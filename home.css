@@ -1,0 +1,129 @@
+.install-button {
+  min-height: 44px;
+  padding: 8px 16px;
+  background: var(--sun);
+  color: #2b2140;
+}
+
+.hello {
+  margin: 4px 0 18px;
+  font-size: 1.15rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+.inline-star {
+  color: var(--star);
+  -webkit-text-stroke: 1px var(--line);
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.filter[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-card {
+  position: relative;
+}
+
+.game-link {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 18px 18px 20px;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.game-link:hover {
+  transform: translateY(-3px) rotate(-0.6deg);
+  box-shadow: 0 8px 0 var(--line);
+}
+
+.game-link:active {
+  transform: translateY(3px);
+  box-shadow: 0 2px 0 var(--line);
+}
+
+.game-art {
+  display: grid;
+  place-items: center;
+  height: 140px;
+  margin-bottom: 8px;
+  border: 3px solid var(--line);
+  border-radius: 16px;
+  background: var(--card-color);
+}
+
+.game-art svg {
+  width: 110px;
+  height: 110px;
+  animation: card-wobble 3.2s ease-in-out infinite;
+}
+
+@keyframes card-wobble {
+  50% { transform: rotate(-6deg) translateY(-4px); }
+}
+
+.game-title {
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.game-blurb {
+  color: var(--ink-soft);
+  font-size: 1rem;
+}
+
+.game-progress {
+  margin-top: 4px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.game-card .star-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.coming-soon {
+  display: grid;
+  place-items: center;
+  min-height: 250px;
+  padding: 18px;
+  border: 3px dashed var(--ink-soft);
+  border-radius: var(--radius);
+  color: var(--ink-soft);
+  font-weight: 800;
+  text-align: center;
+}
+
+.empty-favorites {
+  margin: 8px 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en" data-root="./">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Playbox</title>
+  <meta name="description" content="Games and little tools for kids. Works offline.">
+  <meta name="theme-color" content="#ff7a59">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="stylesheet" href="shared/base.css">
+  <link rel="stylesheet" href="home.css">
+  <script type="module" src="home.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="./">
+      <img src="icons/icon.svg" alt="" width="44" height="44">
+      <h1>Playbox</h1>
+    </a>
+    <button class="chunky-button install-button" type="button" hidden>Install</button>
+  </header>
+
+  <main>
+    <p class="hello">Pick a game. Tap the <span class="inline-star" aria-hidden="true">★</span> to keep your best ones at the top.</p>
+
+    <div class="filters" role="group" aria-label="Show games">
+      <button class="chunky-button filter" type="button" data-filter="all" aria-pressed="true">All games</button>
+      <button class="chunky-button filter" type="button" data-filter="favorites" aria-pressed="false">★ Favorites</button>
+    </div>
+
+    <ul class="game-grid" aria-live="polite"></ul>
+    <p class="empty-favorites" hidden>No favorites yet. Tap a star to add one!</p>
+  </main>
+
+  <footer class="site-footer">
+    Brought to you by Andrea Grassi,
+    <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+  </footer>
+</body>
+</html>
