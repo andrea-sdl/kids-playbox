@@ -240,6 +240,92 @@ button {
   text-underline-offset: 3px;
 }
 
+/* Phones: game top bars hold up to five buttons, so the title gives way. */
+@media (max-width: 480px) {
+  .topbar {
+    gap: 6px;
+  }
+
+  .topbar h1 {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 1.2rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar .icon-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .topbar .icon-button svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* ---------- Focus mode (full screen) ---------- */
+
+/* Only the buttons that matter while playing stay in the top bar. */
+body.is-immersive .topbar {
+  justify-content: flex-end;
+  padding-top: max(8px, env(safe-area-inset-top));
+  padding-bottom: 6px;
+}
+
+body.is-immersive .topbar > :not(.fullscreen-button, .sound-button, .music-button) {
+  display: none;
+}
+
+body.is-immersive .site-footer {
+  display: none;
+}
+
+body.is-immersive main {
+  max-width: none;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+/* ---------- Update notice ---------- */
+
+.update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 12px 10px 16px;
+  border: 3px solid var(--line);
+  border-radius: 20px;
+  background: var(--sun);
+  color: #2b2140;
+  font-weight: 800;
+  box-shadow: 0 5px 0 var(--line);
+  transform: translateX(-50%);
+  z-index: 100;
+  animation: banner-in 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+.update-banner .chunky-button {
+  min-height: 42px;
+  padding: 6px 14px;
+}
+
+.update-refresh {
+  background: #2b2140;
+  color: #fff;
+}
+
+@keyframes banner-in {
+  from { transform: translate(-50%, 120%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

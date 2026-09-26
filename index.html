@@ -31,6 +31,7 @@
     <div class="filters" role="group" aria-label="Show games" data-i18n-attr="aria-label:home.showGames">
       <button class="chunky-button filter" type="button" data-filter="all" aria-pressed="true" data-i18n="home.all">All games</button>
       <button class="chunky-button filter" type="button" data-filter="favorites" aria-pressed="false" data-i18n="home.favorites">★ Favorites</button>
+      <button class="chunky-button whats-new-button" type="button"><span data-i18n="whatsNew.button">✨ What’s new</span><span class="whats-new-dot" hidden></span></button>
     </div>
 
     <ul class="game-grid" aria-live="polite"></ul>
@@ -40,6 +41,13 @@
       <p class="offline-summary"></p>
       <button class="chunky-button save-offline" type="button" data-i18n="home.saveAll">Save all games for offline</button>
     </section>
+    <dialog class="whats-new" aria-labelledby="whats-new-title">
+      <div class="whats-new-head">
+        <h2 id="whats-new-title" data-i18n="whatsNew.title">What’s new</h2>
+        <button class="chunky-button whats-new-close" type="button" data-i18n="whatsNew.close">Close</button>
+      </div>
+      <ol class="release-list"></ol>
+    </dialog>
   </main>
 
   <footer class="site-footer">

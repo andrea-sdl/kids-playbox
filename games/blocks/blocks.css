@@ -21,7 +21,11 @@ body {
   overflow: hidden;
 }
 
-.canvas-holder,
+.canvas-holder {
+  position: absolute;
+  inset: 0;
+}
+
 .canvas-holder canvas {
   display: block;
   width: 100%;
@@ -264,5 +268,68 @@ body {
 
   .clock-toggle {
     font-size: 0.75rem;
+  }
+}
+
+/* ---------- Focus mode: the 3D view fills what the tools don't use ---------- */
+
+body.is-immersive .builder {
+  height: calc(100vh - 70px);
+  height: calc(100dvh - 70px - env(safe-area-inset-top));
+  gap: 8px;
+}
+
+body.is-immersive .viewport {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}
+
+body.is-immersive .dock {
+  gap: 6px;
+  padding: 8px;
+}
+
+body.is-immersive .shapes,
+body.is-immersive .colors,
+body.is-immersive .textures {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+body.is-immersive .shape-button,
+body.is-immersive .texture-swatch,
+body.is-immersive .swatch {
+  flex: none;
+}
+
+/* Phones in focus mode: every dock row is one scrolling line, and smaller. */
+@media (max-width: 600px) {
+  body.is-immersive .dock-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  body.is-immersive .segmented {
+    flex: none;
+  }
+
+  body.is-immersive .segmented button,
+  body.is-immersive .rotate-button {
+    flex: none;
+    min-height: 38px;
+    padding: 4px 10px;
+  }
+
+  body.is-immersive .shape-button,
+  body.is-immersive .texture-swatch {
+    width: 44px;
+    height: 44px;
+  }
+
+  body.is-immersive .swatch:not(.texture-swatch) {
+    width: 36px;
+    height: 36px;
   }
 }

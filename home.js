@@ -2,8 +2,9 @@ import { GAMES } from './shared/games.js';
 import { getFavorites } from './shared/favorites.js';
 import { getProgress } from './shared/progress.js';
 import { readJSON, writeJSON } from './shared/store.js';
-import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from './shared/chrome.js';
-import { t } from './shared/i18n.js';
+import { readSeen, registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG, writeSeen } from './shared/chrome.js';
+import { getLanguage, t } from './shared/i18n.js';
+import { RELEASES, badgesFor, hasUnseenReleases, latestVersion } from './shared/changelog.js';
 import { offlineStatus, onUnmeteredConnection, saveForOffline } from './shared/offline.js';
 
 registerServiceWorker();
@@ -59,7 +60,7 @@ function createCard(game) {
   link.className = 'game-link';
   link.href = game.path;
   link.innerHTML = `
-    <span class="game-art">${game.icon}</span>
+    <span class="game-art">${game.icon}<span class="game-badge" hidden></span></span>
     <span class="game-title"></span>
     <span class="game-blurb"></span>
     <span class="game-progress"></span>
@@ -68,6 +69,13 @@ function createCard(game) {
   link.querySelector('.game-title').textContent = title;
   link.querySelector('.game-blurb').textContent = t(`game.${game.id}.blurb`);
   link.querySelector('.game-offline').textContent = t('home.worksOffline');
+  const badge = badgesFor(readSeen())[game.id];
+  if (badge) {
+    const badgeElement = link.querySelector('.game-badge');
+    badgeElement.hidden = false;
+    badgeElement.textContent = t(`badge.${badge}`);
+    badgeElement.classList.add(`is-${badge}`);
+  }
   link.querySelector('.game-progress').textContent = progressText(game.id);
   item.dataset.id = game.id;
 
@@ -178,3 +186,62 @@ window.addEventListener('load', async () => {
     setTimeout(saveAll, 3000);
   }
 });
+
+/* ---------- What's new ---------- */
+
+const whatsNewButton = document.querySelector('.whats-new-button');
+const whatsNewDot = document.querySelector('.whats-new-dot');
+const whatsNewDialog = document.querySelector('.whats-new');
+const releaseList = document.querySelector('.release-list');
+
+function renderReleases() {
+  const dateFormat = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'long' });
+  const items = RELEASES.map((release) => {
+    const item = document.createElement('li');
+    const heading = document.createElement('h3');
+    // Noon avoids the date shifting a day in some time zones.
+    const date = dateFormat.format(new Date(`${release.date}T12:00:00`));
+    heading.textContent = `${t('whatsNew.version', { version: release.version })} · ${date}`;
+    const changes = document.createElement('ul');
+    release.changes.forEach((change) => {
+      const row = document.createElement('li');
+      row.innerHTML = '<span class="change-type"></span> <strong></strong><span class="change-text"></span>';
+      const type = row.querySelector('.change-type');
+      type.textContent = t(`whatsNew.type.${change.type}`);
+      type.classList.add(`is-${change.type}`);
+      // Game changes say which game; app-wide changes speak for themselves.
+      if (change.target !== 'app') {
+        row.querySelector('strong').textContent = `${t(`game.${change.target}.title`)}: `;
+      }
+      row.querySelector('.change-text').textContent = t(change.text);
+      changes.append(row);
+    });
+    item.append(heading, changes);
+    return item;
+  });
+  releaseList.replaceChildren(...items);
+}
+
+function renderWhatsNewDot() {
+  whatsNewDot.hidden = !hasUnseenReleases(readSeen());
+}
+
+whatsNewButton.addEventListener('click', () => {
+  renderReleases();
+  whatsNewDialog.showModal();
+  const seen = readSeen();
+  seen.release = latestVersion();
+  writeSeen(seen);
+  renderWhatsNewDot();
+  render();
+});
+
+document.querySelector('.whats-new-close').addEventListener('click', () => whatsNewDialog.close());
+whatsNewDialog.addEventListener('click', (event) => {
+  // A tap on the dimmed background closes it too.
+  if (event.target === whatsNewDialog) {
+    whatsNewDialog.close();
+  }
+});
+
+renderWhatsNewDot();

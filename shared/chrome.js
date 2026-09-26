@@ -1,8 +1,13 @@
-// Shared page behavior: offline support and the favorite star.
+// Shared page behavior: offline support, update notice, "seen" tracking
+// for What's new, and the favorite star.
 
 import { isFavorite, toggleFavorite } from './favorites.js';
 import { saveForOffline } from './offline.js';
 import { mountLanguagePicker, t, translatePage } from './i18n.js';
+import { latestVersion, normalizeSeen } from './changelog.js';
+import { readJSON, writeJSON } from './store.js';
+
+const UPDATE_CHECK_MS = 30 * 60 * 1000;
 
 // Translate the static page text and add the language menu. Call once each
 // page's own strings have been added.
@@ -17,17 +22,82 @@ export function siteRoot() {
   return document.documentElement.dataset.root || './';
 }
 
+export function readSeen() {
+  return normalizeSeen(readJSON('seen', null));
+}
+
+export function writeSeen(seen) {
+  writeJSON('seen', seen);
+}
+
+// Opening a game clears its "New" or "Updated" badge on the home page.
+function markGameSeen(gameId) {
+  const seen = readSeen();
+  seen.games[gameId] = latestVersion();
+  writeSeen(seen);
+}
+
+function showUpdateBanner() {
+  if (document.querySelector('.update-banner')) {
+    return;
+  }
+  const banner = document.createElement('div');
+  banner.className = 'update-banner';
+  banner.setAttribute('role', 'status');
+  banner.innerHTML = '<span></span><button class="chunky-button update-refresh" type="button"></button><button class="chunky-button update-later" type="button"></button>';
+  banner.querySelector('span').textContent = `✨ ${t('update.ready')}`;
+  banner.querySelector('.update-refresh').textContent = t('update.refresh');
+  banner.querySelector('.update-later').textContent = t('update.later');
+  banner.querySelector('.update-refresh').addEventListener('click', () => location.reload());
+  banner.querySelector('.update-later').addEventListener('click', () => banner.remove());
+  document.body.append(banner);
+}
+
+// A new version installs quietly in the background. When it takes over
+// this page, offer a refresh instead of reloading by surprise (a game could
+// be in progress). Apps left open for days check again when shown.
+function watchForUpdates(registration, hadController) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController) {
+      showUpdateBanner();
+    }
+  });
+  let lastCheck = Date.now();
+  const check = () => {
+    if (Date.now() - lastCheck < UPDATE_CHECK_MS) {
+      return;
+    }
+    lastCheck = Date.now();
+    registration.update().catch(() => {
+      // Offline: try again later.
+    });
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      check();
+    }
+  });
+  setInterval(check, UPDATE_CHECK_MS);
+}
+
 // Pass the game's id on a game page: once the page has loaded, all of that
 // game's files are saved so it keeps working offline.
 export function registerServiceWorker(gameId) {
+  if (gameId) {
+    markGameSeen(gameId);
+  }
   if (!('serviceWorker' in navigator)) {
     return;
   }
   const root = siteRoot();
+  // The first install also "takes over" the page; that's not an update.
+  const hadController = Boolean(navigator.serviceWorker.controller);
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register(`${root}sw.js`, { scope: root }).catch(() => {
-      // Offline support is a bonus; the site still works without it.
-    });
+    navigator.serviceWorker.register(`${root}sw.js`, { scope: root })
+      .then((registration) => watchForUpdates(registration, hadController))
+      .catch(() => {
+        // Offline support is a bonus; the site still works without it.
+      });
     if (gameId) {
       setTimeout(() => saveForOffline([gameId]), 1500);
     }
@@ -64,3 +134,66 @@ export const STAR_SVG = `
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3L2.9 9.5l6.3-.9z"/>
   </svg>`;
+
+/* ---------- Full screen ---------- */
+
+export const FULLSCREEN_BUTTON = `
+  <svg class="fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <svg class="fs-exit" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function fullscreenElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+// Focus mode hides the header, footer and extras so the game gets the whole
+// screen. Where the browser allows it (not iPhone Safari), it also goes
+// truly full screen.
+export function setupFullscreen(button, onChange) {
+  button.innerHTML = FULLSCREEN_BUTTON;
+  const root = document.documentElement;
+
+  function render(on) {
+    document.body.classList.toggle('is-immersive', on);
+    button.setAttribute('aria-pressed', String(on));
+    let label = t('common.fullscreen');
+    if (on) {
+      label = t('common.exitFullscreen');
+    }
+    button.setAttribute('aria-label', label);
+    button.title = label;
+    button.querySelector('.fs-enter').toggleAttribute('hidden', on);
+    button.querySelector('.fs-exit').toggleAttribute('hidden', !on);
+    if (onChange) {
+      onChange(on);
+    }
+  }
+
+  button.addEventListener('click', async () => {
+    const on = !document.body.classList.contains('is-immersive');
+    render(on);
+    try {
+      if (on && !fullscreenElement()) {
+        const request = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (request) {
+          await request.call(root);
+        }
+      }
+      if (!on && fullscreenElement()) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        await exit.call(document);
+      }
+    } catch {
+      // Full screen was refused; focus mode still works.
+    }
+  });
+
+  // Leaving full screen with Esc or a system gesture also leaves focus mode.
+  const onFullscreenChange = () => {
+    if (!fullscreenElement() && document.body.classList.contains('is-immersive')) {
+      render(false);
+    }
+  };
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  render(false);
+}

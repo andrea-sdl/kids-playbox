@@ -1,4 +1,4 @@
-import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupFullscreen, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
 import { t } from '../../shared/i18n.js';
 import './strings.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
@@ -556,6 +556,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+setupFullscreen(document.querySelector('.fullscreen-button'));
 els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.blocks.title'));
 

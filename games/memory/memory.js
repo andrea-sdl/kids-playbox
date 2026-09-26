@@ -1,4 +1,4 @@
-import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupFullscreen, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
 import { t } from '../../shared/i18n.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
 import { recordPlay } from '../../shared/progress.js';
@@ -461,7 +461,16 @@ function finish() {
 /* ---------- Zoom (buttons, pinch, ctrl + wheel) ---------- */
 
 const CARD_RATIO = 5 / 4; // height / width
-const TABLE_CHROME = 36; // table padding and border
+
+// Space the table's padding and border take, which is less in focus mode.
+function tableChrome() {
+  const style = getComputedStyle(els.table);
+  const sum = (...names) => names.reduce((total, name) => total + parseFloat(style[name]), 0);
+  return {
+    x: sum('paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'),
+    y: sum('paddingTop', 'paddingBottom', 'borderTopWidth', 'borderBottomWidth'),
+  };
+}
 
 // "Fit" means the whole board is visible: as wide as the table allows,
 // but not taller than the space left on screen.
@@ -473,8 +482,9 @@ function fitBoard() {
   const top = els.table.getBoundingClientRect().top + window.scrollY;
   const available = Math.max(280, window.innerHeight - top - 16);
   els.table.style.maxHeight = `${available}px`;
-  const tableWidth = els.table.clientWidth - TABLE_CHROME;
-  const widthForHeight = (available - TABLE_CHROME) / CARD_RATIO;
+  const chrome = tableChrome();
+  const tableWidth = els.table.getBoundingClientRect().width - chrome.x;
+  const widthForHeight = (available - chrome.y) / CARD_RATIO;
   const fitWidth = Math.min(tableWidth, widthForHeight, 900);
   els.board.style.setProperty('--fit-width', `${Math.floor(fitWidth)}px`);
 }
@@ -586,6 +596,7 @@ els.sound.addEventListener('click', () => {
   sounds.flip();
 });
 
+setupFullscreen(document.querySelector('.fullscreen-button'), fitBoard);
 els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.memory.title'));
 

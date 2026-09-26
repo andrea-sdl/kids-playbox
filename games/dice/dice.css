@@ -961,18 +961,7 @@ body[data-mascot="explorer"] .face {
 
 @media (max-width: 480px) {
   .topbar {
-    gap: 8px;
     padding-bottom: 6px;
-  }
-
-  .topbar h1 {
-    font-size: 1.25rem;
-    white-space: nowrap;
-  }
-
-  .topbar .icon-button {
-    width: 42px;
-    height: 42px;
   }
 
   .picker {
@@ -1063,4 +1052,24 @@ body[data-mascot="explorer"] .face {
     min-height: 60px;
     font-size: 1.5rem;
   }
+}
+
+/* ---------- Focus mode: the stage takes the free space ---------- */
+
+body.is-immersive .picker,
+body.is-immersive .results-panel {
+  display: none;
+}
+
+body.is-immersive .stage {
+  min-height: max(300px, calc(100vh - 250px));
+  min-height: max(300px, calc(100dvh - 250px));
+}
+
+body.is-immersive .buddy {
+  max-width: min(320px, 40vh);
+}
+
+body.is-immersive .controls {
+  margin-bottom: 0;
 }

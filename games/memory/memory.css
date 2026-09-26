@@ -610,3 +610,29 @@ body {
     margin-left: 0;
   }
 }
+
+/* ---------- Focus mode ---------- */
+
+body.is-immersive main {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+body.is-immersive .hud {
+  margin-bottom: 6px;
+}
+
+/* Thinner felt edge and gaps: on phones, width decides how big cards get. */
+body.is-immersive .table {
+  padding: 6px;
+  border-width: 3px;
+  border-radius: 16px;
+}
+
+body.is-immersive .board {
+  --gap: 4px;
+}
+
+body.is-immersive .fact {
+  margin-bottom: 6px;
+}

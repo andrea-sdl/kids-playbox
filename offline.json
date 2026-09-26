@@ -12,6 +12,7 @@
     "./icons/icon.svg",
     "./shared/audio.js",
     "./shared/base.css",
+    "./shared/changelog.js",
     "./shared/chrome.js",
     "./shared/favorites.js",
     "./shared/games.js",
