@@ -76,6 +76,11 @@ button {
   outline-offset: 3px;
 }
 
+/* Keep the hidden attribute working even when a class sets display. */
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

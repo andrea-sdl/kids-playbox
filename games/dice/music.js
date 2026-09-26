@@ -2,7 +2,7 @@
 // A look-ahead scheduler queues notes slightly ahead of time so the music
 // stays in time even when the page is busy animating dice.
 
-import { getAudioContext, getNoiseBuffer } from './audio.js';
+import { getAudioContext, getNoiseBuffer } from '../../shared/audio.js';
 import { SONGS, parseDrums, parseNotes } from './songs.js';
 
 const MUSIC_VOLUME = 0.22;

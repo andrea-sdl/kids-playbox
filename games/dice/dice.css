@@ -594,19 +594,19 @@ body[data-mascot="pixel"] .bubble {
 body[data-mascot="mage"] .face {
   background: radial-gradient(circle at 30% 25%, #5b43a3 0%, var(--die-face) 60%, #1a1038 140%);
   border-color: #5b43a3;
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15), inset -3px -4px 8px rgb(0 0 0 / 0.3);
 }
 
 body[data-mascot="mage"] .pip {
   box-shadow: none;
 }
 
-body[data-mascot="mage"] .die-camera {
-  filter: drop-shadow(0 0 6px rgb(255 214 107 / 0.45));
+/* Glow on each face. A CSS filter on the 3D die would flatten it. */
+body[data-mascot="mage"] .face {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15), inset -3px -4px 8px rgb(0 0 0 / 0.3), 0 0 10px rgb(255 214 107 / 0.35);
 }
 
-body[data-character="wizard"] .die-camera {
-  filter: drop-shadow(0 0 6px rgb(127 212 255 / 0.5));
+body[data-character="wizard"] .face {
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15), inset -3px -4px 8px rgb(0 0 0 / 0.3), 0 0 10px rgb(127 212 255 / 0.4);
 }
 
 /* ---------- 3D dice ---------- */
@@ -707,14 +707,6 @@ body[data-mascot="explorer"] .face {
 .c4 { transform: rotateX(-90deg) translateZ(calc(var(--die-size) * 0.44)); }
 .c5 { transform: rotateY(-90deg) translateZ(calc(var(--die-size) * 0.44)); }
 .c6 { transform: rotateY(180deg) translateZ(calc(var(--die-size) * 0.44)); }
-
-.die-slot.is-winner .die-camera {
-  animation: die-glow 0.9s ease;
-}
-
-@keyframes die-glow {
-  40% { transform: rotateX(-18deg) rotateY(-22deg) scale(1.15); }
-}
 
 /* ---------- Result and controls ---------- */
 

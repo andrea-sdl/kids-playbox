@@ -3,10 +3,16 @@ import { getFavorites } from './shared/favorites.js';
 import { getProgress } from './shared/progress.js';
 import { readJSON, writeJSON } from './shared/store.js';
 import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from './shared/chrome.js';
+import { offlineStatus, onUnmeteredConnection, saveForOffline } from './shared/offline.js';
 
 registerServiceWorker();
 
 const grid = document.querySelector('.game-grid');
+const offlineBar = document.querySelector('.offline-bar');
+const offlineSummary = document.querySelector('.offline-summary');
+const saveOfflineButton = document.querySelector('.save-offline');
+// Which games are saved for offline use, from the service worker.
+let savedGames = {};
 const emptyFavorites = document.querySelector('.empty-favorites');
 const filterButtons = document.querySelectorAll('.filter');
 
@@ -54,10 +60,12 @@ function createCard(game) {
     <span class="game-art">${game.icon}</span>
     <span class="game-title"></span>
     <span class="game-blurb"></span>
-    <span class="game-progress"></span>`;
+    <span class="game-progress"></span>
+    <span class="game-offline" hidden>✓ Works offline</span>`;
   link.querySelector('.game-title').textContent = game.title;
   link.querySelector('.game-blurb').textContent = game.blurb;
   link.querySelector('.game-progress').textContent = progressText(game.id);
+  item.dataset.id = game.id;
 
   const star = document.createElement('button');
   star.type = 'button';
@@ -88,6 +96,7 @@ function render() {
     grid.append(createComingSoon());
   }
   emptyFavorites.hidden = !(filter === 'favorites' && games.length === 0);
+  renderOffline();
   filterButtons.forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.filter === filter));
   });
@@ -110,26 +119,58 @@ window.addEventListener('pageshow', (event) => {
 
 render();
 
-// "Install" button for browsers that support the install prompt.
-const installButton = document.querySelector('.install-button');
-let installPrompt = null;
+/* ---------- Offline ---------- */
 
-window.addEventListener('beforeinstallprompt', (event) => {
-  event.preventDefault();
-  installPrompt = event;
-  installButton.hidden = false;
-});
 
-installButton.addEventListener('click', async () => {
-  if (!installPrompt) {
+function renderOffline() {
+  document.querySelectorAll('.game-card').forEach((card) => {
+    card.querySelector('.game-offline').hidden = !savedGames[card.dataset.id];
+  });
+  const total = GAMES.length;
+  const saved = GAMES.filter((game) => savedGames[game.id]).length;
+  if (saved === total) {
+    offlineSummary.textContent = 'All games work offline.';
+    saveOfflineButton.hidden = true;
     return;
   }
-  installPrompt.prompt();
-  await installPrompt.userChoice;
-  installPrompt = null;
-  installButton.hidden = true;
-});
+  offlineSummary.textContent = `${saved} of ${total} games work offline. Games are saved when you open them.`;
+  saveOfflineButton.hidden = false;
+}
 
-window.addEventListener('appinstalled', () => {
-  installButton.hidden = true;
+async function refreshOffline() {
+  const status = await offlineStatus();
+  if (!status) {
+    return;
+  }
+  savedGames = status.games;
+  offlineBar.hidden = false;
+  renderOffline();
+}
+
+async function saveAll() {
+  saveOfflineButton.disabled = true;
+  saveOfflineButton.textContent = 'Saving…';
+  const status = await saveForOffline(GAMES.map((game) => game.id));
+  saveOfflineButton.disabled = false;
+  saveOfflineButton.textContent = 'Save all games for offline';
+  if (!status) {
+    offlineSummary.textContent = 'Could not save right now. Try again when you are online.';
+    return;
+  }
+  savedGames = status.games;
+  renderOffline();
+  if (status.failed && status.failed.length > 0) {
+    offlineSummary.textContent += ' Some games could not be saved. Try again when you are online.';
+  }
+}
+
+saveOfflineButton.addEventListener('click', saveAll);
+
+window.addEventListener('load', async () => {
+  await refreshOffline();
+  // On Wi-Fi or a fast unmetered line, quietly save everything.
+  const missing = GAMES.some((game) => !savedGames[game.id]);
+  if (missing && onUnmeteredConnection()) {
+    setTimeout(saveAll, 3000);
+  }
 });

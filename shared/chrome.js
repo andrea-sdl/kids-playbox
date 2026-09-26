@@ -1,6 +1,7 @@
 // Shared page behavior: offline support and the favorite star.
 
 import { isFavorite, toggleFavorite } from './favorites.js';
+import { saveForOffline } from './offline.js';
 
 // Each page sets <html data-root="..."> to the relative path of the site root,
 // so the app works both at a domain root and under a sub-path (GitHub Pages).
@@ -8,7 +9,9 @@ export function siteRoot() {
   return document.documentElement.dataset.root || './';
 }
 
-export function registerServiceWorker() {
+// Pass the game's id on a game page: once the page has loaded, all of that
+// game's files are saved so it keeps working offline.
+export function registerServiceWorker(gameId) {
   if (!('serviceWorker' in navigator)) {
     return;
   }
@@ -17,6 +20,9 @@ export function registerServiceWorker() {
     navigator.serviceWorker.register(`${root}sw.js`, { scope: root }).catch(() => {
       // Offline support is a bonus; the site still works without it.
     });
+    if (gameId) {
+      setTimeout(() => saveForOffline([gameId]), 1500);
+    }
   });
 }
 

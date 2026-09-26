@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Memory · Playbox</title>
+  <meta name="description" content="Flip the cards and find the pairs. Works offline.">
+  <meta name="theme-color" content="#2f8f55">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="memory.css">
+  <script type="module" src="memory.js"></script>
+</head>
+<body data-back="classic">
+  <header class="topbar">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1>Memory</h1>
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound">
+      <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button star-button favorite-button" type="button"></button>
+  </header>
+
+  <main>
+    <section class="setup" aria-label="New game">
+      <fieldset class="choice">
+        <legend>Pick your cards</legend>
+        <div class="theme-options"></div>
+      </fieldset>
+
+      <div class="photo-panel" hidden>
+        <p class="photo-help">Add your own pictures. They stay on this device only.</p>
+        <div class="photo-actions">
+          <label class="chunky-button add-photos">
+            <input class="photo-input visually-hidden" type="file" accept="image/*" multiple>
+            + Add photos
+          </label>
+          <span class="photo-count"></span>
+        </div>
+        <ul class="photo-list"></ul>
+      </div>
+
+      <fieldset class="choice">
+        <legend>How big?</legend>
+        <div class="size-options"></div>
+      </fieldset>
+
+      <fieldset class="choice">
+        <legend>Card back</legend>
+        <div class="back-options"></div>
+      </fieldset>
+
+      <button class="chunky-button deal-button" type="button">Deal the cards!</button>
+      <p class="best-line"></p>
+    </section>
+
+    <section class="play" aria-label="Game" hidden>
+      <div class="hud">
+        <p class="stat"><span>Pairs</span> <strong class="stat-pairs">0/0</strong></p>
+        <p class="stat"><span>Moves</span> <strong class="stat-moves">0</strong></p>
+        <p class="stat"><span>Time</span> <strong class="stat-time">0:00</strong></p>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button class="chunky-button icon-button zoom-out" type="button" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+          </button>
+          <button class="chunky-button zoom-fit" type="button">Fit</button>
+          <button class="chunky-button icon-button zoom-in" type="button" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <button class="chunky-button new-game" type="button">New game</button>
+      </div>
+      <p class="fact" aria-live="polite"></p>
+      <div class="table">
+        <div class="board"></div>
+      </div>
+    </section>
+
+    <dialog class="win-dialog" aria-labelledby="win-title">
+      <div class="win-stars" aria-hidden="true"></div>
+      <h2 id="win-title">You found them all!</h2>
+      <p class="win-detail"></p>
+      <p class="win-best"></p>
+      <div class="win-actions">
+        <button class="chunky-button play-again" type="button">Play again</button>
+        <button class="chunky-button change-cards" type="button">Change cards</button>
+      </div>
+    </dialog>
+  </main>
+
+  <footer class="site-footer">
+    Brought to you by Andrea Grassi,
+    <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+  </footer>
+</body>
+</html>

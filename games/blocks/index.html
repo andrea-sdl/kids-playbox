@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Blocks · Playbox</title>
+  <meta name="description" content="Build anything with 3D blocks. Works offline.">
+  <meta name="theme-color" content="#3490dc">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="modulepreload" href="../../vendor/three/three.min.js">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="blocks.css">
+  <script type="module" src="blocks.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1>Blocks</h1>
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound">
+      <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button star-button favorite-button" type="button"></button>
+  </header>
+
+  <main class="builder">
+    <div class="viewport">
+      <div class="canvas-holder" role="application" aria-label="Building area. Tap to add a block, drag to look around, pinch or use the zoom buttons to zoom."></div>
+      <p class="loading">Getting the blocks ready…</p>
+
+      <div class="overlay overlay-top-left">
+        <button class="chunky-button icon-button undo-button" type="button" aria-label="Undo" title="Undo (Ctrl+Z)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+        </button>
+        <button class="chunky-button clear-button" type="button">Clear</button>
+      </div>
+
+      <div class="overlay overlay-top-right time-panel">
+        <label class="time-label" for="time-of-day"><span class="time-icon" aria-hidden="true"></span><span class="time-text">12:00</span></label>
+        <input id="time-of-day" class="time-slider" type="range" min="0" max="24" step="0.25" value="12" aria-label="Time of day">
+        <label class="clock-toggle"><input class="clock-input" type="checkbox"> Match my clock</label>
+      </div>
+
+      <div class="overlay overlay-bottom-right">
+        <button class="chunky-button icon-button zoom-in" type="button" aria-label="Zoom in">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+        </button>
+        <button class="chunky-button icon-button zoom-out" type="button" aria-label="Zoom out">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <p class="hint" aria-live="polite">Tap to build · Drag to look around · Pinch to zoom</p>
+    </div>
+
+    <div class="dock">
+      <div class="dock-row">
+        <div class="tools segmented" role="radiogroup" aria-label="Tool"></div>
+        <button class="chunky-button rotate-button" type="button" title="Turn the block (R)">⟳ Turn</button>
+        <div class="finish segmented" role="radiogroup" aria-label="Look"></div>
+      </div>
+      <div class="dock-row shapes" role="radiogroup" aria-label="Block shape"></div>
+      <div class="dock-row colors" role="radiogroup" aria-label="Color"></div>
+      <div class="dock-row textures" role="radiogroup" aria-label="Texture"></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    Brought to you by Andrea Grassi,
+    <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+  </footer>
+</body>
+</html>

@@ -25,7 +25,7 @@ const GAME_ID = 'dice';
 const STORE_KEY = 'game:dice';
 const HISTORY_SHOWN = 10;
 
-registerServiceWorker();
+registerServiceWorker(GAME_ID);
 
 const $ = (selector) => document.querySelector(selector);
 

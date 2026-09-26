@@ -1,7 +1,7 @@
 // All sounds are made on the fly with the Web Audio API, so there are no
 // audio files to download and everything works offline.
 
-import { getAudioContext, getNoiseBuffer } from './audio.js';
+import { getAudioContext, getNoiseBuffer } from '../../shared/audio.js';
 
 const TUNES = {
   princess: { wave: 'sine', notes: [784, 988, 1175, 1568] },

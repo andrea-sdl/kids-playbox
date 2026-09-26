@@ -22,7 +22,6 @@
       <img src="icons/icon.svg" alt="" width="44" height="44">
       <h1>Playbox</h1>
     </a>
-    <button class="chunky-button install-button" type="button" hidden>Install</button>
   </header>
 
   <main>
@@ -35,6 +34,11 @@
 
     <ul class="game-grid" aria-live="polite"></ul>
     <p class="empty-favorites" hidden>No favorites yet. Tap a star to add one!</p>
+
+    <section class="offline-bar" hidden>
+      <p class="offline-summary"></p>
+      <button class="chunky-button save-offline" type="button">Save all games for offline</button>
+    </section>
   </main>
 
   <footer class="site-footer">

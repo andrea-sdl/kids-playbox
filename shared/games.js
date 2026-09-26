@@ -20,4 +20,35 @@ export const GAMES = [
         </g>
       </svg>`,
   },
+  {
+    id: 'memory',
+    title: 'Memory',
+    blurb: 'Flip the cards and find the pairs!',
+    path: 'games/memory/',
+    color: '#3fa06a',
+    icon: `
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <rect x="8" y="12" width="28" height="38" rx="5" fill="#b3202f" stroke="#2b2140" stroke-width="3" transform="rotate(-10 22 31)"/>
+        <path d="M22 24l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z" fill="#fff" transform="rotate(-10 22 31)"/>
+        <rect x="28" y="14" width="28" height="38" rx="5" fill="#fffef9" stroke="#2b2140" stroke-width="3" transform="rotate(8 42 33)"/>
+        <circle cx="42" cy="31" r="7" fill="#ffd23f" stroke="#2b2140" stroke-width="2.5" transform="rotate(8 42 33)"/>
+      </svg>`,
+  },
+  {
+    id: 'blocks',
+    title: 'Blocks',
+    blurb: 'Build anything you like in 3D!',
+    path: 'games/blocks/',
+    color: '#3490dc',
+    icon: `
+      <svg viewBox="0 0 64 64" aria-hidden="true" stroke="#2b2140" stroke-width="3" stroke-linejoin="round">
+        <rect x="8" y="34" width="30" height="18" rx="2" fill="#e3342f"/>
+        <rect x="12" y="28" width="8" height="6" rx="1" fill="#e3342f"/>
+        <rect x="26" y="28" width="8" height="6" rx="1" fill="#e3342f"/>
+        <rect x="26" y="16" width="30" height="18" rx="2" fill="#ffd23f"/>
+        <rect x="30" y="10" width="8" height="6" rx="1" fill="#ffd23f"/>
+        <rect x="44" y="10" width="8" height="6" rx="1" fill="#ffd23f"/>
+        <rect x="38" y="34" width="18" height="18" rx="2" fill="#38c172"/>
+      </svg>`,
+  },
 ];

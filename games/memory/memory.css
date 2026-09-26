@@ -1,0 +1,612 @@
+body {
+  --theme: #2f8f55;
+  --theme-soft: #dcf3df;
+  --zoom: 1;
+  --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.3 0 0 0 0 0.25 0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --star-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L12 18l-6.5 3.4 1.3-7.2L1.5 9.1l7.3-1z'/%3E%3C/svg%3E");
+}
+
+/* ---------- Setup ---------- */
+
+.setup {
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.choice {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.choice legend {
+  margin-bottom: 10px;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.theme-options,
+.size-options,
+.back-options {
+  display: grid;
+  gap: 10px;
+}
+
+.theme-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.size-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.back-options {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 6px;
+  border: 3px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 4px 0 var(--line);
+  cursor: pointer;
+}
+
+.option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.option:has(input:checked) {
+  background: var(--theme-soft);
+  color: #2b2140;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--line);
+  outline: 3px dashed var(--theme);
+  outline-offset: 4px;
+}
+
+.option:has(input:focus-visible) {
+  outline: 4px solid var(--sun);
+}
+
+.option:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.option-art {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.option-art img,
+.option-art svg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.option-art .flag {
+  width: 90%;
+  height: auto;
+}
+
+.size-options .option {
+  font-size: 1.3rem;
+}
+
+.size-options small {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.back-swatch {
+  width: 44px;
+  height: 58px;
+  border-radius: 6px;
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+}
+
+.deal-button {
+  min-height: 64px;
+  border-width: 4px;
+  background: var(--theme);
+  color: #fff;
+  font-size: 1.5rem;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+}
+
+.deal-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.best-line {
+  margin: 0;
+  text-align: center;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* ---------- Photos ---------- */
+
+.photo-panel {
+  padding: 14px;
+  border: 3px dashed var(--ink-soft);
+  border-radius: 16px;
+}
+
+.photo-help {
+  margin: 0 0 10px;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.add-photos {
+  background: var(--theme);
+  color: #fff;
+}
+
+.add-photos:focus-within {
+  outline: 4px solid var(--sun);
+  outline-offset: 3px;
+}
+
+.photo-count {
+  font-weight: 800;
+}
+
+.photo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-list li {
+  position: relative;
+}
+
+.photo-list img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+}
+
+.photo-list button {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: #ff5f5f;
+  color: #fff;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* ---------- Play area ---------- */
+
+.hud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin-bottom: 10px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.stat span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.stat strong {
+  font-size: 1.4rem;
+}
+
+.zoom {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.zoom-fit {
+  min-height: 48px;
+  padding: 6px 12px;
+}
+
+.new-game {
+  background: var(--theme);
+  color: #fff;
+}
+
+.fact {
+  min-height: 1.5em;
+  margin: 0 0 10px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.fact.is-new {
+  animation: fact-in 0.4s ease;
+}
+
+@keyframes fact-in {
+  from { opacity: 0; transform: translateY(6px); }
+}
+
+/* A felt card table. The board inside can be zoomed and scrolled. */
+.table {
+  position: relative;
+  padding: 14px;
+  border: 4px solid var(--line);
+  border-radius: 24px;
+  background:
+    var(--paper-grain),
+    radial-gradient(ellipse at 50% 30%, #3fa06a, #1f6b44 80%);
+  box-shadow: inset 0 0 40px rgb(0 0 0 / 0.35), var(--shadow);
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-x pan-y;
+}
+
+.board {
+  --gap: clamp(4px, 1.2vw, 10px);
+  display: grid;
+  grid-template-columns: repeat(var(--size), minmax(0, 1fr));
+  gap: var(--gap);
+  width: calc(var(--fit-width, 100%) * var(--zoom));
+  margin: 0 auto;
+}
+
+/* ---------- Cards ---------- */
+
+.card {
+  position: relative;
+  container-type: inline-size;
+  aspect-ratio: 4 / 5;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 700px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.card:focus-visible {
+  outline: 4px solid var(--sun);
+  outline-offset: 2px;
+  border-radius: 10%;
+}
+
+.card-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.35, 1.45, 0.5, 1);
+}
+
+.card:hover:not(.is-flipped) .card-inner {
+  transform: translateY(-3px) rotateX(6deg);
+}
+
+.card.is-flipped .card-inner,
+.card.is-matched .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  border-radius: 9%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  overflow: hidden;
+  /* Stacked edges make the card look thick. */
+  box-shadow:
+    0 1px 0 #d8cfbd,
+    0 2px 0 #c9bfab,
+    0 3px 0 #bdb29c,
+    0 5px 8px rgb(0 0 0 / 0.35);
+}
+
+.card-front {
+  grid-template-rows: 1fr auto;
+  place-items: center;
+  padding: 7%;
+  background: var(--paper-grain), linear-gradient(160deg, #fffef9, #f4efe2);
+  transform: rotateY(180deg);
+}
+
+.card-front::before {
+  content: "";
+  position: absolute;
+  inset: 4%;
+  border: 1.5px solid rgb(120 100 70 / 0.25);
+  border-radius: 7%;
+  pointer-events: none;
+}
+
+.card-front img {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+}
+
+.card-front .flag {
+  width: 94%;
+  height: auto;
+  max-height: 100%;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.2), 0 2px 3px rgb(0 0 0 / 0.2);
+}
+
+.card-front.is-photo {
+  padding: 5%;
+}
+
+.card-front.is-photo img {
+  object-fit: cover;
+  border-radius: 6%;
+}
+
+.card-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: #3a3226;
+  font-size: clamp(7px, 12cqi, 18px);
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Shiny highlight that makes the card read as coated paper. */
+.card-face::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(125deg, rgb(255 255 255 / 0.35) 0%, rgb(255 255 255 / 0) 35%);
+  pointer-events: none;
+}
+
+.card-back {
+  place-items: center;
+}
+
+.card-back::before {
+  content: "";
+  width: 36%;
+  aspect-ratio: 1;
+  background: rgb(255 255 255 / 0.85);
+  -webkit-mask: var(--star-mark) center / contain no-repeat;
+  mask: var(--star-mark) center / contain no-repeat;
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.2));
+}
+
+/* ---------- Card backs ---------- */
+
+.back-classic {
+  background:
+    radial-gradient(circle at 50% 50%, #c92a3a 0 26%, transparent 27%),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.18) 0 3px, transparent 3px 11px),
+    repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.18) 0 3px, transparent 3px 11px),
+    #b3202f;
+  outline: 5px solid #fff;
+  outline-offset: -9px;
+}
+
+.back-wood {
+  background:
+    var(--paper-grain),
+    repeating-linear-gradient(92deg, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 9px),
+    repeating-radial-gradient(ellipse at 30% 120%, #b77a45 0 6px, #a86a38 6px 12px, #c08652 12px 16px),
+    #a86a38;
+  outline: 4px solid #6b4122;
+  outline-offset: -7px;
+}
+
+.back-galaxy {
+  background:
+    radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 70% 20%, #fff 0 1.2px, transparent 2px),
+    radial-gradient(circle at 80% 70%, #fff 0 1px, transparent 2px),
+    radial-gradient(circle at 35% 80%, #ffd66b 0 1.2px, transparent 2px),
+    radial-gradient(circle at 55% 45%, #fff 0 0.8px, transparent 1.5px),
+    radial-gradient(ellipse at 30% 30%, #7b4bd6 0%, transparent 55%),
+    radial-gradient(ellipse at 75% 75%, #2f6fd1 0%, transparent 55%),
+    #1a1440;
+  outline: 3px solid #ffd66b;
+  outline-offset: -8px;
+}
+
+.back-candy {
+  background:
+    repeating-linear-gradient(45deg, #ff8fc2 0 10px, #fff3f9 10px 20px);
+  outline: 5px solid #fff;
+  outline-offset: -9px;
+}
+
+.back-candy::before {
+  background: #ff5fa2;
+}
+
+/* ---------- Game states ---------- */
+
+.card.is-matched .card-front {
+  box-shadow:
+    0 0 0 3px #ffd23f,
+    0 0 18px rgb(255 210 63 / 0.8),
+    0 5px 8px rgb(0 0 0 / 0.35);
+}
+
+.card.is-matched .card-inner {
+  animation: match-pop 0.5s ease 0.1s;
+}
+
+.card.is-missed .card-inner {
+  animation: miss-shake 0.4s ease;
+}
+
+.card.is-free {
+  cursor: default;
+}
+
+.card.is-free .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card.is-free .card-front {
+  background: var(--paper-grain), radial-gradient(circle, #fff6c9, #ffd23f);
+}
+
+.card.is-free .card-front::before {
+  inset: 18%;
+  border: 0;
+  background: #f0a500;
+  -webkit-mask: var(--star-mark) center / contain no-repeat;
+  mask: var(--star-mark) center / contain no-repeat;
+}
+
+@keyframes match-pop {
+  0% { transform: rotateY(180deg) scale(1); }
+  40% { transform: rotateY(180deg) scale(1.1); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
+
+@keyframes miss-shake {
+  0%, 100% { transform: rotateY(180deg) translateX(0); }
+  25% { transform: rotateY(180deg) translateX(-5px); }
+  75% { transform: rotateY(180deg) translateX(5px); }
+}
+
+/* ---------- Win ---------- */
+
+.win-dialog {
+  width: min(92vw, 420px);
+  padding: 24px;
+  border: 4px solid var(--line);
+  border-radius: 28px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: center;
+  box-shadow: 0 8px 0 var(--line);
+}
+
+.win-dialog::backdrop {
+  background: rgb(20 12 40 / 0.55);
+}
+
+.win-dialog h2 {
+  margin: 8px 0;
+  font-size: 1.8rem;
+}
+
+.win-stars {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.win-stars span {
+  width: 56px;
+  height: 56px;
+  background: var(--star-off);
+  -webkit-mask: var(--star-mark) center / contain no-repeat;
+  mask: var(--star-mark) center / contain no-repeat;
+}
+
+.win-stars span.is-on {
+  background: var(--star);
+  animation: star-pop 0.5s ease backwards;
+}
+
+.win-stars span:nth-child(2) { animation-delay: 0.15s; }
+.win-stars span:nth-child(3) { animation-delay: 0.3s; }
+
+.win-detail,
+.win-best {
+  margin: 6px 0;
+  font-weight: 800;
+}
+
+.win-best {
+  color: var(--theme);
+}
+
+.win-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.play-again {
+  background: var(--theme);
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .theme-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table {
+    padding: 8px;
+  }
+
+  .zoom {
+    margin-left: 0;
+  }
+}
