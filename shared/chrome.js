@@ -2,6 +2,14 @@
 
 import { isFavorite, toggleFavorite } from './favorites.js';
 import { saveForOffline } from './offline.js';
+import { mountLanguagePicker, t, translatePage } from './i18n.js';
+
+// Translate the static page text and add the language menu. Call once each
+// page's own strings have been added.
+export function setupLanguage() {
+  translatePage();
+  mountLanguagePicker();
+}
 
 // Each page sets <html data-root="..."> to the relative path of the site root,
 // so the app works both at a domain root and under a sub-path (GitHub Pages).
@@ -29,9 +37,9 @@ export function registerServiceWorker(gameId) {
 export function renderFavoriteButton(button, gameId, title) {
   const favorite = isFavorite(gameId);
   button.setAttribute('aria-pressed', String(favorite));
-  let label = `Add ${title} to favorites`;
+  let label = t('common.favoriteAdd', { title });
   if (favorite) {
-    label = `Remove ${title} from favorites`;
+    label = t('common.favoriteRemove', { title });
   }
   button.setAttribute('aria-label', label);
   button.title = label;

@@ -13,7 +13,7 @@ test('every look has a name, cheers, a body and a face', () => {
       const info = MASCOT_INFO[character];
       assert.ok(info, `${character} has no drawing`);
       assert.ok(info.name);
-      assert.ok(info.cheers.length > 0);
+      assert.ok(info.cheers().length > 0);
       assert.match(info.svg(), /m-hand/, `${character} needs a hand for the dice to leave from`);
       assert.ok(info.face().length > 0);
     });

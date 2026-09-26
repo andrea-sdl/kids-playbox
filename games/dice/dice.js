@@ -1,4 +1,6 @@
-import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from '../../shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { t } from '../../shared/i18n.js';
+import './strings.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
 import { recordPlay, clearProgress } from '../../shared/progress.js';
 import {
@@ -26,6 +28,7 @@ const STORE_KEY = 'game:dice';
 const HISTORY_SHOWN = 10;
 
 registerServiceWorker(GAME_ID);
+setupLanguage();
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -237,11 +240,7 @@ function renderDice(values) {
 }
 
 function renderCount() {
-  let unit = 'dice';
-  if (state.count === 1) {
-    unit = 'die';
-  }
-  els.countValue.textContent = `${state.count} ${unit}`;
+  els.countValue.textContent = t('dice.count', { count: state.count });
   els.countMinus.disabled = rolling || state.count <= MIN_DICE;
   els.countPlus.disabled = rolling || state.count >= MAX_DICE;
 }
@@ -363,7 +362,7 @@ async function throwDice(values) {
 
 function describe(values) {
   if (values.length === 1) {
-    return `You rolled ${values[0]}.`;
+    return t('dice.youRolled', { value: values[0] });
   }
   return `${values.join(' + ')} = ${sum(values)}`;
 }
@@ -374,7 +373,7 @@ async function roll() {
   }
   rolling = true;
   els.roll.disabled = true;
-  els.roll.textContent = 'Rolling…';
+  els.roll.textContent = t('dice.rolling');
   renderCount();
   hideBubble();
   sounds.unlock();
@@ -387,7 +386,7 @@ async function roll() {
 
   state = addRoll(state, values, state.mascot, currentCharacter(state));
   save();
-  recordPlay(GAME_ID, `Last roll: ${total}`);
+  recordPlay(GAME_ID, { key: 'progress.dice', vars: { total } });
 
   els.total.textContent = String(total);
   els.total.classList.remove('is-new');
@@ -395,11 +394,11 @@ async function roll() {
   els.total.classList.add('is-new');
   let detail = describe(values);
   if (isBest) {
-    detail += ' New best!';
+    detail += ` ${t('dice.newBest')}`;
   }
   els.detail.textContent = detail;
 
-  showBubble(`${pick(MASCOT_INFO[currentCharacter(state)].cheers)} ${total}!`);
+  showBubble(`${pick(MASCOT_INFO[currentCharacter(state)].cheers())} ${total}!`);
   cheer();
   sounds.tada(state.mascot, isBest);
   if (navigator.vibrate) {
@@ -409,7 +408,7 @@ async function roll() {
   renderResults();
   rolling = false;
   els.roll.disabled = false;
-  els.roll.textContent = 'Roll!';
+  els.roll.textContent = t('dice.roll');
   renderCount();
 }
 
@@ -444,7 +443,7 @@ function renderResults() {
       <span class="face-track"><span class="face-fill"></span></span>
       <span class="face-count">${count}</span>`;
     item.querySelector('.face-fill').style.width = `${(count / most) * 100}%`;
-    item.setAttribute('aria-label', `${index + 1}: ${count} times`);
+    item.setAttribute('aria-label', t('dice.faceCount', { face: index + 1, count }));
     return item;
   });
   els.faceBars.replaceChildren(...bars);
@@ -455,7 +454,7 @@ let clearTimer = null;
 function onClear() {
   if (!els.clear.classList.contains('is-armed')) {
     els.clear.classList.add('is-armed');
-    els.clear.textContent = 'Tap again to clear';
+    els.clear.textContent = t('common.tapAgain');
     clearTimer = setTimeout(disarmClear, 3000);
     return;
   }
@@ -464,23 +463,23 @@ function onClear() {
   save();
   clearProgress(GAME_ID);
   els.total.textContent = '?';
-  els.detail.textContent = 'All clear! Roll again.';
+  els.detail.textContent = t('dice.allClear');
   renderResults();
 }
 
 function disarmClear() {
   clearTimeout(clearTimer);
   els.clear.classList.remove('is-armed');
-  els.clear.textContent = 'Clear';
+  els.clear.textContent = t('common.clear');
 }
 
 /* ---------- Sound toggle ---------- */
 
 function renderSound() {
   els.sound.setAttribute('aria-pressed', String(state.sound));
-  let label = 'Sound is off. Turn sound on';
+  let label = t('common.soundOff');
   if (state.sound) {
-    label = 'Sound is on. Turn sound off';
+    label = t('common.soundOn');
   }
   els.sound.setAttribute('aria-label', label);
   els.sound.title = label;
@@ -493,9 +492,9 @@ function renderSound() {
 
 function renderMusic() {
   els.music.setAttribute('aria-pressed', String(state.music));
-  let label = 'Music is off. Turn music on';
+  let label = t('dice.musicOff');
   if (state.music) {
-    label = 'Music is on. Turn music off';
+    label = t('dice.musicOn');
   }
   els.music.setAttribute('aria-label', label);
   els.music.title = label;
@@ -526,7 +525,7 @@ function allowAudio() {
 /* ---------- Start ---------- */
 
 els.favorite.innerHTML = STAR_SVG;
-setupFavoriteButton(els.favorite, GAME_ID, 'Dice Thrower');
+setupFavoriteButton(els.favorite, GAME_ID, t('game.dice.title'));
 
 els.roll.addEventListener('click', roll);
 els.mat.addEventListener('click', roll);
@@ -561,5 +560,5 @@ renderResults();
 const last = state.history[0];
 if (last) {
   els.total.textContent = String(last.total);
-  els.detail.textContent = `Last time: ${describe(last.values)}`;
+  els.detail.textContent = t('dice.lastTime', { roll: describe(last.values) });
 }

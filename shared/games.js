@@ -1,11 +1,10 @@
 // The list of games on the home page. Each game lives in its own folder
-// under games/<id>/ and is fully self-contained.
+// under games/<id>/ and is fully self-contained. Titles and blurbs are
+// translated: see game.<id>.title / game.<id>.blurb in shared/i18n.js.
 
 export const GAMES = [
   {
     id: 'dice',
-    title: 'Dice Thrower',
-    blurb: 'Pick a buddy and roll the dice!',
     path: 'games/dice/',
     color: '#ff7a59',
     icon: `
@@ -22,8 +21,6 @@ export const GAMES = [
   },
   {
     id: 'memory',
-    title: 'Memory',
-    blurb: 'Flip the cards and find the pairs!',
     path: 'games/memory/',
     color: '#3fa06a',
     icon: `
@@ -36,8 +33,6 @@ export const GAMES = [
   },
   {
     id: 'blocks',
-    title: 'Blocks',
-    blurb: 'Build anything you like in 3D!',
     path: 'games/blocks/',
     color: '#3490dc',
     icon: `

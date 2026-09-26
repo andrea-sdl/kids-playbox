@@ -5,6 +5,8 @@
 //   .m-hand  where the dice leave from
 //   .m-hat   hat or crown (bounces on cheer)
 
+import { t } from '../../shared/i18n.js';
+
 const OUTLINE = '#2b2140';
 
 // A rounded limb with an outline: a thick dark stroke under a colored one.
@@ -511,62 +513,82 @@ function spriteFace(id) {
 // Keyed by character (see CHARACTERS in logic.js).
 export const MASCOT_INFO = {
   princess: {
-    name: 'Princess',
-    cheers: ['Royal roll!', 'Sparkle power!', 'How magical!', 'Fit for a queen!'],
+    get name() {
+      return t('char.princess.name');
+    },
+    cheers: () => t('char.princess.cheers').split('|'),
     svg: () => frame('0 0 200 240', princess(), 124, 134),
     face: () => frame('50 10 100 100', princess(), 124, 134),
   },
   prince: {
-    name: 'Prince',
-    cheers: ['Royal roll!', 'Hear ye, hear ye!', 'By royal decree!', 'A noble number!'],
+    get name() {
+      return t('char.prince.name');
+    },
+    cheers: () => t('char.prince.cheers').split('|'),
     svg: () => frame('0 0 200 240', prince(), 120, 132),
     face: () => frame('45 18 110 110', prince(), 120, 132),
   },
   cowboy: {
-    name: 'Cowboy',
-    cheers: ['Yee-haw!', 'Nice throw, partner!', 'Rootin’ tootin’!', 'Giddy-up!'],
+    get name() {
+      return t('char.cowboy.name');
+    },
+    cheers: () => t('char.cowboy.cheers').split('|'),
     svg: () => frame('0 0 200 240', cowboy(), 120, 132),
     face: () => frame('45 18 110 110', cowboy(), 120, 132),
   },
   cowgirl: {
-    name: 'Cowgirl',
-    cheers: ['Yee-haw!', 'Nice throw, partner!', 'Ride ’em!', 'Howdy, lucky!'],
+    get name() {
+      return t('char.cowgirl.name');
+    },
+    cheers: () => t('char.cowgirl.cheers').split('|'),
     svg: () => frame('0 0 200 240', cowgirl(), 120, 132),
     face: () => frame('45 18 110 110', cowgirl(), 120, 132),
   },
   explorer: {
-    name: 'Explorer',
-    cheers: ['Treasure found!', 'What an adventure!', 'X marks the spot!', 'Great discovery!'],
+    get name() {
+      return t('char.explorer.name');
+    },
+    cheers: () => t('char.explorer.cheers').split('|'),
     svg: () => frame('0 0 200 240', explorer(), 120, 132),
     face: () => frame('45 18 110 110', explorer(), 120, 132),
   },
   adventurer: {
-    name: 'Adventurer',
-    cheers: ['Relic found!', 'Into the tomb!', 'Ancient luck!', 'Tomb treasure!'],
+    get name() {
+      return t('char.adventurer.name');
+    },
+    cheers: () => t('char.adventurer.cheers').split('|'),
     svg: () => frame('0 0 200 240', adventurer(), 120, 132),
     face: () => frame('45 30 110 110', adventurer(), 120, 132),
   },
   pixel: {
-    name: 'Pixel Boy',
-    cheers: ['Level up!', 'Critical roll!', '+1 XP!', 'Block party!'],
+    get name() {
+      return t('char.pixel.name');
+    },
+    cheers: () => t('char.pixel.cheers').split('|'),
     svg: () => frame('0 0 200 240', pixel('boy'), 144, 120, 'is-pixel'),
     face: () => frame('50 30 100 100', pixel('boy'), 144, 120, 'is-pixel'),
   },
   'pixel-girl': {
-    name: 'Pixel Girl',
-    cheers: ['Level up!', 'High score!', '+1 XP!', 'Power-up!'],
+    get name() {
+      return t('char.pixel-girl.name');
+    },
+    cheers: () => t('char.pixel-girl.cheers').split('|'),
     svg: () => frame('0 0 200 240', pixel('girl'), 144, 120, 'is-pixel'),
     face: () => frame('50 22 100 100', pixel('girl'), 144, 120, 'is-pixel'),
   },
   witch: {
-    name: 'Witch',
-    cheers: ['Abracadabra!', 'Hocus pocus!', 'Spell success!', 'Magic number!'],
+    get name() {
+      return t('char.witch.name');
+    },
+    cheers: () => t('char.witch.cheers').split('|'),
     svg: () => sprite('witch'),
     face: () => spriteFace('witch'),
   },
   wizard: {
-    name: 'Wizard',
-    cheers: ['Alakazam!', 'By my beard!', 'Arcane roll!', 'Wizardly!'],
+    get name() {
+      return t('char.wizard.name');
+    },
+    cheers: () => t('char.wizard.cheers').split('|'),
     svg: () => sprite('wizard'),
     face: () => spriteFace('wizard'),
   },

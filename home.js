@@ -2,10 +2,12 @@ import { GAMES } from './shared/games.js';
 import { getFavorites } from './shared/favorites.js';
 import { getProgress } from './shared/progress.js';
 import { readJSON, writeJSON } from './shared/store.js';
-import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from './shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from './shared/chrome.js';
+import { t } from './shared/i18n.js';
 import { offlineStatus, onUnmeteredConnection, saveForOffline } from './shared/offline.js';
 
 registerServiceWorker();
+setupLanguage();
 
 const grid = document.querySelector('.game-grid');
 const offlineBar = document.querySelector('.offline-bar');
@@ -24,15 +26,15 @@ if (filter !== 'favorites') {
 function progressText(gameId) {
   const progress = getProgress(gameId);
   if (progress.plays === 0) {
-    return 'Not played yet';
+    return t('home.notPlayed');
   }
-  let unit = 'times';
-  if (progress.plays === 1) {
-    unit = 'time';
-  }
-  let text = `Played ${progress.plays} ${unit}`;
-  if (progress.last) {
+  let text = t('home.played', { count: progress.plays });
+  // Older saves stored plain English text; newer ones a translatable summary.
+  if (typeof progress.last === 'string' && progress.last) {
     text += ` · ${progress.last}`;
+  }
+  if (typeof progress.last === 'object') {
+    text += ` · ${t(progress.last.key, progress.last.vars)}`;
   }
   return text;
 }
@@ -61,9 +63,11 @@ function createCard(game) {
     <span class="game-title"></span>
     <span class="game-blurb"></span>
     <span class="game-progress"></span>
-    <span class="game-offline" hidden>✓ Works offline</span>`;
-  link.querySelector('.game-title').textContent = game.title;
-  link.querySelector('.game-blurb').textContent = game.blurb;
+    <span class="game-offline" hidden></span>`;
+  const title = t(`game.${game.id}.title`);
+  link.querySelector('.game-title').textContent = title;
+  link.querySelector('.game-blurb').textContent = t(`game.${game.id}.blurb`);
+  link.querySelector('.game-offline').textContent = t('home.worksOffline');
   link.querySelector('.game-progress').textContent = progressText(game.id);
   item.dataset.id = game.id;
 
@@ -71,7 +75,7 @@ function createCard(game) {
   star.type = 'button';
   star.className = 'chunky-button icon-button star-button';
   star.innerHTML = STAR_SVG;
-  setupFavoriteButton(star, game.id, game.title, () => {
+  setupFavoriteButton(star, game.id, title, () => {
     // In the favorites view, removing a star should remove the card.
     if (filter === 'favorites') {
       render();
@@ -85,7 +89,7 @@ function createCard(game) {
 function createComingSoon() {
   const item = document.createElement('li');
   item.className = 'coming-soon';
-  item.textContent = 'More games coming soon!';
+  item.textContent = t('home.comingSoon');
   return item;
 }
 
@@ -129,11 +133,11 @@ function renderOffline() {
   const total = GAMES.length;
   const saved = GAMES.filter((game) => savedGames[game.id]).length;
   if (saved === total) {
-    offlineSummary.textContent = 'All games work offline.';
+    offlineSummary.textContent = t('home.allOffline');
     saveOfflineButton.hidden = true;
     return;
   }
-  offlineSummary.textContent = `${saved} of ${total} games work offline. Games are saved when you open them.`;
+  offlineSummary.textContent = t('home.someOffline', { saved, total });
   saveOfflineButton.hidden = false;
 }
 
@@ -149,18 +153,18 @@ async function refreshOffline() {
 
 async function saveAll() {
   saveOfflineButton.disabled = true;
-  saveOfflineButton.textContent = 'Saving…';
+  saveOfflineButton.textContent = t('home.saving');
   const status = await saveForOffline(GAMES.map((game) => game.id));
   saveOfflineButton.disabled = false;
-  saveOfflineButton.textContent = 'Save all games for offline';
+  saveOfflineButton.textContent = t('home.saveAll');
   if (!status) {
-    offlineSummary.textContent = 'Could not save right now. Try again when you are online.';
+    offlineSummary.textContent = t('home.saveFailed');
     return;
   }
   savedGames = status.games;
   renderOffline();
   if (status.failed && status.failed.length > 0) {
-    offlineSummary.textContent += ' Some games could not be saved. Try again when you are online.';
+    offlineSummary.textContent += ` ${t('home.someFailed')}`;
   }
 }
 

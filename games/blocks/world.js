@@ -10,15 +10,15 @@ export const MAX_BLOCKS = 3000;
 
 // size: [width along x, height, depth along z] in cells.
 export const SHAPES = [
-  { id: 'brick', name: 'Brick', size: [1, 1, 1], studs: true },
-  { id: 'long', name: 'Long', size: [2, 1, 1], studs: true },
-  { id: 'square', name: 'Square', size: [2, 1, 2], studs: true },
-  { id: 'plank', name: 'Plank', size: [4, 1, 1], studs: true },
-  { id: 'ramp', name: 'Ramp', size: [1, 1, 1], studs: false },
-  { id: 'round', name: 'Round', size: [1, 1, 1], studs: true },
-  { id: 'cone', name: 'Cone', size: [1, 1, 1], studs: false },
-  { id: 'arch', name: 'Arch', size: [2, 1, 1], studs: true },
-  { id: 'dome', name: 'Dome', size: [1, 1, 1], studs: false },
+  { id: 'brick', size: [1, 1, 1], studs: true },
+  { id: 'long', size: [2, 1, 1], studs: true },
+  { id: 'square', size: [2, 1, 2], studs: true },
+  { id: 'plank', size: [4, 1, 1], studs: true },
+  { id: 'ramp', size: [1, 1, 1], studs: false },
+  { id: 'round', size: [1, 1, 1], studs: true },
+  { id: 'cone', size: [1, 1, 1], studs: false },
+  { id: 'arch', size: [2, 1, 1], studs: true },
+  { id: 'dome', size: [1, 1, 1], studs: false },
 ];
 
 export const COLORS = [

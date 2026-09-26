@@ -1,4 +1,6 @@
-import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from '../../shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { t } from '../../shared/i18n.js';
+import './strings.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
 import { recordPlay } from '../../shared/progress.js';
 import { COLORS, SHAPES, TEXTURES, World, anchorFor, shapeById } from './world.js';
@@ -12,6 +14,7 @@ const TAP_DISTANCE = 8;
 const TAP_TIME_MS = 600;
 
 registerServiceWorker(GAME_ID);
+setupLanguage();
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -39,11 +42,7 @@ const els = {
 
 /* ---------- Saved state ---------- */
 
-const TOOLS = [
-  { id: 'build', label: 'Build' },
-  { id: 'paint', label: 'Paint' },
-  { id: 'remove', label: 'Remove' },
-];
+const TOOLS = ['build', 'paint', 'remove'];
 
 function loadSettings(raw) {
   const settings = {
@@ -53,7 +52,7 @@ function loadSettings(raw) {
   if (!raw || typeof raw !== 'object') {
     return settings;
   }
-  if (TOOLS.some((tool) => tool.id === raw.tool)) {
+  if (TOOLS.includes(raw.tool)) {
     settings.tool = raw.tool;
   }
   if (shapeById(raw.shape)) {
@@ -159,18 +158,20 @@ function radioButton(className, checked, label, onSelect) {
 
 function renderTools() {
   const buttons = TOOLS.map((tool) => {
-    const button = radioButton('', settings.tool === tool.id, tool.label, () => {
-      settings.tool = tool.id;
+    const label = t(`blocks.tool.${tool}`);
+    const button = radioButton('', settings.tool === tool, label, () => {
+      settings.tool = tool;
       save();
       renderDock();
       scene?.setGhost(null);
     });
-    button.textContent = tool.label;
+    button.textContent = label;
     return button;
   });
   els.tools.replaceChildren(...buttons);
 
-  const finishes = [['plain', 'Plain'], ['textured', 'Textured']].map(([id, label]) => {
+  const finishes = ['plain', 'textured'].map((id) => {
+    const label = t(`blocks.finish.${id}`);
     const button = radioButton('', settings.finish === id, label, () => {
       settings.finish = id;
       save();
@@ -184,7 +185,7 @@ function renderTools() {
 
 function renderShapes() {
   const buttons = SHAPES.map((shape) => {
-    const button = radioButton('shape-button', settings.shape === shape.id, shape.name, () => {
+    const button = radioButton('shape-button', settings.shape === shape.id, t(`blocks.shape.${shape.id}`), () => {
       settings.shape = shape.id;
       settings.tool = 'build';
       save();
@@ -198,7 +199,7 @@ function renderShapes() {
 
 function renderColors() {
   const buttons = COLORS.map((color) => {
-    const button = radioButton('swatch', settings.color === color, `Color ${color}`, () => {
+    const button = radioButton('swatch', settings.color === color, t('blocks.colorNamed', { hex: color }), () => {
       settings.color = color;
       save();
       renderDock();
@@ -208,8 +209,9 @@ function renderColors() {
   });
   const custom = document.createElement('label');
   custom.className = 'swatch custom-color';
-  custom.title = 'Pick any color';
-  custom.innerHTML = '<input type="color" aria-label="Pick any color">';
+  custom.title = t('blocks.anyColor');
+  custom.innerHTML = '<input type="color">';
+  custom.querySelector('input').setAttribute('aria-label', t('blocks.anyColor'));
   const input = custom.querySelector('input');
   input.value = settings.color;
   if (!COLORS.includes(settings.color)) {
@@ -227,7 +229,7 @@ function renderColors() {
 function renderTextures() {
   els.textures.hidden = settings.finish !== 'textured';
   const buttons = TEXTURES.map((texture) => {
-    const button = radioButton('swatch texture-swatch', settings.texture === texture, texture, () => {
+    const button = radioButton('swatch texture-swatch', settings.texture === texture, t(`blocks.texture.${texture}`), () => {
       settings.texture = texture;
       save();
       renderDock();
@@ -278,7 +280,7 @@ function noteBuilding() {
     return;
   }
   recordedThisVisit = true;
-  recordPlay(GAME_ID, 'Building');
+  recordPlay(GAME_ID, { key: 'progress.blocks', vars: {} });
 }
 
 function addBlock(block, { animate = true } = {}) {
@@ -366,7 +368,7 @@ let clearTimer = null;
 function onClear() {
   if (!els.clear.classList.contains('is-armed')) {
     els.clear.classList.add('is-armed');
-    els.clear.textContent = 'Tap again';
+    els.clear.textContent = t('blocks.tapAgain');
     clearTimer = setTimeout(disarmClear, 3000);
     return;
   }
@@ -381,7 +383,7 @@ function onClear() {
 function disarmClear() {
   clearTimeout(clearTimer);
   els.clear.classList.remove('is-armed');
-  els.clear.textContent = 'Clear';
+  els.clear.textContent = t('common.clear');
 }
 
 /* ---------- Pointer: tap acts, drag looks around ---------- */
@@ -439,26 +441,26 @@ function setupPointer(canvas) {
 
 /* ---------- Time of day ---------- */
 
-function hourName(hour) {
+function partOfDay(hour) {
   if (hour >= 5 && hour < 7) {
-    return 'Sunrise';
+    return 'sunrise';
   }
   if (hour >= 7 && hour < 11) {
-    return 'Morning';
+    return 'morning';
   }
   if (hour >= 11 && hour < 14) {
-    return 'Noon';
+    return 'noon';
   }
   if (hour >= 14 && hour < 17) {
-    return 'Afternoon';
+    return 'afternoon';
   }
   if (hour >= 17 && hour < 19.5) {
-    return 'Sunset';
+    return 'sunset';
   }
   if (hour >= 19.5 && hour < 21) {
-    return 'Evening';
+    return 'evening';
   }
-  return 'Night';
+  return 'night';
 }
 
 function clockHour() {
@@ -473,14 +475,15 @@ function renderTime() {
   const hour = settings.hour;
   const whole = Math.floor(hour) % 24;
   const minutes = String(Math.round((hour - Math.floor(hour)) * 60) % 60).padStart(2, '0');
-  els.timeText.textContent = `${whole}:${minutes} · ${hourName(hour)}`;
+  els.timeText.textContent = `${whole}:${minutes} · ${t(`blocks.time.${partOfDay(hour)}`)}`;
   els.timeSlider.value = String(hour);
   els.clock.checked = settings.followClock;
   let icon = '#ffd23f';
-  if (hourName(hour) === 'Night' || hourName(hour) === 'Evening') {
+  const part = partOfDay(hour);
+  if (part === 'night' || part === 'evening') {
     icon = '#dfe7ff';
   }
-  if (hourName(hour) === 'Sunset' || hourName(hour) === 'Sunrise') {
+  if (part === 'sunset' || part === 'sunrise') {
     icon = '#ff8a3d';
   }
   els.timePanel.style.setProperty('--time-icon', icon);
@@ -510,9 +513,9 @@ setInterval(() => {
 
 function renderSound() {
   els.sound.setAttribute('aria-pressed', String(settings.sound));
-  let label = 'Sound is off. Turn sound on';
+  let label = t('common.soundOff');
   if (settings.sound) {
-    label = 'Sound is on. Turn sound off';
+    label = t('common.soundOn');
   }
   els.sound.setAttribute('aria-label', label);
   els.sound.title = label;
@@ -554,7 +557,7 @@ document.addEventListener('keydown', (event) => {
 });
 
 els.favorite.innerHTML = STAR_SVG;
-setupFavoriteButton(els.favorite, GAME_ID, 'Blocks');
+setupFavoriteButton(els.favorite, GAME_ID, t('game.blocks.title'));
 
 /* ---------- Start ---------- */
 
@@ -572,5 +575,5 @@ try {
   renderTime();
   setupPointer(scene.canvas);
 } catch {
-  els.loading.textContent = 'This device can’t show 3D right now. Try another browser.';
+  els.loading.textContent = t('blocks.noWebgl');
 }

@@ -40,6 +40,14 @@ Uses Node's built-in test runner (Node 20+). The tests cover the dice logic, sav
 
 All saved data lives in the browser's `localStorage` under keys starting with `playbox:`.
 
+## Languages
+
+English, Italian, Spanish, Brazilian Portuguese and German. The app picks the device language the first time and remembers the choice from the language menu (home page and every page footer).
+
+- Shared texts live in `shared/i18n.js`; each game has its own `strings.js` (Memory's also holds every card name and fun fact).
+- In HTML, `data-i18n="key"` sets text, `data-i18n-attr="aria-label:key"` sets attributes. In code, use `t('key', { vars })`. Texts with `{ one, other }` pick the right plural.
+- Tests fail if a language misses a text or a `{placeholder}`, or if a game, shape, card or buddy has no name.
+
 ## Offline and download size
 
 Everything works offline, but the app doesn't download every game up front:

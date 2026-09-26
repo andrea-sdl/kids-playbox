@@ -15,6 +15,7 @@
     "./shared/chrome.js",
     "./shared/favorites.js",
     "./shared/games.js",
+    "./shared/i18n.js",
     "./shared/offline.js",
     "./shared/progress.js",
     "./shared/store.js"
@@ -36,6 +37,7 @@
       "./games/blocks/scene.js",
       "./games/blocks/shapes.js",
       "./games/blocks/sound.js",
+      "./games/blocks/strings.js",
       "./games/blocks/world.js",
       "./vendor/three/LICENSE",
       "./vendor/three/three.min.js"
@@ -69,7 +71,8 @@
       "./games/dice/mascots.js",
       "./games/dice/music.js",
       "./games/dice/songs.js",
-      "./games/dice/sound.js"
+      "./games/dice/sound.js",
+      "./games/dice/strings.js"
     ],
     "memory": [
       "./games/memory/",
@@ -134,6 +137,7 @@
       "./games/memory/memory.js",
       "./games/memory/photos.js",
       "./games/memory/sound.js",
+      "./games/memory/strings.js",
       "./games/memory/themes.js"
     ]
   }

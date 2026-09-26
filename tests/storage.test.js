@@ -39,10 +39,22 @@ test('progress counts plays and keeps the last summary', () => {
   const storage = memoryStorage();
   assert.deepEqual(getProgress('dice', storage), { plays: 0, lastPlayed: null, last: '' });
 
-  recordPlay('dice', 'Last roll: 7', storage, 1000);
-  recordPlay('dice', 'Last roll: 9', storage, 2000);
-  assert.deepEqual(getProgress('dice', storage), { plays: 2, lastPlayed: 2000, last: 'Last roll: 9' });
+  recordPlay('dice', { key: 'progress.dice', vars: { total: 7 } }, storage, 1000);
+  recordPlay('dice', { key: 'progress.dice', vars: { total: 9 } }, storage, 2000);
+  assert.deepEqual(getProgress('dice', storage), { plays: 2, lastPlayed: 2000, last: { key: 'progress.dice', vars: { total: 9 } } });
 
   clearProgress('dice', storage);
   assert.equal(getProgress('dice', storage).plays, 0);
+});
+
+test('English summaries saved by older versions become translatable', () => {
+  const storage = memoryStorage();
+  const load = (last) => {
+    storage.setItem('playbox:progress:dice', JSON.stringify({ plays: 3, lastPlayed: 5, last }));
+    return getProgress('dice', storage).last;
+  };
+  assert.deepEqual(load('Last roll: 7'), { key: 'progress.dice', vars: { total: 7 } });
+  assert.deepEqual(load('Won 6×6 in 25 moves'), { key: 'progress.memory', vars: { size: 6, moves: 25 } });
+  assert.deepEqual(load('Building'), { key: 'progress.blocks', vars: {} });
+  assert.equal(load('Something else'), 'Something else', 'unknown text is shown as it was');
 });

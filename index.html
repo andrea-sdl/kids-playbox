@@ -22,28 +22,32 @@
       <img src="icons/icon.svg" alt="" width="44" height="44">
       <h1>Playbox</h1>
     </a>
+    <div class="lang-slot"></div>
   </header>
 
   <main>
-    <p class="hello">Pick a game. Tap the <span class="inline-star" aria-hidden="true">★</span> to keep your best ones at the top.</p>
+    <p class="hello" data-i18n-html="home.hello">Pick a game. Tap the <span class="inline-star" aria-hidden="true">★</span> to keep your best ones at the top.</p>
 
-    <div class="filters" role="group" aria-label="Show games">
-      <button class="chunky-button filter" type="button" data-filter="all" aria-pressed="true">All games</button>
-      <button class="chunky-button filter" type="button" data-filter="favorites" aria-pressed="false">★ Favorites</button>
+    <div class="filters" role="group" aria-label="Show games" data-i18n-attr="aria-label:home.showGames">
+      <button class="chunky-button filter" type="button" data-filter="all" aria-pressed="true" data-i18n="home.all">All games</button>
+      <button class="chunky-button filter" type="button" data-filter="favorites" aria-pressed="false" data-i18n="home.favorites">★ Favorites</button>
     </div>
 
     <ul class="game-grid" aria-live="polite"></ul>
-    <p class="empty-favorites" hidden>No favorites yet. Tap a star to add one!</p>
+    <p class="empty-favorites" hidden data-i18n="home.noFavorites">No favorites yet. Tap a star to add one!</p>
 
     <section class="offline-bar" hidden>
       <p class="offline-summary"></p>
-      <button class="chunky-button save-offline" type="button">Save all games for offline</button>
+      <button class="chunky-button save-offline" type="button" data-i18n="home.saveAll">Save all games for offline</button>
     </section>
   </main>
 
   <footer class="site-footer">
-    Brought to you by Andrea Grassi,
-    <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    <p>
+      <span data-i18n="common.footer">Brought to you by Andrea Grassi,</span>
+      <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    </p>
+    <div class="lang-slot"></div>
   </footer>
 </body>
 </html>

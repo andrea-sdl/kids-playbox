@@ -2,9 +2,27 @@ import { readJSON, writeJSON } from './store.js';
 
 // A tiny, game-agnostic record the home page can show on each card.
 // Games keep their own detailed results under their own key.
+// `last` is a translatable summary { key, vars }. Older saves stored plain
+// English text, which is still shown as is.
 
 function key(gameId) {
   return `progress:${gameId}`;
+}
+
+// Summaries saved as English text before translations existed.
+function fromOldText(text) {
+  let match = /^Last roll: (\d+)$/.exec(text);
+  if (match) {
+    return { key: 'progress.dice', vars: { total: Number(match[1]) } };
+  }
+  match = /^Won (\d+)×\d+ in (\d+) moves$/.exec(text);
+  if (match) {
+    return { key: 'progress.memory', vars: { size: Number(match[1]), moves: Number(match[2]) } };
+  }
+  if (text === 'Building') {
+    return { key: 'progress.blocks', vars: {} };
+  }
+  return text;
 }
 
 export function getProgress(gameId, storage) {
@@ -20,7 +38,14 @@ export function getProgress(gameId, storage) {
     progress.lastPlayed = raw.lastPlayed;
   }
   if (typeof raw.last === 'string') {
-    progress.last = raw.last;
+    progress.last = fromOldText(raw.last);
+  }
+  if (raw.last && typeof raw.last === 'object' && typeof raw.last.key === 'string') {
+    let vars = {};
+    if (raw.last.vars && typeof raw.last.vars === 'object') {
+      vars = raw.last.vars;
+    }
+    progress.last = { key: raw.last.key, vars };
   }
   return progress;
 }

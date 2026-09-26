@@ -198,6 +198,41 @@ button {
   color: var(--ink-soft);
 }
 
+.site-footer p {
+  margin: 0 0 10px;
+}
+
+.lang-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 10px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 3px 0 var(--line);
+}
+
+.lang-picker svg {
+  width: 20px;
+  height: 20px;
+}
+
+.lang-picker select {
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.topbar .lang-slot {
+  margin-left: auto;
+}
+
 .site-footer a {
   color: var(--ink);
   font-weight: 800;

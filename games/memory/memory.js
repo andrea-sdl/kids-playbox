@@ -1,4 +1,5 @@
-import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from '../../shared/chrome.js';
+import { registerServiceWorker, setupFavoriteButton, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { t } from '../../shared/i18n.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
 import { recordPlay } from '../../shared/progress.js';
 import {
@@ -25,6 +26,7 @@ const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 3;
 
 registerServiceWorker(GAME_ID);
+setupLanguage();
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -80,7 +82,7 @@ function save() {
 
 function themeItems(theme) {
   if (theme === 'photos') {
-    return photos.map((photo, i) => ({ key: photo.id, name: `Photo ${i + 1}`, image: photo.url, isPhoto: true }));
+    return photos.map((photo, i) => ({ key: photo.id, name: t('memory.photoName', { number: i + 1 }), image: photo.url, isPhoto: true }));
   }
   return THEME_INFO[theme].items;
 }
@@ -141,7 +143,7 @@ function renderSizes() {
       'size',
       size,
       settings.size === size,
-      `<span>${size}×${size}</span><small>${pairsFor(size)} pairs</small>`,
+      `<span>${size}×${size}</span><small>${t('memory.pairsCount', { count: pairsFor(size) })}</small>`,
       (value) => {
         settings.size = value;
         save();
@@ -155,12 +157,11 @@ function renderSizes() {
 }
 
 function renderBacks() {
-  const labels = { classic: 'Classic', wood: 'Wood', galaxy: 'Galaxy', candy: 'Candy' };
   const options = CARD_BACKS.map((back) => radioOption(
     'back',
     back,
     settings.back === back,
-    `<span class="back-swatch back-${back}"></span><span>${labels[back]}</span>`,
+    `<span class="back-swatch back-${back}"></span><span>${t(`memory.back.${back}`)}</span>`,
     (value) => {
       settings.back = value;
       save();
@@ -190,21 +191,18 @@ function renderPhotos() {
   }
   const count = photos.length;
   const needed = pairsFor(SIZES[0]);
-  let unit = 'photos';
-  if (count === 1) {
-    unit = 'photo';
-  }
-  let text = `${count} ${unit}.`;
+  let text = t('memory.photoCount', { count });
   if (count < needed) {
-    text += ` Add ${needed - count} more to play.`;
+    text += ` ${t('memory.addMore', { count: needed - count })}`;
   } else {
     const biggest = SIZES.filter((size) => pairsFor(size) <= count).pop();
-    text += ` Enough for ${biggest}×${biggest}.`;
+    text += ` ${t('memory.enoughFor', { size: biggest })}`;
   }
   els.photoCount.textContent = text;
   const items = photos.map((photo) => {
     const item = document.createElement('li');
-    item.innerHTML = `<img src="${photo.url}" alt=""><button type="button" aria-label="Remove photo">×</button>`;
+    item.innerHTML = `<img src="${photo.url}" alt=""><button type="button">×</button>`;
+    item.querySelector('button').setAttribute('aria-label', t('memory.removePhoto'));
     item.querySelector('button').addEventListener('click', async () => {
       await deletePhoto(photo.id);
       await loadPhotos();
@@ -218,10 +216,10 @@ function renderPhotos() {
 function renderBest() {
   const best = records[recordKey(settings.theme, settings.size)];
   if (!best) {
-    els.bestLine.textContent = 'No record yet for these cards. Can you set one?';
+    els.bestLine.textContent = t('memory.noRecord');
     return;
   }
-  els.bestLine.textContent = `Your best: ${best.moves} moves in ${formatTime(best.seconds)}.`;
+  els.bestLine.textContent = t('memory.best', { moves: best.moves, time: formatTime(best.seconds) });
 }
 
 function renderSetup() {
@@ -247,7 +245,7 @@ els.photoInput.addEventListener('change', async () => {
   if (files.length === 0) {
     return;
   }
-  els.photoCount.textContent = 'Adding photos…';
+  els.photoCount.textContent = t('memory.adding');
   await addPhotos(files);
   await loadPhotos();
   renderSetup();
@@ -257,12 +255,12 @@ els.photoInput.addEventListener('change', async () => {
 
 function cardLabel(card, index) {
   if (card.free) {
-    return 'Free star card';
+    return t('memory.freeCard');
   }
   if (card.el.classList.contains('is-flipped') || card.el.classList.contains('is-matched')) {
     return card.item.name;
   }
-  return `Card ${index + 1}, face down`;
+  return t('memory.faceDown', { number: index + 1 });
 }
 
 function createCard(card, index) {
@@ -343,7 +341,7 @@ function startGame() {
   };
   els.board.style.setProperty('--size', game.size);
   els.board.replaceChildren(...game.cards.map(createCard));
-  els.fact.textContent = 'Find the pairs!';
+  els.fact.textContent = t('memory.findPairs');
   els.setup.hidden = true;
   els.play.hidden = false;
   window.scrollTo(0, 0);
@@ -364,12 +362,12 @@ function renderHud() {
 }
 
 function showFact(item) {
-  let text = `${item.name}!`;
+  let text = t('memory.named', { name: item.name });
   if (item.fact) {
-    text = `${item.name}: ${item.fact}`;
+    text = t('memory.withFact', { name: item.name, fact: item.fact });
   }
   if (item.isPhoto) {
-    text = 'A match!';
+    text = t('memory.match');
   }
   els.fact.textContent = text;
   els.fact.classList.remove('is-new');
@@ -441,7 +439,7 @@ function finish() {
     records[key] = result;
     save();
   }
-  recordPlay(GAME_ID, `Won ${game.size}×${game.size} in ${game.moves} moves`);
+  recordPlay(GAME_ID, { key: 'progress.memory', vars: { size: game.size, moves: game.moves } });
 
   const stars = starsFor(game.moves, game.pairs);
   els.winStars.replaceChildren(...[1, 2, 3].map((n) => {
@@ -451,10 +449,10 @@ function finish() {
     }
     return star;
   }));
-  els.winDetail.textContent = `${game.moves} moves in ${formatTime(seconds)}`;
+  els.winDetail.textContent = t('memory.winDetail', { moves: game.moves, time: formatTime(seconds) });
   els.winBest.textContent = '';
   if (isBest) {
-    els.winBest.textContent = 'New record!';
+    els.winBest.textContent = t('memory.newRecord');
   }
   sounds.win();
   els.win.showModal();
@@ -562,9 +560,9 @@ function backToSetup() {
 
 function renderSound() {
   els.sound.setAttribute('aria-pressed', String(settings.sound));
-  let label = 'Sound is off. Turn sound on';
+  let label = t('common.soundOff');
   if (settings.sound) {
-    label = 'Sound is on. Turn sound off';
+    label = t('common.soundOn');
   }
   els.sound.setAttribute('aria-label', label);
   els.sound.title = label;
@@ -589,7 +587,7 @@ els.sound.addEventListener('click', () => {
 });
 
 els.favorite.innerHTML = STAR_SVG;
-setupFavoriteButton(els.favorite, GAME_ID, 'Memory');
+setupFavoriteButton(els.favorite, GAME_ID, t('game.memory.title'));
 
 renderSound();
 renderSetup();

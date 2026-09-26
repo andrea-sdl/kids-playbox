@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Dice Thrower · Playbox</title>
+  <title data-i18n="dice.pageTitle">Dice Thrower · Playbox</title>
   <meta name="description" content="Pick a buddy and roll the dice. Works offline.">
   <meta name="theme-color" content="#ff7a59">
   <link rel="manifest" href="../../manifest.webmanifest">
@@ -18,15 +18,15 @@
 </head>
 <body data-mascot="princess">
   <header class="topbar">
-    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games" data-i18n-attr="aria-label:common.back title:common.allGames">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
-    <h1>Dice Thrower</h1>
-    <button class="chunky-button icon-button music-button" type="button" aria-pressed="true" aria-label="Music">
+    <h1 data-i18n="game.dice.title">Dice Thrower</h1>
+    <button class="chunky-button icon-button music-button" type="button" aria-pressed="true" aria-label="Music" data-i18n-attr="aria-label:dice.music">
       <svg class="music-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor"/></svg>
       <svg class="music-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".45"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor" opacity=".45"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor" opacity=".45"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
     </button>
-    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound">
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound" data-i18n-attr="aria-label:common.sound">
       <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
     </button>
@@ -35,60 +35,63 @@
 
   <main>
     <fieldset class="picker">
-      <legend>Choose your buddy</legend>
+      <legend data-i18n="dice.chooseBuddy">Choose your buddy</legend>
       <div class="picker-options"></div>
     </fieldset>
 
-    <section class="stage" aria-label="Dice table">
+    <section class="stage" aria-label="Dice table" data-i18n-attr="aria-label:dice.table">
       <div class="scene" aria-hidden="true"></div>
-      <div class="look-switch" role="group" aria-label="Choose a look"></div>
+      <div class="look-switch" role="group" aria-label="Choose a look" data-i18n-attr="aria-label:dice.chooseLook"></div>
       <div class="buddy">
         <div class="bubble" aria-hidden="true"></div>
         <div class="mascot" aria-hidden="true"></div>
       </div>
-      <button class="mat" type="button" aria-label="Roll the dice">
+      <button class="mat" type="button" aria-label="Roll the dice" data-i18n-attr="aria-label:dice.rollTheDice">
         <span class="dice-tray"></span>
       </button>
     </section>
 
     <p class="result" aria-live="polite">
       <span class="result-total">?</span>
-      <span class="result-detail">Tap Roll to throw the dice!</span>
+      <span class="result-detail" data-i18n="dice.start">Tap Roll to throw the dice!</span>
     </p>
 
     <div class="controls">
-      <div class="count-control" role="group" aria-label="How many dice">
-        <button class="chunky-button icon-button count-minus" type="button" aria-label="One less die">
+      <div class="count-control" role="group" aria-label="How many dice" data-i18n-attr="aria-label:dice.howMany">
+        <button class="chunky-button icon-button count-minus" type="button" aria-label="One less die" data-i18n-attr="aria-label:dice.oneLess">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
         </button>
         <output class="count-value" aria-live="polite">2 dice</output>
-        <button class="chunky-button icon-button count-plus" type="button" aria-label="One more die">
+        <button class="chunky-button icon-button count-plus" type="button" aria-label="One more die" data-i18n-attr="aria-label:dice.oneMore">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
         </button>
       </div>
-      <button class="chunky-button roll-button" type="button">Roll!</button>
+      <button class="chunky-button roll-button" type="button" data-i18n="dice.roll">Roll!</button>
     </div>
 
     <section class="results-panel" aria-labelledby="results-title">
       <div class="results-head">
-        <h2 id="results-title">Your rolls</h2>
-        <button class="chunky-button clear-button" type="button">Clear</button>
+        <h2 id="results-title" data-i18n="dice.yourRolls">Your rolls</h2>
+        <button class="chunky-button clear-button" type="button" data-i18n="common.clear">Clear</button>
       </div>
       <dl class="stats">
-        <div><dt>Rolls</dt><dd class="stat-rolls">0</dd></div>
-        <div><dt>Best total</dt><dd class="stat-best">–</dd></div>
+        <div><dt data-i18n="dice.rolls">Rolls</dt><dd class="stat-rolls">0</dd></div>
+        <div><dt data-i18n="dice.bestTotal">Best total</dt><dd class="stat-best">–</dd></div>
       </dl>
-      <h3>Last rolls</h3>
+      <h3 data-i18n="dice.lastRolls">Last rolls</h3>
       <ol class="history"></ol>
-      <p class="history-empty">No rolls yet.</p>
-      <h3>How often each number came up</h3>
+      <p class="history-empty" data-i18n="dice.noRolls">No rolls yet.</p>
+      <h3 data-i18n="dice.howOften">How often each number came up</h3>
       <ul class="face-bars"></ul>
     </section>
   </main>
 
   <footer class="site-footer">
-    Brought to you by Andrea Grassi,
-    <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    <p>
+      <span data-i18n="common.footer">Brought to you by Andrea Grassi,</span>
+      <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    </p>
+    <div class="lang-slot"></div>
   </footer>
 </body>
 </html>
