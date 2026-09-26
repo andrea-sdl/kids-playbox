@@ -75,6 +75,7 @@ test('saved state survives a round trip through JSON', () => {
   let state = emptyState();
   state.mascot = 'explorer';
   state.count = 4;
+  state.music = false;
   state = addRoll(state, [2, 4, 6, 1], 'explorer', 5);
   assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(state))), state);
 });
@@ -87,12 +88,14 @@ test('bad saved data falls back to safe defaults', () => {
     mascot: 'dragon',
     count: 99,
     sound: 'loud',
+    music: 'yes please',
     history: [{ values: [7, 3, 'x'] }, null, { values: [] }],
     stats: { rolls: -1, best: 'big', faces: [1, 2] },
   });
   assert.equal(state.mascot, 'princess');
   assert.equal(state.count, 6);
   assert.equal(state.sound, true);
+  assert.equal(state.music, true);
   assert.deepEqual(state.history.map((roll) => roll.values), [[3]]);
   assert.deepEqual(state.stats, emptyState().stats);
 });
@@ -102,11 +105,13 @@ test('clearing results keeps mascot and settings', () => {
   state.mascot = 'pixel';
   state.count = 3;
   state.sound = false;
+  state.music = false;
   state = addRoll(state, [4, 4, 4], 'pixel', 1);
   const cleared = clearResults(state);
   assert.equal(cleared.mascot, 'pixel');
   assert.equal(cleared.count, 3);
   assert.equal(cleared.sound, false);
+  assert.equal(cleared.music, false);
   assert.equal(cleared.history.length, 0);
   assert.equal(cleared.stats.rolls, 0);
 });

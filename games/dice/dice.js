@@ -17,6 +17,7 @@ import {
 } from './logic.js';
 import { MASCOT_INFO } from './mascots.js';
 import { createSounds } from './sound.js';
+import { createMusic } from './music.js';
 
 const GAME_ID = 'dice';
 const STORE_KEY = 'game:dice';
@@ -39,6 +40,7 @@ const els = {
   countValue: $('.count-value'),
   roll: $('.roll-button'),
   sound: $('.sound-button'),
+  music: $('.music-button'),
   favorite: $('.favorite-button'),
   clear: $('.clear-button'),
   statRolls: $('.stat-rolls'),
@@ -51,6 +53,9 @@ const els = {
 let state = normalizeState(readJSON(STORE_KEY, null));
 let rolling = false;
 const sounds = createSounds();
+const music = createMusic();
+// Browsers block audio until the first tap or key press.
+let audioAllowed = false;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 function save() {
@@ -99,6 +104,7 @@ function chooseMascot(id) {
   renderMascot();
   hideBubble();
   sounds.select(id);
+  syncMusic();
   cheer();
 }
 
@@ -446,6 +452,40 @@ function renderSound() {
   sounds.setEnabled(state.sound);
 }
 
+/* ---------- Music toggle ---------- */
+
+function renderMusic() {
+  els.music.setAttribute('aria-pressed', String(state.music));
+  let label = 'Music is off. Turn music on';
+  if (state.music) {
+    label = 'Music is on. Turn music off';
+  }
+  els.music.setAttribute('aria-label', label);
+  els.music.title = label;
+  els.music.querySelector('.music-on').toggleAttribute('hidden', !state.music);
+  els.music.querySelector('.music-off').toggleAttribute('hidden', state.music);
+}
+
+// Play the current mascot's tune when music is on and the page is visible.
+function syncMusic() {
+  if (!audioAllowed) {
+    return;
+  }
+  if (state.music && document.visibilityState === 'visible') {
+    music.play(state.mascot);
+    return;
+  }
+  music.stop();
+}
+
+function allowAudio() {
+  if (audioAllowed) {
+    return;
+  }
+  audioAllowed = true;
+  syncMusic();
+}
+
 /* ---------- Start ---------- */
 
 els.favorite.innerHTML = STAR_SVG;
@@ -463,11 +503,21 @@ els.sound.addEventListener('click', () => {
   sounds.unlock();
   sounds.tick();
 });
+els.music.addEventListener('click', () => {
+  state.music = !state.music;
+  save();
+  renderMusic();
+  syncMusic();
+});
+document.addEventListener('click', allowAudio);
+document.addEventListener('keydown', allowAudio);
+document.addEventListener('visibilitychange', syncMusic);
 
 renderPicker();
 renderMascot();
 renderCount();
 renderSound();
+renderMusic();
 renderDice(currentValues());
 renderResults();
 

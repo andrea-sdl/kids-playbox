@@ -1,6 +1,8 @@
 // All sounds are made on the fly with the Web Audio API, so there are no
 // audio files to download and everything works offline.
 
+import { getAudioContext, getNoiseBuffer } from './audio.js';
+
 const TUNES = {
   princess: { wave: 'sine', notes: [784, 988, 1175, 1568] },
   cowboy: { wave: 'triangle', notes: [392, 494, 587, 784] },
@@ -9,37 +11,13 @@ const TUNES = {
 };
 
 export function createSounds() {
-  let context = null;
   let enabled = true;
-  let noise = null;
 
   function ready() {
     if (!enabled) {
       return null;
     }
-    if (!context) {
-      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-      if (!AudioContextClass) {
-        return null;
-      }
-      context = new AudioContextClass();
-    }
-    if (context.state === 'suspended') {
-      context.resume();
-    }
-    return context;
-  }
-
-  function noiseBuffer(ctx) {
-    if (noise) {
-      return noise;
-    }
-    noise = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate);
-    const data = noise.getChannelData(0);
-    for (let i = 0; i < data.length; i += 1) {
-      data[i] = Math.random() * 2 - 1;
-    }
-    return noise;
+    return getAudioContext();
   }
 
   function burst({ at = 0, length = 0.05, frequency = 2500, q = 3, volume = 0.5 }) {
@@ -49,7 +27,7 @@ export function createSounds() {
     }
     const start = ctx.currentTime + at;
     const source = ctx.createBufferSource();
-    source.buffer = noiseBuffer(ctx);
+    source.buffer = getNoiseBuffer(ctx);
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
     filter.frequency.value = frequency;
@@ -86,7 +64,7 @@ export function createSounds() {
     },
     // Browsers only allow audio after a tap; call this from a click handler.
     unlock() {
-      ready();
+      getAudioContext();
     },
     tick() {
       burst({ length: 0.03, frequency: 3200, volume: 0.25 });
@@ -98,7 +76,7 @@ export function createSounds() {
       }
       const start = ctx.currentTime;
       const source = ctx.createBufferSource();
-      source.buffer = noiseBuffer(ctx);
+      source.buffer = getNoiseBuffer(ctx);
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
       filter.Q.value = 1.2;

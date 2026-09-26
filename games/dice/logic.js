@@ -64,6 +64,7 @@ export function emptyState() {
     mascot: MASCOTS[0],
     count: 2,
     sound: true,
+    music: true,
     history: [],
     stats: { rolls: 0, best: 0, faces: [0, 0, 0, 0, 0, 0] },
   };
@@ -107,6 +108,9 @@ export function normalizeState(raw) {
   }
   if (typeof raw.sound === 'boolean') {
     state.sound = raw.sound;
+  }
+  if (typeof raw.music === 'boolean') {
+    state.music = raw.music;
   }
   if (Array.isArray(raw.history)) {
     state.history = raw.history.map(normalizeRoll).filter(Boolean).slice(0, HISTORY_LIMIT);

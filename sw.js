@@ -1,7 +1,7 @@
 // Service worker: stores every file the app needs so it runs fully offline.
 // Bump VERSION when adding or removing files, so old caches are cleared.
 
-const VERSION = 'playbox-v1';
+const VERSION = 'playbox-v2';
 
 const FILES = [
   './',
@@ -27,6 +27,9 @@ const FILES = [
   './games/dice/logic.js',
   './games/dice/mascots.js',
   './games/dice/sound.js',
+  './games/dice/audio.js',
+  './games/dice/music.js',
+  './games/dice/songs.js',
   './games/dice/art/bg-princess.webp',
   './games/dice/art/bg-cowboy.webp',
   './games/dice/art/bg-explorer.webp',
