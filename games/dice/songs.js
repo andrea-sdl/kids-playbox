@@ -224,4 +224,37 @@ const pixel = {
   ],
 };
 
-export const SONGS = { princess, cowboy, explorer, pixel };
+/* ---------------- Mage: mysterious celesta in A minor, 6/8 ---------------- */
+// Steps are eighth notes: 6 per bar (two beats of three), 8 bars.
+
+const mage = {
+  bpm: 62,
+  stepsPerBeat: 3,
+  stepsPerBar: 6,
+  tracks: [
+    {
+      instrument: 'celesta',
+      volume: 1,
+      notes: `
+        A5 - C6 B5 - A5 | C6 - A5 F5 - A5 | D6 - F6 E6 - D6 | B5 - - G#5 - . |
+        E6 - D6 C6 - B5 | A5 - C6 F6 - E6 | D6 - C6 B5 - G#5 | A5 - - - - . `,
+    },
+    {
+      instrument: 'marimba',
+      volume: 0.45,
+      notes: `
+        A3 C4 E4 A4 E4 C4 | F3 A3 C4 F4 C4 A3 | D3 F3 A3 D4 A3 F3 | E3 G#3 B3 E4 B3 G#3 |
+        A3 C4 E4 A4 E4 C4 | F3 A3 C4 F4 C4 A3 | D3 F3 A3 E3 G#3 B3 | A3 C4 E4 A4 E4 C4 `,
+    },
+    {
+      instrument: 'pizz',
+      volume: 1,
+      notes: `
+        A2 . . E2 . . | F2 . . C3 . . | D2 . . A2 . . | E2 . . B2 . . |
+        A2 . . E2 . . | F2 . . C3 . . | D2 . . E2 . . | A2 . . E2 . . `,
+    },
+    { drums: 'x . . x . .', volume: 0.8 },
+  ],
+};
+
+export const SONGS = { princess, cowboy, explorer, pixel, mage };

@@ -2,6 +2,7 @@ import { registerServiceWorker, setupFavoriteButton, STAR_SVG } from '../../shar
 import { readJSON, writeJSON } from '../../shared/store.js';
 import { recordPlay, clearProgress } from '../../shared/progress.js';
 import {
+  CHARACTERS,
   FACE_ROTATIONS,
   PIP_CELLS,
   MASCOTS,
@@ -10,6 +11,7 @@ import {
   addRoll,
   clampDiceCount,
   clearResults,
+  currentCharacter,
   normalizeState,
   randomInt,
   rollDice,
@@ -29,6 +31,7 @@ const $ = (selector) => document.querySelector(selector);
 
 const els = {
   pickerOptions: $('.picker-options'),
+  lookSwitch: $('.look-switch'),
   mascot: $('.mascot'),
   bubble: $('.bubble'),
   mat: $('.mat'),
@@ -76,7 +79,7 @@ function pick(list) {
 
 function renderPicker() {
   const options = MASCOTS.map((id) => {
-    const info = MASCOT_INFO[id];
+    const info = MASCOT_INFO[state.characters[id]];
     const label = document.createElement('label');
     label.className = 'picker-option';
     label.innerHTML = `<input type="radio" name="mascot" value="${id}">${info.face()}<span></span>`;
@@ -94,8 +97,29 @@ function renderPicker() {
 }
 
 function renderMascot() {
+  const character = currentCharacter(state);
   document.body.dataset.mascot = state.mascot;
-  els.mascot.innerHTML = MASCOT_INFO[state.mascot].svg();
+  document.body.dataset.character = character;
+  els.mascot.innerHTML = MASCOT_INFO[character].svg();
+  renderLookSwitch();
+}
+
+// The two looks of the current mascot, e.g. Princess / Prince.
+function renderLookSwitch() {
+  const current = currentCharacter(state);
+  const buttons = CHARACTERS[state.mascot].map((character) => {
+    const info = MASCOT_INFO[character];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'look-option';
+    button.setAttribute('aria-pressed', String(character === current));
+    button.setAttribute('aria-label', info.name);
+    button.innerHTML = `${info.face()}<span></span>`;
+    button.querySelector('span').textContent = info.name;
+    button.addEventListener('click', () => chooseLook(character));
+    return button;
+  });
+  els.lookSwitch.replaceChildren(...buttons);
 }
 
 function chooseMascot(id) {
@@ -105,6 +129,19 @@ function chooseMascot(id) {
   hideBubble();
   sounds.select(id);
   syncMusic();
+  cheer();
+}
+
+function chooseLook(character) {
+  if (rolling || character === currentCharacter(state)) {
+    return;
+  }
+  state.characters[state.mascot] = character;
+  save();
+  renderMascot();
+  renderPicker();
+  hideBubble();
+  sounds.select(state.mascot);
   cheer();
 }
 
@@ -348,7 +385,7 @@ async function roll() {
 
   await throwDice(values);
 
-  state = addRoll(state, values, state.mascot);
+  state = addRoll(state, values, state.mascot, currentCharacter(state));
   save();
   recordPlay(GAME_ID, `Last roll: ${total}`);
 
@@ -362,7 +399,7 @@ async function roll() {
   }
   els.detail.textContent = detail;
 
-  showBubble(`${pick(MASCOT_INFO[state.mascot].cheers)} ${total}!`);
+  showBubble(`${pick(MASCOT_INFO[currentCharacter(state)].cheers)} ${total}!`);
   cheer();
   sounds.tada(state.mascot, isBest);
   if (navigator.vibrate) {
@@ -388,7 +425,7 @@ function renderResults() {
 
   const items = state.history.slice(0, HISTORY_SHOWN).map((entry) => {
     const item = document.createElement('li');
-    item.innerHTML = `<span class="mini-mascot">${MASCOT_INFO[entry.mascot].face()}</span><span class="mini-total"></span><span class="mini-values"></span>`;
+    item.innerHTML = `<span class="mini-mascot">${MASCOT_INFO[entry.character].face()}</span><span class="mini-total"></span><span class="mini-values"></span>`;
     item.querySelector('.mini-total').textContent = String(entry.total);
     if (entry.values.length > 1) {
       item.querySelector('.mini-values').textContent = `(${entry.values.join(' ')})`;

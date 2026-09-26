@@ -1,7 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  CHARACTERS,
   FACE_ROTATIONS,
+  MASCOTS,
+  currentCharacter,
   HISTORY_LIMIT,
   PIP_CELLS,
   addRoll,
@@ -51,21 +54,22 @@ test('dice count is kept between 1 and 6', () => {
 
 test('a roll updates history, best total and face counts', () => {
   let state = emptyState();
-  state = addRoll(state, [3, 5], 'cowboy', 1);
-  state = addRoll(state, [6, 6], 'pixel', 2);
-  state = addRoll(state, [1, 2], 'princess', 3);
+  state = addRoll(state, [3, 5], 'cowboy', 'cowgirl', 1);
+  state = addRoll(state, [6, 6], 'pixel', 'pixel', 2);
+  state = addRoll(state, [1, 2], 'princess', 'prince', 3);
 
   assert.equal(state.stats.rolls, 3);
   assert.equal(state.stats.best, 12);
   assert.deepEqual(state.stats.faces, [1, 1, 1, 0, 1, 2]);
   assert.equal(state.history[0].total, 3, 'newest roll comes first');
   assert.equal(state.history[0].mascot, 'princess');
+  assert.equal(state.history[0].character, 'prince');
 });
 
 test('history keeps only the latest rolls', () => {
   let state = emptyState();
   for (let i = 0; i < HISTORY_LIMIT + 5; i += 1) {
-    state = addRoll(state, [1], 'princess', i);
+    state = addRoll(state, [1], 'princess', 'princess', i);
   }
   assert.equal(state.history.length, HISTORY_LIMIT);
   assert.equal(state.stats.rolls, HISTORY_LIMIT + 5);
@@ -76,7 +80,7 @@ test('saved state survives a round trip through JSON', () => {
   state.mascot = 'explorer';
   state.count = 4;
   state.music = false;
-  state = addRoll(state, [2, 4, 6, 1], 'explorer', 5);
+  state = addRoll(state, [2, 4, 6, 1], 'explorer', 'adventurer', 5);
   assert.deepEqual(normalizeState(JSON.parse(JSON.stringify(state))), state);
 });
 
@@ -106,7 +110,7 @@ test('clearing results keeps mascot and settings', () => {
   state.count = 3;
   state.sound = false;
   state.music = false;
-  state = addRoll(state, [4, 4, 4], 'pixel', 1);
+  state = addRoll(state, [4, 4, 4], 'pixel', 'pixel-girl', 1);
   const cleared = clearResults(state);
   assert.equal(cleared.mascot, 'pixel');
   assert.equal(cleared.count, 3);
@@ -114,4 +118,42 @@ test('clearing results keeps mascot and settings', () => {
   assert.equal(cleared.music, false);
   assert.equal(cleared.history.length, 0);
   assert.equal(cleared.stats.rolls, 0);
+});
+
+test('every mascot has two looks, and the witch is the default mage', () => {
+  MASCOTS.forEach((mascot) => {
+    assert.equal(CHARACTERS[mascot].length, 2, `${mascot} should have two looks`);
+  });
+  const state = emptyState();
+  assert.equal(state.characters.mage, 'witch');
+  assert.equal(state.characters.princess, 'princess');
+  state.mascot = 'mage';
+  assert.equal(currentCharacter(state), 'witch');
+});
+
+test('each mascot remembers its own look', () => {
+  const state = normalizeState({
+    mascot: 'explorer',
+    characters: { explorer: 'adventurer', cowboy: 'cowgirl', mage: 'wizard' },
+  });
+  assert.equal(currentCharacter(state), 'adventurer');
+  assert.equal(state.characters.cowboy, 'cowgirl');
+  assert.equal(state.characters.mage, 'wizard');
+  assert.equal(state.characters.princess, 'princess');
+});
+
+test('unknown looks fall back to the default look', () => {
+  const state = normalizeState({
+    characters: { princess: 'dragon', cowboy: 'prince' },
+    history: [{ values: [3], mascot: 'cowboy', character: 'witch' }],
+  });
+  assert.equal(state.characters.princess, 'princess');
+  assert.equal(state.characters.cowboy, 'cowboy', 'a look from another mascot is not allowed');
+  assert.equal(state.history[0].character, 'cowboy');
+});
+
+test('rolls saved before looks existed still load', () => {
+  const state = normalizeState({ history: [{ values: [2, 5], mascot: 'pixel', total: 7, at: 1 }] });
+  assert.equal(state.history[0].character, 'pixel');
+  assert.equal(state.history[0].total, 7);
 });

@@ -8,6 +8,7 @@ const TUNES = {
   cowboy: { wave: 'triangle', notes: [392, 494, 587, 784] },
   explorer: { wave: 'triangle', notes: [330, 415, 494, 659] },
   pixel: { wave: 'square', notes: [523, 659, 784, 1047] },
+  mage: { wave: 'sine', notes: [880, 1047, 1319, 1760] },
 };
 
 export function createSounds() {

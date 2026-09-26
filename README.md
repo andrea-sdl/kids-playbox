@@ -8,7 +8,7 @@ Plain HTML, CSS and JavaScript. No build step and no dependencies.
 
 | Game | What it does |
 |---|---|
-| **Dice Thrower** (`games/dice/`) | Pick a buddy (Princess, Cowboy, Explorer or Pixel Hero) and watch them throw 1 to 6 animated 3D dice. Keeps your last rolls, your best total, and how often each number came up. |
+| **Dice Thrower** (`games/dice/`) | Pick a buddy and watch them throw 1 to 6 animated 3D dice. Five buddies, each with two looks and their own scene: Princess or Prince, Cowboy or Cowgirl, Explorer or Adventurer, Pixel Boy or Pixel Girl, Witch or Wizard. Every buddy has its own background music (can be turned off). Keeps your last rolls, your best total, and how often each number came up. |
 
 Kids can star games to keep favorites at the top of the home page.
 
@@ -45,7 +45,11 @@ All saved data lives in the browser's `localStorage` under keys starting with `p
 
 ## Art
 
-The mascots are hand-made SVGs. The scene backgrounds and table textures in `games/dice/art/` were generated with Codex image generation. The prompts are in [`docs/art-prompts.md`](docs/art-prompts.md).
+Most buddies are hand-made SVGs. The Witch and Wizard are painted 3D-style images. Those, the scene backgrounds and the table textures in `games/dice/art/` were generated with Codex image generation. The prompts are in [`docs/art-prompts.md`](docs/art-prompts.md) and [`docs/art-prompts-2.md`](docs/art-prompts-2.md).
+
+## Music
+
+Each buddy's tune is written as a MIDI-style score in `games/dice/songs.js` and played with small Web Audio synths in `music.js`. There are no audio files, so it works offline. Music starts after the first tap (browsers block sound before that) and pauses when the page is hidden.
 
 ---
 

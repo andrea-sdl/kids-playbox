@@ -21,6 +21,8 @@ export const INSTRUMENTS = {
   pulse: { wave: 'square', attack: 0.004, sustain: true, volume: 0.07 },
   blip: { wave: 'square', attack: 0.002, decay: 0.09, volume: 0.04 },
   tri: { wave: 'triangle', attack: 0.004, sustain: true, volume: 0.3 },
+  celesta: { wave: 'sine', attack: 0.004, decay: 1.2, volume: 0.36, overtone: { ratio: 3, volume: 0.07 } },
+  pizz: { wave: 'triangle', attack: 0.004, decay: 0.28, volume: 0.36 },
 };
 
 function frequency(midi) {

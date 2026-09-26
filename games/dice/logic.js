@@ -3,7 +3,31 @@
 export const MIN_DICE = 1;
 export const MAX_DICE = 6;
 export const HISTORY_LIMIT = 20;
-export const MASCOTS = ['princess', 'cowboy', 'explorer', 'pixel'];
+export const MASCOTS = ['princess', 'cowboy', 'explorer', 'pixel', 'mage'];
+
+// Each mascot comes in two looks. The first one is the default.
+export const CHARACTERS = {
+  princess: ['princess', 'prince'],
+  cowboy: ['cowboy', 'cowgirl'],
+  explorer: ['explorer', 'adventurer'],
+  pixel: ['pixel', 'pixel-girl'],
+  mage: ['witch', 'wizard'],
+};
+
+function defaultCharacters() {
+  return Object.fromEntries(MASCOTS.map((mascot) => [mascot, CHARACTERS[mascot][0]]));
+}
+
+function validCharacter(mascot, character) {
+  if (CHARACTERS[mascot].includes(character)) {
+    return character;
+  }
+  return CHARACTERS[mascot][0];
+}
+
+export function currentCharacter(state) {
+  return state.characters[state.mascot];
+}
 
 // Cube rotation (degrees) that turns each face toward the viewer.
 // Faces are placed so opposite sides add up to 7, like a real die:
@@ -62,6 +86,7 @@ export function sum(values) {
 export function emptyState() {
   return {
     mascot: MASCOTS[0],
+    characters: defaultCharacters(),
     count: 2,
     sound: true,
     music: true,
@@ -90,7 +115,8 @@ function normalizeRoll(roll) {
   if (typeof roll.at === 'number') {
     at = roll.at;
   }
-  return { values, total: sum(values), mascot, at };
+  const character = validCharacter(mascot, roll.character);
+  return { values, total: sum(values), mascot, character, at };
 }
 
 // Turn whatever is in storage into a valid state. Bad or old data falls back
@@ -102,6 +128,11 @@ export function normalizeState(raw) {
   }
   if (MASCOTS.includes(raw.mascot)) {
     state.mascot = raw.mascot;
+  }
+  if (raw.characters && typeof raw.characters === 'object') {
+    MASCOTS.forEach((mascot) => {
+      state.characters[mascot] = validCharacter(mascot, raw.characters[mascot]);
+    });
   }
   if (raw.count !== undefined) {
     state.count = clampDiceCount(raw.count);
@@ -136,8 +167,8 @@ export function normalizeState(raw) {
 }
 
 // Returns a new state with the roll added to history and stats.
-export function addRoll(state, values, mascot, at = Date.now()) {
-  const roll = { values: [...values], total: sum(values), mascot, at };
+export function addRoll(state, values, mascot, character, at = Date.now()) {
+  const roll = { values: [...values], total: sum(values), mascot, character: validCharacter(mascot, character), at };
   const faces = [...state.stats.faces];
   values.forEach((value) => {
     faces[value - 1] += 1;

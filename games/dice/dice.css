@@ -3,6 +3,8 @@
 body {
   --die-size: clamp(50px, 14vw, 78px);
   --heart: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.5S2.5 15.6 2.5 9A5 5 0 0 1 12 6.4 5 5 0 0 1 21.5 9c0 6.6-9.5 12.5-9.5 12.5z'/%3E%3C/svg%3E");
+  --sparkle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 0c.8 6.4 4.6 10.9 12 12-7.4 1.1-11.2 5.6-12 12-.8-6.4-4.6-10.9-12-12C7.4 10.9 11.2 6.4 12 0z'/%3E%3C/svg%3E");
+  --crown: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 7l5.5 4.5L12 4l4.5 7.5L22 7l-2.5 12h-15z'/%3E%3C/svg%3E");
   --star-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L12 18l-6.5 3.4 1.3-7.2L1.5 9.1l7.3-1z'/%3E%3C/svg%3E");
 }
 
@@ -74,6 +76,64 @@ body[data-mascot="pixel"] {
   --die-radius: 0;
 }
 
+body[data-mascot="mage"] {
+  --theme: #7b4bd6;
+  --theme-soft: #ece2ff;
+  --sky: linear-gradient(#2a1f5c, #6b4fb5 75%);
+  --ground: #3b2a6b;
+  --scene-image: url("art/bg-witch.webp");
+  --mat-image: url("art/tex-mage.webp");
+  --mat-color: #4b2d86;
+  --die-face: #3a2670;
+  --die-edge: #22164a;
+  --pip: #ffd66b;
+  --pip-mask: var(--sparkle);
+  --pip-radius: 0;
+  --pip-scale: 1.1;
+  --die-radius: 18%;
+}
+
+/* ---------- Second looks: their own scene (and colors for the prince) ---------- */
+
+body[data-character="prince"] {
+  --theme: #3a6fd8;
+  --theme-soft: #dfe9ff;
+  --sky: linear-gradient(#8fd3ff, #e3f3ff 70%);
+  --scene-image: url("art/bg-prince.webp");
+  --mat-image: url("art/tex-prince.webp");
+  --mat-color: #6f95e0;
+  --die-face: #fbfcff;
+  --die-edge: #bcd0f4;
+  --pip: #2f55b5;
+  --pip-mask: var(--crown);
+  --pip-scale: 1.05;
+}
+
+body[data-character="cowgirl"] {
+  --theme: #d9467a;
+  --theme-soft: #ffe0ec;
+  --scene-image: url("art/bg-cowgirl.webp");
+}
+
+body[data-character="adventurer"] {
+  --theme: #1f8f8a;
+  --theme-soft: #d9f4f2;
+  --scene-image: url("art/bg-adventurer.webp");
+}
+
+body[data-character="pixel-girl"] {
+  --theme: #e0559a;
+  --theme-soft: #ffe0f0;
+  --scene-image: url("art/bg-pixel-girl.webp");
+}
+
+body[data-character="wizard"] {
+  --theme: #2f6fd1;
+  --theme-soft: #dde9ff;
+  --scene-image: url("art/bg-wizard.webp");
+  --pip: #9fe3ff;
+}
+
 /* ---------- Mascot picker ---------- */
 
 .picker {
@@ -92,7 +152,7 @@ body[data-mascot="pixel"] {
 
 .picker-options {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -112,6 +172,13 @@ body[data-mascot="pixel"] {
   text-align: center;
   cursor: pointer;
   transition: transform 0.1s ease, box-shadow 0.1s ease, background 0.2s ease;
+}
+
+.picker-option > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .picker-option input {
@@ -217,6 +284,60 @@ body[data-mascot="pixel"] .mat {
   align-content: center;
   gap: calc(var(--die-size) * 0.5) calc(var(--die-size) * 0.32);
   max-width: calc(var(--die-size) * 3 + var(--die-size) * 0.32 * 2 + 4px);
+}
+
+/* ---------- Look switch (e.g. Princess / Prince) ---------- */
+
+.look-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 3px 0 var(--line);
+  z-index: 4;
+}
+
+.look-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 3px 12px 3px 3px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #2b2140;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.look-option .mascot-svg {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.look-option[aria-pressed="true"] {
+  background: var(--theme);
+  color: #fff;
+}
+
+.mascot-face {
+  display: block;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.history .mini-mascot img {
+  width: 100%;
+  height: 100%;
 }
 
 /* ---------- Speech bubble ---------- */
@@ -353,6 +474,139 @@ body[data-mascot="pixel"] .bubble {
 @keyframes hat-hop {
   30% { transform: translateY(-14px) rotate(-10deg); }
   60% { transform: translateY(0) rotate(4deg); }
+}
+
+/* ---------- Painted mascots (witch and wizard) ---------- */
+
+/* The painted characters are slimmer than the SVG ones, so show them larger. */
+.mascot-sprite {
+  position: relative;
+  width: 116%;
+  margin-left: -8%;
+  aspect-ratio: 5 / 6;
+}
+
+.picker-option .mascot-sprite,
+.look-option .mascot-sprite {
+  width: 100%;
+  margin-left: 0;
+}
+
+.mascot-sprite .m-root {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 100%;
+  animation: float 3.4s ease-in-out infinite;
+}
+
+.sprite-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+  filter: drop-shadow(0 6px 6px rgb(0 0 0 / 0.35));
+  user-select: none;
+}
+
+.m-orb {
+  position: absolute;
+  left: var(--orb-x);
+  top: var(--orb-y);
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, var(--glow) 30%, transparent 70%);
+  mix-blend-mode: screen;
+  transform: translate(-50%, -50%);
+  animation: orb-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.m-sparkles {
+  position: absolute;
+  left: var(--orb-x);
+  top: var(--orb-y);
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.m-sparkles i {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px;
+  background: var(--glow);
+  -webkit-mask: var(--sparkle) center / contain no-repeat;
+  mask: var(--sparkle) center / contain no-repeat;
+  animation: orbit 3s linear infinite;
+}
+
+.m-sparkles i:nth-child(2) { animation-delay: -0.6s; animation-duration: 2.4s; }
+.m-sparkles i:nth-child(3) { animation-delay: -1.2s; animation-duration: 3.6s; width: 10px; height: 10px; }
+.m-sparkles i:nth-child(4) { animation-delay: -1.8s; animation-duration: 2.8s; }
+.m-sparkles i:nth-child(5) { animation-delay: -2.4s; animation-duration: 3.2s; width: 5px; height: 5px; }
+
+.mascot.is-throwing .mascot-sprite .m-root {
+  animation: cast 0.62s cubic-bezier(0.4, 0, 0.3, 1);
+}
+
+.mascot.is-throwing .m-orb {
+  animation: orb-flare 0.62s ease-out;
+}
+
+.mascot.is-cheering .mascot-sprite .m-root {
+  animation: cheer 0.8s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.mascot.is-cheering .m-sparkles i {
+  animation-duration: 0.9s;
+}
+
+@keyframes float {
+  50% { transform: translateY(-5px) rotate(-0.6deg); }
+}
+
+@keyframes orb-pulse {
+  50% { transform: translate(-50%, -50%) scale(1.25); opacity: 0.8; }
+}
+
+@keyframes orb-flare {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  45% { transform: translate(-50%, -50%) scale(2.6); filter: brightness(1.6); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes cast {
+  0% { transform: rotate(0); }
+  35% { transform: rotate(-5deg) translateY(2px); }
+  60% { transform: rotate(4deg) translateY(-6px); }
+  100% { transform: rotate(0); }
+}
+
+@keyframes orbit {
+  from { transform: rotate(0) translateX(26px) rotate(0) scale(1); }
+  50% { transform: rotate(180deg) translateX(20px) rotate(-180deg) scale(0.6); }
+  to { transform: rotate(360deg) translateX(26px) rotate(-360deg) scale(1); }
+}
+
+body[data-mascot="mage"] .face {
+  background: radial-gradient(circle at 30% 25%, #5b43a3 0%, var(--die-face) 60%, #1a1038 140%);
+  border-color: #5b43a3;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15), inset -3px -4px 8px rgb(0 0 0 / 0.3);
+}
+
+body[data-mascot="mage"] .pip {
+  box-shadow: none;
+}
+
+body[data-mascot="mage"] .die-camera {
+  filter: drop-shadow(0 0 6px rgb(255 214 107 / 0.45));
+}
+
+body[data-character="wizard"] .die-camera {
+  filter: drop-shadow(0 0 6px rgb(127 212 255 / 0.5));
 }
 
 /* ---------- 3D dice ---------- */
@@ -715,7 +969,18 @@ body[data-mascot="explorer"] .face {
 
 @media (max-width: 480px) {
   .topbar {
+    gap: 8px;
     padding-bottom: 6px;
+  }
+
+  .topbar h1 {
+    font-size: 1.25rem;
+    white-space: nowrap;
+  }
+
+  .topbar .icon-button {
+    width: 42px;
+    height: 42px;
   }
 
   .picker {
@@ -733,11 +998,34 @@ body[data-mascot="explorer"] .face {
 
   .picker-option {
     padding: 4px 2px 6px;
-    font-size: 0.74rem;
+    font-size: 0.68rem;
   }
 
   .picker-option .mascot-svg {
-    width: 48px;
+    width: 44px;
+  }
+
+  .picker-options {
+    gap: 6px;
+  }
+
+  .look-switch {
+    top: 6px;
+    right: 6px;
+  }
+
+  .look-option {
+    min-height: 40px;
+    padding-right: 3px;
+  }
+
+  .look-option span {
+    display: none;
+  }
+
+  .look-option .mascot-svg {
+    width: 34px;
+    height: 34px;
   }
 
   .stage {

@@ -1,7 +1,7 @@
 // Service worker: stores every file the app needs so it runs fully offline.
 // Bump VERSION when adding or removing files, so old caches are cleared.
 
-const VERSION = 'playbox-v2';
+const VERSION = 'playbox-v3';
 
 const FILES = [
   './',
@@ -38,6 +38,18 @@ const FILES = [
   './games/dice/art/tex-cowboy.webp',
   './games/dice/art/tex-explorer.webp',
   './games/dice/art/tex-pixel.webp',
+  './games/dice/art/bg-prince.webp',
+  './games/dice/art/bg-cowgirl.webp',
+  './games/dice/art/bg-adventurer.webp',
+  './games/dice/art/bg-pixel-girl.webp',
+  './games/dice/art/bg-witch.webp',
+  './games/dice/art/bg-wizard.webp',
+  './games/dice/art/tex-prince.webp',
+  './games/dice/art/tex-mage.webp',
+  './games/dice/art/sprite-witch.webp',
+  './games/dice/art/sprite-wizard.webp',
+  './games/dice/art/face-witch.webp',
+  './games/dice/art/face-wizard.webp',
 ];
 
 self.addEventListener('install', (event) => {
