@@ -44,12 +44,15 @@
       </div>
 
       <div class="overlay overlay-top-right time-panel">
-        <label class="time-label" for="time-of-day"><span class="time-icon" aria-hidden="true"></span><span class="time-text">12:00</span></label>
-        <input id="time-of-day" class="time-slider" type="range" min="0" max="24" step="0.25" value="12" aria-label="Time of day" data-i18n-attr="aria-label:blocks.timeOfDay">
-        <label class="clock-toggle"><input class="clock-input" type="checkbox"> <span data-i18n="blocks.matchClock">Match my clock</span></label>
+        <button class="time-toggle" type="button" aria-expanded="false" aria-controls="time-controls" title="Time of day" data-i18n-attr="title:blocks.timeOfDay"><span class="time-icon" aria-hidden="true"></span><span class="time-text">12:00</span></button>
+        <div class="time-controls" id="time-controls">
+          <input class="time-slider" type="range" min="0" max="24" step="0.25" value="12" aria-label="Time of day" data-i18n-attr="aria-label:blocks.timeOfDay">
+          <label class="clock-toggle"><input class="clock-input" type="checkbox"> <span data-i18n="blocks.matchClock">Match my clock</span></label>
+        </div>
       </div>
 
       <div class="overlay overlay-bottom-right">
+        <div class="focus-slot"></div>
         <button class="chunky-button icon-button zoom-in" type="button" aria-label="Zoom in" data-i18n-attr="aria-label:common.zoomIn">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
         </button>
@@ -61,15 +64,23 @@
       <p class="hint" aria-live="polite" data-i18n="blocks.hint">Tap to build · Drag to look around · Pinch to zoom</p>
     </div>
 
-    <div class="dock">
-      <div class="dock-row">
+    <div class="dock" data-panel="shapes">
+      <div class="dock-row dock-main">
         <div class="tools segmented" role="radiogroup" aria-label="Tool" data-i18n-attr="aria-label:blocks.toolGroup"></div>
         <button class="chunky-button rotate-button" type="button" title="Turn the block (R)" data-i18n="blocks.turn" data-i18n-attr="title:blocks.turnTitle">⟳ Turn</button>
-        <div class="finish segmented" role="radiogroup" aria-label="Look" data-i18n-attr="aria-label:blocks.lookGroup"></div>
       </div>
-      <div class="dock-row shapes" role="radiogroup" aria-label="Block shape" data-i18n-attr="aria-label:blocks.shapeGroup"></div>
-      <div class="dock-row colors" role="radiogroup" aria-label="Color" data-i18n-attr="aria-label:blocks.colorGroup"></div>
-      <div class="dock-row textures" role="radiogroup" aria-label="Texture" data-i18n-attr="aria-label:blocks.textureGroup"></div>
+      <!-- On phones only one palette shows at a time, picked with these tabs. -->
+      <div class="dock-tabs" role="tablist">
+        <button class="dock-tab" type="button" role="tab" data-panel="shapes"><span class="tab-preview shape-preview" aria-hidden="true"></span><span data-i18n="blocks.tab.shape">Shape</span></button>
+        <button class="dock-tab" type="button" role="tab" data-panel="colors"><span class="tab-preview color-preview" aria-hidden="true"></span><span data-i18n="blocks.tab.color">Color</span></button>
+        <button class="dock-tab" type="button" role="tab" data-panel="look"><span class="tab-preview look-preview" aria-hidden="true"></span><span data-i18n="blocks.tab.look">Look</span></button>
+      </div>
+      <div class="dock-row palette shapes" data-panel="shapes" role="radiogroup" aria-label="Block shape" data-i18n-attr="aria-label:blocks.shapeGroup"></div>
+      <div class="dock-row palette colors" data-panel="colors" role="radiogroup" aria-label="Color" data-i18n-attr="aria-label:blocks.colorGroup"></div>
+      <div class="dock-row palette look" data-panel="look">
+        <div class="finish segmented" role="radiogroup" aria-label="Look" data-i18n-attr="aria-label:blocks.lookGroup"></div>
+        <div class="textures" role="radiogroup" aria-label="Texture" data-i18n-attr="aria-label:blocks.textureGroup"></div>
+      </div>
     </div>
   </main>
 

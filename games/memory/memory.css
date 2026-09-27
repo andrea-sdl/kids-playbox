@@ -636,3 +636,12 @@ body.is-immersive .board {
 body.is-immersive .fact {
   margin-bottom: 6px;
 }
+
+/* Focus mode: the play buttons join the zoom buttons. */
+.hud .focus-slot {
+  margin-left: auto;
+}
+
+body.is-immersive .zoom {
+  margin-left: 0;
+}

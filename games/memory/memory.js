@@ -556,10 +556,14 @@ els.table.addEventListener('pointercancel', endPointer);
 
 /* ---------- Buttons ---------- */
 
+// Set up at the end of the file; the setup screen doesn't use focus mode.
+let focusMode = null;
+
 function backToSetup() {
   if (game) {
     clearInterval(game.timer);
   }
+  focusMode?.leave();
   if (els.win.open) {
     els.win.close();
   }
@@ -596,7 +600,7 @@ els.sound.addEventListener('click', () => {
   sounds.flip();
 });
 
-setupFullscreen(document.querySelector('.fullscreen-button'), fitBoard);
+focusMode = setupFullscreen(document.querySelector('.fullscreen-button'), { slot: document.querySelector('.focus-slot'), onChange: fitBoard });
 els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.memory.title'));
 

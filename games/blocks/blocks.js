@@ -36,6 +36,12 @@ const els = {
   timeText: $('.time-text'),
   clock: $('.clock-input'),
   timePanel: $('.time-panel'),
+  timeToggle: $('.time-toggle'),
+  dock: $('.dock'),
+  tabs: document.querySelectorAll('.dock-tab'),
+  shapePreview: $('.shape-preview'),
+  colorPreview: $('.color-preview'),
+  lookPreview: $('.look-preview'),
   sound: $('.sound-button'),
   favorite: $('.favorite-button'),
 };
@@ -241,11 +247,33 @@ function renderTextures() {
   els.textures.replaceChildren(...buttons);
 }
 
+// Phones show one palette at a time. Each tab previews the current pick.
+function renderTabs() {
+  els.tabs.forEach((tab) => {
+    tab.setAttribute('aria-selected', String(tab.dataset.panel === els.dock.dataset.panel));
+  });
+  els.shapePreview.innerHTML = `<svg viewBox="0 0 48 48" fill="${settings.color}" stroke="#2b2140" stroke-width="3" stroke-linejoin="round">${SHAPE_ICONS[settings.shape]}</svg>`;
+  els.colorPreview.style.background = settings.color;
+  els.lookPreview.style.backgroundColor = settings.color;
+  els.lookPreview.style.backgroundImage = 'linear-gradient(135deg, rgb(255 255 255 / 0.55), transparent 55%)';
+  if (settings.finish === 'textured') {
+    els.lookPreview.style.backgroundImage = `url(art/tex-${settings.texture}.webp)`;
+  }
+}
+
+els.tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    els.dock.dataset.panel = tab.dataset.panel;
+    renderTabs();
+  });
+});
+
 function renderDock() {
   renderTools();
   renderShapes();
   renderColors();
   renderTextures();
+  renderTabs();
   els.rotate.hidden = settings.tool !== 'build';
 }
 
@@ -404,8 +432,15 @@ function updateGhost(event) {
   scene.setGhost(block, world.canPlace(block));
 }
 
+function closeTimePanel() {
+  els.timePanel.classList.remove('is-open');
+  els.timeToggle.setAttribute('aria-expanded', 'false');
+}
+
 function setupPointer(canvas) {
   canvas.addEventListener('pointerdown', (event) => {
+    // Going back to building closes the time slider on phones.
+    closeTimePanel();
     // A second finger means pinch or pan, never a tap.
     if (!event.isPrimary) {
       if (press) {
@@ -497,6 +532,12 @@ els.timeSlider.addEventListener('input', () => {
   save();
 });
 
+els.timeToggle.addEventListener('click', () => {
+  const open = !els.timePanel.classList.contains('is-open');
+  els.timePanel.classList.toggle('is-open', open);
+  els.timeToggle.setAttribute('aria-expanded', String(open));
+});
+
 els.clock.addEventListener('change', () => {
   settings.followClock = els.clock.checked;
   renderTime();
@@ -556,7 +597,7 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-setupFullscreen(document.querySelector('.fullscreen-button'));
+setupFullscreen(document.querySelector('.fullscreen-button'), { slot: document.querySelector('.focus-slot') });
 els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.blocks.title'));
 

@@ -52,7 +52,7 @@ English, Italian, Spanish, Brazilian Portuguese and German. The app picks the de
 
 - **Update notice:** when a new version has downloaded in the background, a banner offers a refresh. It never reloads by itself, so a game in progress is safe. Apps left open check again when they come back on screen.
 - **What's new:** the home page lists every release (`shared/changelog.js`) and puts a "New" or "Updated" badge on games changed since you last looked. Every release needs an entry: a test fails if `VERSION` in `sw.js` has no matching release.
-- **Full screen:** every game has a full-screen button. Where the browser allows it, the page goes truly full screen; on iPhone Safari (which doesn't allow it) the same button hides the header, footer and extras so the game fills the screen.
+- **Full screen:** every game has a full-screen button. It hides the top bar and footer and moves the full-screen, sound and music buttons into the game (each page gives them a `.focus-slot`). Where the browser allows it, the page also goes truly full screen; iPhone Safari doesn't allow that, but focus mode still gives the game the whole screen.
 
 ## Offline and download size
 

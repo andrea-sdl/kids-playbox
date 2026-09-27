@@ -145,15 +145,33 @@ function fullscreenElement() {
   return document.fullscreenElement || document.webkitFullscreenElement || null;
 }
 
-// Focus mode hides the header, footer and extras so the game gets the whole
-// screen. Where the browser allows it (not iPhone Safari), it also goes
-// truly full screen.
-export function setupFullscreen(button, onChange) {
+// Focus mode hides the top bar, footer and extras so the game gets the whole
+// screen. The full-screen, sound and music buttons move into `slot`, a spot
+// inside the game itself, and go back to the top bar afterwards. Where the
+// browser allows it (not iPhone Safari), the page also goes truly full screen.
+export function setupFullscreen(button, { slot = null, onChange = null } = {}) {
   button.innerHTML = FULLSCREEN_BUTTON;
   const root = document.documentElement;
+  const movable = [button, ...document.querySelectorAll('.topbar .music-button, .topbar .sound-button')];
+  const homes = movable.map((element) => ({ element, parent: element.parentNode, next: element.nextSibling }));
+
+  function moveButtons(intoGame) {
+    if (!slot) {
+      return;
+    }
+    if (intoGame) {
+      slot.append(...movable);
+      return;
+    }
+    // Put back last-first, so each button's old neighbor is already home.
+    [...homes].reverse().forEach(({ element, parent, next }) => {
+      parent.insertBefore(element, next);
+    });
+  }
 
   function render(on) {
     document.body.classList.toggle('is-immersive', on);
+    moveButtons(on);
     button.setAttribute('aria-pressed', String(on));
     let label = t('common.fullscreen');
     if (on) {
@@ -168,8 +186,7 @@ export function setupFullscreen(button, onChange) {
     }
   }
 
-  button.addEventListener('click', async () => {
-    const on = !document.body.classList.contains('is-immersive');
+  async function setFocus(on) {
     render(on);
     try {
       if (on && !fullscreenElement()) {
@@ -185,6 +202,10 @@ export function setupFullscreen(button, onChange) {
     } catch {
       // Full screen was refused; focus mode still works.
     }
+  }
+
+  button.addEventListener('click', () => {
+    setFocus(!document.body.classList.contains('is-immersive'));
   });
 
   // Leaving full screen with Esc or a system gesture also leaves focus mode.
@@ -196,4 +217,11 @@ export function setupFullscreen(button, onChange) {
   document.addEventListener('fullscreenchange', onFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   render(false);
+  return {
+    leave() {
+      if (document.body.classList.contains('is-immersive')) {
+        setFocus(false);
+      }
+    },
+  };
 }

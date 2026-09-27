@@ -267,24 +267,25 @@ button {
 
 /* ---------- Focus mode (full screen) ---------- */
 
-/* Only the buttons that matter while playing stay in the top bar. */
-body.is-immersive .topbar {
-  justify-content: flex-end;
-  padding-top: max(8px, env(safe-area-inset-top));
-  padding-bottom: 6px;
-}
-
-body.is-immersive .topbar > :not(.fullscreen-button, .sound-button, .music-button) {
-  display: none;
-}
-
+/* The top bar goes away: its play buttons move into the game (.focus-slot). */
+body.is-immersive .topbar,
 body.is-immersive .site-footer {
   display: none;
 }
 
 body.is-immersive main {
   max-width: none;
+  padding-top: max(8px, env(safe-area-inset-top));
   padding-bottom: max(8px, env(safe-area-inset-bottom));
+}
+
+.focus-slot {
+  display: none;
+  gap: 6px;
+}
+
+body.is-immersive .focus-slot {
+  display: flex;
 }
 
 /* ---------- Update notice ---------- */

@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 7,
+    date: '2026-09-27',
+    changes: [
+      { target: 'app', type: 'updated', text: 'changes.v7.focus' },
+      { target: 'blocks', type: 'updated', text: 'changes.v7.blocksPhones' },
+    ],
+  },
+  {
     version: 6,
     date: '2026-09-26',
     changes: [

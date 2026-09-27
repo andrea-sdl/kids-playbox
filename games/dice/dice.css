@@ -1062,8 +1062,8 @@ body.is-immersive .results-panel {
 }
 
 body.is-immersive .stage {
-  min-height: max(300px, calc(100vh - 250px));
-  min-height: max(300px, calc(100dvh - 250px));
+  min-height: max(300px, calc(100vh - 180px));
+  min-height: max(300px, calc(100dvh - 180px));
 }
 
 body.is-immersive .buddy {
@@ -1072,4 +1072,22 @@ body.is-immersive .buddy {
 
 body.is-immersive .controls {
   margin-bottom: 0;
+}
+
+/* Focus mode: the play buttons sit in the scene's top-left corner. */
+.stage .focus-slot {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+}
+
+body.is-immersive .stage .icon-button {
+  width: 40px;
+  height: 40px;
+}
+
+body.is-immersive .stage .icon-button svg {
+  width: 20px;
+  height: 20px;
 }

@@ -8,12 +8,17 @@ body {
   flex-direction: column;
   gap: 12px;
   max-width: 1200px;
+  /* The builder fills the screen; the 3D view gets what the tools don't use.
+     `flex: none` so the page layout (main is flex: 1) keeps this height. */
+  flex: none;
+  height: max(560px, calc(100vh - 90px));
+  height: max(560px, calc(100dvh - 90px));
 }
 
 .viewport {
   position: relative;
-  height: max(340px, calc(100vh - 330px));
-  height: max(340px, calc(100dvh - 330px));
+  flex: 1;
+  min-height: 260px;
   border: 4px solid var(--line);
   border-radius: 24px;
   background: linear-gradient(#9fd3ff, #e7f4ff);
@@ -71,6 +76,10 @@ body {
   flex-direction: column;
 }
 
+.overlay-bottom-right .focus-slot {
+  flex-direction: column;
+}
+
 .clear-button.is-armed {
   background: #ff5f5f;
   color: #fff;
@@ -107,14 +116,25 @@ body {
   box-shadow: 0 3px 0 var(--line);
 }
 
-.time-label {
+.time-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
   font-weight: 900;
+  cursor: pointer;
+}
+
+.time-controls {
+  display: grid;
+  gap: 4px;
 }
 
 .time-icon {
+  flex: none;
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -152,6 +172,17 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.textures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Tabs only exist on phones (see below). */
+.dock-tabs {
+  display: none;
 }
 
 .segmented {
@@ -236,100 +267,236 @@ body {
   background-blend-mode: multiply;
 }
 
+/* ---------- Phones: compact tools, one palette at a time ---------- */
+
 @media (max-width: 600px) {
+  .builder {
+    gap: 8px;
+    height: max(470px, calc(100vh - 62px));
+    height: max(470px, calc(100dvh - 62px));
+  }
+
   .viewport {
-    height: max(320px, calc(100dvh - 380px));
+    min-height: 220px;
     border-radius: 18px;
   }
 
-  .shapes,
-  .colors,
-  .textures {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 6px;
-    scrollbar-width: thin;
+  .dock {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 18px;
   }
 
-  .shape-button,
-  .texture-swatch {
+  .segmented button,
+  .rotate-button {
+    min-height: 38px;
+    padding: 4px 12px;
+  }
+
+  .dock-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  .dock-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 4px 6px;
+    border: 3px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg);
+    font-weight: 800;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .dock-tab[aria-selected="true"] {
+    background: var(--theme-soft);
+    box-shadow: inset 0 -3px 0 var(--theme);
+  }
+
+  .tab-preview {
     flex: none;
-    width: 52px;
-    height: 52px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .color-preview,
+  .look-preview {
+    border: 2px solid var(--line);
+    border-radius: 50%;
+    background-size: cover;
+    background-blend-mode: multiply;
+  }
+
+  .shape-preview svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Only the chosen palette shows, always the same height so the 3D view
+     doesn't jump when switching tabs. */
+  .palette {
+    align-content: flex-start;
+    min-height: 102px;
+    gap: 4px;
+  }
+
+  .dock:not([data-panel="shapes"]) .shapes,
+  .dock:not([data-panel="colors"]) .colors,
+  .dock:not([data-panel="look"]) .look {
+    display: none;
+  }
+
+  .shape-button {
+    width: 46px;
+    height: 46px;
   }
 
   .swatch {
-    flex: none;
+    width: 34px;
+    height: 34px;
+  }
+
+  /* With 4 px gaps, 8 materials or 8 colors fit on one row of a 360 px phone. */
+  .texture-swatch {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+
+  .textures {
+    gap: 4px;
+  }
+}
+
+/* ---------- Small screens (narrow or short): compact overlays, time pill ---------- */
+
+@media (max-width: 600px), (max-height: 500px) {
+  .overlay {
+    gap: 6px;
+  }
+
+  .overlay-top-left,
+  .overlay-top-right {
+    top: 8px;
+  }
+
+  .overlay-top-left {
+    left: 8px;
+  }
+
+  .overlay-top-right {
+    right: 8px;
+  }
+
+  .overlay-bottom-right {
+    right: 8px;
+    bottom: 8px;
+  }
+
+  .viewport .icon-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .viewport .clear-button {
+    min-height: 42px;
+    padding: 6px 12px;
   }
 
   .hint {
     display: none;
   }
 
-  .clock-toggle {
-    font-size: 0.75rem;
+  /* Time of day shrinks to a pill; tap it for the slider. */
+  .time-panel {
+    width: auto;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+
+  .time-panel .time-controls {
+    display: none;
+  }
+
+  .time-panel.is-open {
+    width: min(230px, 62vw);
+    border-radius: 18px;
+  }
+
+  .time-panel.is-open .time-controls {
+    display: grid;
+  }
+
+  .time-toggle {
+    min-height: 30px;
+    font-size: 0.9rem;
+    white-space: nowrap;
   }
 }
 
-/* ---------- Focus mode: the 3D view fills what the tools don't use ---------- */
+/* ---------- Landscape phones: tools in a side column ---------- */
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .builder {
+    display: grid;
+    grid-template-columns: 1fr min(290px, 42vw);
+    height: calc(100vh - 62px);
+    height: calc(100dvh - 62px);
+    min-height: 0;
+  }
+
+  .viewport {
+    min-height: 0;
+    height: auto;
+  }
+
+  .dock {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow-y: auto;
+  }
+
+  .dock > * {
+    flex: none;
+  }
+
+  .builder .dock-tabs {
+    display: none;
+  }
+
+  .builder .dock .palette {
+    display: flex;
+    min-height: 0;
+  }
+
+  .shape-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .swatch {
+    width: 32px;
+    height: 32px;
+  }
+
+  .texture-swatch {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* ---------- Focus mode: no top bar, so the builder gets the full height ---------- */
 
 body.is-immersive .builder {
-  height: calc(100vh - 70px);
-  height: calc(100dvh - 70px - env(safe-area-inset-top));
-  gap: 8px;
-}
-
-body.is-immersive .viewport {
-  flex: 1;
-  height: auto;
+  height: calc(100vh - 16px);
+  height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   min-height: 0;
-}
-
-body.is-immersive .dock {
-  gap: 6px;
-  padding: 8px;
-}
-
-body.is-immersive .shapes,
-body.is-immersive .colors,
-body.is-immersive .textures {
-  flex-wrap: nowrap;
-  overflow-x: auto;
-}
-
-body.is-immersive .shape-button,
-body.is-immersive .texture-swatch,
-body.is-immersive .swatch {
-  flex: none;
-}
-
-/* Phones in focus mode: every dock row is one scrolling line, and smaller. */
-@media (max-width: 600px) {
-  body.is-immersive .dock-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 4px;
-  }
-
-  body.is-immersive .segmented {
-    flex: none;
-  }
-
-  body.is-immersive .segmented button,
-  body.is-immersive .rotate-button {
-    flex: none;
-    min-height: 38px;
-    padding: 4px 10px;
-  }
-
-  body.is-immersive .shape-button,
-  body.is-immersive .texture-swatch {
-    width: 44px;
-    height: 44px;
-  }
-
-  body.is-immersive .swatch:not(.texture-swatch) {
-    width: 36px;
-    height: 36px;
-  }
 }

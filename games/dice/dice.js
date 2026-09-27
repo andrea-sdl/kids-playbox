@@ -524,7 +524,7 @@ function allowAudio() {
 
 /* ---------- Start ---------- */
 
-setupFullscreen(document.querySelector('.fullscreen-button'));
+setupFullscreen(document.querySelector('.fullscreen-button'), { slot: document.querySelector('.focus-slot') });
 els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.dice.title'));
 
