@@ -14,6 +14,20 @@ const UPDATE_CHECK_MS = 30 * 60 * 1000;
 export function setupLanguage() {
   translatePage();
   mountLanguagePicker();
+  showVersion();
+}
+
+// The version this page is running, in the footer. If it's older than the
+// newest release, this copy hasn't updated yet.
+function showVersion() {
+  const footer = document.querySelector('.site-footer');
+  if (!footer) {
+    return;
+  }
+  const version = document.createElement('p');
+  version.className = 'app-version';
+  version.textContent = `Playbox · ${t('whatsNew.version', { version: latestVersion() })}`;
+  footer.append(version);
 }
 
 // Each page sets <html data-root="..."> to the relative path of the site root,

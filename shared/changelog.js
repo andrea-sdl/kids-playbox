@@ -8,6 +8,13 @@
 
 export const RELEASES = [
   {
+    version: 8,
+    date: '2026-09-27',
+    changes: [
+      { target: 'app', type: 'new', text: 'changes.v8.version' },
+    ],
+  },
+  {
     version: 7,
     date: '2026-09-27',
     changes: [
