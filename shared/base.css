@@ -274,6 +274,16 @@ button {
 
 /* ---------- Focus mode (full screen) ---------- */
 
+/* Focus mode: each game fits the screen, so the page itself doesn't scroll.
+   On iPhones this also keeps game controls from sliding under the status
+   bar, where Safari blurs them. Parts like Memory's table scroll inside. */
+body.is-immersive {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
 /* The top bar goes away: its play buttons move into the game (.focus-slot). */
 body.is-immersive .topbar,
 body.is-immersive .site-footer {

@@ -8,6 +8,13 @@
 
 export const RELEASES = [
   {
+    version: 9,
+    date: '2026-09-27',
+    changes: [
+      { target: 'app', type: 'fixed', text: 'changes.v9.iosBlur' },
+    ],
+  },
+  {
     version: 8,
     date: '2026-09-27',
     changes: [
