@@ -344,7 +344,8 @@ function startGame() {
   els.fact.textContent = t('memory.findPairs');
   els.setup.hidden = true;
   els.play.hidden = false;
-  window.scrollTo(0, 0);
+  // The page body is what scrolls (see shared/base.css).
+  document.body.scrollTo(0, 0);
   fitBoard();
   setZoom(1);
   renderHud();
@@ -479,7 +480,7 @@ function fitBoard() {
     return;
   }
   // Measured from the top of the page, as if scrolled to the top.
-  const top = els.table.getBoundingClientRect().top + window.scrollY;
+  const top = els.table.getBoundingClientRect().top + document.body.scrollTop;
   const available = Math.max(280, window.innerHeight - top - 16);
   els.table.style.maxHeight = `${available}px`;
   const chrome = tableChrome();

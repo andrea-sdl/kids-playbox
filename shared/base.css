@@ -35,15 +35,24 @@
   box-sizing: border-box;
 }
 
+/* App-shell layout: the window never scrolls, the body does.
+   On iPhones, Safari blurs any page content that scrolls up behind the
+   clock; with this, nothing ever gets there. The plain html background is
+   what shows behind the clock (without it, the dotted body background would
+   spread there and look blurry). */
 html {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   display: flex;
   flex-direction: column;
   font-family: var(--font);
@@ -192,7 +201,7 @@ button {
 /* ---------- Footer ---------- */
 
 .site-footer {
-  padding: 20px 16px max(20px, env(safe-area-inset-bottom));
+  padding: 20px 16px max(28px, env(safe-area-inset-bottom));
   text-align: center;
   font-size: 0.95rem;
   color: var(--ink-soft);
@@ -203,10 +212,19 @@ button {
 }
 
 .app-version {
-  margin: 12px 0 0;
+  margin: 16px 0 0;
+  padding-bottom: 8px;
   font-size: 0.8rem;
   font-weight: 700;
   opacity: 0.8;
+}
+
+/* iOS Safari's floating address bar covers the bottom of the page, so leave
+   room for it under the footer. (-webkit-touch-callout exists only on iOS.) */
+@supports (-webkit-touch-callout: none) {
+  .site-footer {
+    padding-bottom: max(96px, calc(env(safe-area-inset-bottom) + 72px));
+  }
 }
 
 .lang-picker {
@@ -278,9 +296,6 @@ button {
    On iPhones this also keeps game controls from sliding under the status
    bar, where Safari blurs them. Parts like Memory's table scroll inside. */
 body.is-immersive {
-  height: 100vh;
-  height: 100dvh;
-  min-height: 0;
   overflow: hidden;
 }
 

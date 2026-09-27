@@ -8,6 +8,15 @@
 
 export const RELEASES = [
   {
+    version: 10,
+    date: '2026-09-27',
+    changes: [
+      { target: 'app', type: 'fixed', text: 'changes.v10.iosTop' },
+      { target: 'app', type: 'fixed', text: 'changes.v10.footer' },
+      { target: 'blocks', type: 'fixed', text: 'changes.v10.firefox' },
+    ],
+  },
+  {
     version: 9,
     date: '2026-09-27',
     changes: [
