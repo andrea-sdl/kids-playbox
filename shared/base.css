@@ -211,8 +211,9 @@ button {
   margin: 0 0 10px;
 }
 
-.app-version {
-  margin: 16px 0 0;
+/* More specific than `.site-footer p`, which would otherwise zero the gap. */
+.site-footer .app-version {
+  margin: 24px 0 0;
   padding-bottom: 8px;
   font-size: 0.8rem;
   font-weight: 700;
