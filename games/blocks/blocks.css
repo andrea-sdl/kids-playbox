@@ -12,7 +12,7 @@ body {
      `flex: none` so the page layout (main is flex: 1) keeps this height. */
   flex: none;
   height: max(560px, calc(100vh - 90px));
-  height: max(560px, calc(100dvh - 90px));
+  height: max(560px, calc(var(--app-height) - 90px));
 }
 
 .viewport {
@@ -280,7 +280,7 @@ body {
   .builder {
     gap: 8px;
     height: max(470px, calc(100vh - 62px));
-    height: max(470px, calc(100dvh - 62px));
+    height: max(470px, calc(var(--app-height) - 62px));
   }
 
   .viewport {
@@ -456,7 +456,7 @@ body {
     display: grid;
     grid-template-columns: 1fr min(290px, 42vw);
     height: calc(100vh - 62px);
-    height: calc(100dvh - 62px);
+    height: calc(var(--app-height) - 62px);
     min-height: 0;
   }
 
@@ -505,6 +505,6 @@ body {
 
 body.is-immersive .builder {
   height: calc(100vh - 16px);
-  height: calc(100dvh - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  height: calc(var(--app-height) - 16px - env(safe-area-inset-bottom));
   min-height: 0;
 }

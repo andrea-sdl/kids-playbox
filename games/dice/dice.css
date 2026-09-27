@@ -1063,7 +1063,7 @@ body.is-immersive .results-panel {
 
 body.is-immersive .stage {
   min-height: max(300px, calc(100vh - 180px));
-  min-height: max(300px, calc(100dvh - 180px));
+  min-height: max(300px, calc(var(--app-height) - 180px));
 }
 
 body.is-immersive .buddy {

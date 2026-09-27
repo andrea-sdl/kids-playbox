@@ -1,4 +1,9 @@
 :root {
+  /* Screen height below the status bar. In an installed iPhone app the page
+     is drawn under the status bar, and the top safe area is its height; in a
+     browser tab it's 0. */
+  --status-bar: env(safe-area-inset-top, 0px);
+  --app-height: calc(100dvh - var(--status-bar));
   --bg: #fff6e9;
   --bg-dots: #ffe7c7;
   --surface: #ffffff;
@@ -49,8 +54,10 @@ html {
 }
 
 body {
-  margin: 0;
-  height: 100%;
+  /* Start below the status bar, so scrolled content never goes behind the
+     clock (iOS blurs it there). Only the plain html background shows there. */
+  margin: var(--status-bar) 0 0;
+  height: calc(100% - var(--status-bar));
   overflow-y: auto;
   overscroll-behavior-y: contain;
   display: flex;
@@ -111,7 +118,7 @@ button {
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;
-  padding: max(16px, env(safe-area-inset-top)) 16px 12px;
+  padding: 16px 16px 12px;
 }
 
 .topbar h1 {
@@ -308,7 +315,7 @@ body.is-immersive .site-footer {
 
 body.is-immersive main {
   max-width: none;
-  padding-top: max(8px, env(safe-area-inset-top));
+  padding-top: 8px;
   padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
