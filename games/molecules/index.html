@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-i18n="molecules.pageTitle">Molecules · Playbox</title>
+  <meta name="description" content="Join atoms together to build real molecules. Works offline.">
+  <meta name="theme-color" content="#6c4fd1">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="molecules.css">
+  <script type="module" src="molecules.js"></script>
+</head>
+<body>
+  <svg class="ball-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs></defs></svg>
+
+  <header class="topbar">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games" data-i18n-attr="aria-label:common.back title:common.allGames">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1 data-i18n="game.molecules.title">Molecules</h1>
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound" data-i18n-attr="aria-label:common.sound">
+      <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button fullscreen-button" type="button" aria-pressed="false"></button>
+    <button class="chunky-button icon-button star-button favorite-button" type="button"></button>
+  </header>
+
+  <main class="lab">
+    <div class="level-bar">
+      <button class="chunky-button icon-button level-prev" type="button" aria-label="Previous molecule" data-i18n-attr="aria-label:molecules.prev title:molecules.prev">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="chunky-button level-button" type="button" aria-haspopup="dialog">
+        <span class="level-number"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="chunky-button icon-button level-next" type="button" aria-label="Next molecule" data-i18n-attr="aria-label:molecules.next title:molecules.next">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <div class="mode" role="radiogroup" aria-label="Mode" data-i18n-attr="aria-label:molecules.mode">
+        <label><input type="radio" name="mode" value="easy"><span data-i18n="molecules.easy">Easy</span></label>
+        <label><input type="radio" name="mode" value="hard"><span data-i18n="molecules.hard">Hard</span></label>
+      </div>
+    </div>
+
+    <div class="lab-body">
+      <section class="bench">
+        <svg class="workspace" role="group" aria-label="Building area" data-i18n-attr="aria-label:molecules.area">
+          <g class="bonds"></g>
+          <g class="atoms"></g>
+        </svg>
+        <div class="bench-tools">
+          <button class="chunky-button icon-button undo-button" type="button" aria-label="Undo" data-i18n-attr="aria-label:molecules.undo title:molecules.undo">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4.5 12H14a6 6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+          </button>
+          <button class="chunky-button icon-button remove-button" type="button" aria-label="Remove atom" data-i18n-attr="aria-label:molecules.remove title:molecules.remove">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="chunky-button clear-button" type="button" data-i18n="common.clear">Clear</button>
+          <div class="focus-slot"></div>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </section>
+
+      <aside class="goal">
+        <p class="goal-label" data-i18n="molecules.goal">Build</p>
+        <h2 class="goal-name"></h2>
+        <p class="goal-formula"></p>
+        <svg class="goal-picture" aria-hidden="true"></svg>
+        <p class="goal-mystery" data-i18n="molecules.mystery">What is it made of? Think, then build!</p>
+        <ul class="goal-atoms"></ul>
+        <button class="chunky-button hint-button" type="button" data-i18n="molecules.hint">Hint</button>
+      </aside>
+    </div>
+
+    <div class="tray" role="group" aria-label="Atoms" data-i18n-attr="aria-label:molecules.atoms"></div>
+  </main>
+
+  <dialog class="levels-dialog" aria-labelledby="levels-title">
+    <div class="levels-head">
+      <h2 id="levels-title" data-i18n="molecules.levels">All molecules</h2>
+      <button class="chunky-button levels-close" type="button" data-i18n="whatsNew.close">Close</button>
+    </div>
+    <ol class="levels-list"></ol>
+  </dialog>
+
+  <dialog class="win-dialog" aria-labelledby="win-title">
+    <svg class="win-picture" aria-hidden="true"></svg>
+    <h2 id="win-title"></h2>
+    <p class="win-formula"></p>
+    <p class="win-fact"></p>
+    <p class="win-hard" data-i18n="molecules.hardWin">Built without the picture. Amazing!</p>
+    <div class="win-actions">
+      <button class="chunky-button next-level" type="button" data-i18n="molecules.nextLevel">Next molecule</button>
+      <button class="chunky-button build-again" type="button" data-i18n="molecules.again">Build again</button>
+    </div>
+  </dialog>
+
+  <footer class="site-footer">
+    <p>
+      <span data-i18n="common.footer">Brought to you by Andrea Grassi,</span>
+      <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    </p>
+    <div class="lang-slot"></div>
+  </footer>
+</body>
+</html>

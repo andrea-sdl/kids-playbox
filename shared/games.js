@@ -46,4 +46,18 @@ export const GAMES = [
         <rect x="38" y="34" width="18" height="18" rx="2" fill="#38c172"/>
       </svg>`,
   },
+  {
+    id: 'molecules',
+    path: 'games/molecules/',
+    color: '#6c4fd1',
+    icon: `
+      <svg viewBox="0 0 64 64" aria-hidden="true" stroke="#2b2140" stroke-width="3">
+        <path d="M28.5 34V12M35.5 34V12M32 36L13 49M32 36l19 13" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="32" cy="12" r="9" fill="#e5453c"/>
+        <circle cx="13" cy="49" r="8" fill="#f4f1ea"/>
+        <circle cx="51" cy="49" r="8" fill="#f4f1ea"/>
+        <circle cx="32" cy="36" r="11" fill="#3d3a4b"/>
+        <circle cx="28" cy="32" r="3" fill="#fff" stroke="none" opacity="0.5"/>
+      </svg>`,
+  },
 ];

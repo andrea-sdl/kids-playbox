@@ -1,0 +1,746 @@
+body {
+  --theme: #6c4fd1;
+  --theme-soft: #e6defc;
+  --bench: #f2f6ff;
+  --bench-grid: #dfe7fb;
+  --bond: #4a4060;
+  --hand: #ffc93c;
+  --hand-arm: #f2a516;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    --theme-soft: #3b2f6b;
+    --bench: #211a38;
+    --bench-grid: #2d2550;
+    --bond: #d6cdee;
+  }
+}
+
+.ball-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* The lab fills the screen below the top bar; the footer is below it. */
+.lab {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 10px;
+  height: calc(var(--app-height) - 76px);
+  min-height: 520px;
+  max-height: 940px;
+  padding-bottom: 12px;
+}
+
+/* ---------- Level bar ---------- */
+
+.level-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.level-button {
+  flex: 1;
+  min-width: 0;
+  justify-content: space-between;
+  padding: 8px 14px 8px 18px;
+}
+
+.level-number {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.level-button svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.level-bar .icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.mode {
+  display: inline-flex;
+  padding: 3px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 4px 0 var(--line);
+}
+
+.mode label {
+  position: relative;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.mode input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mode label:has(input:checked) {
+  background: var(--theme);
+  color: #fff;
+}
+
+.mode label:has(input:focus-visible) {
+  outline: 4px solid var(--sun);
+}
+
+/* ---------- Bench and goal ---------- */
+
+.lab-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 12px;
+  min-height: 0;
+}
+
+.bench {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background-color: var(--bench);
+  background-image:
+    linear-gradient(var(--bench-grid) 2px, transparent 2px),
+    linear-gradient(90deg, var(--bench-grid) 2px, transparent 2px);
+  background-size: 34px 34px;
+  box-shadow: var(--shadow);
+}
+
+.workspace {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bench-tools {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.bench-tools > * {
+  pointer-events: auto;
+}
+
+.bench-tools .chunky-button {
+  min-height: 44px;
+}
+
+.bench-tools .icon-button {
+  width: 44px;
+  height: 44px;
+}
+
+.bench-tools .chunky-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.clear-button {
+  padding: 6px 14px;
+}
+
+.clear-button.is-armed {
+  background: #ff5f5f;
+  color: #fff;
+}
+
+.bench-tools .focus-slot {
+  margin-left: auto;
+}
+
+.status {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  /* Room for two lines always, so atoms keep a steady space above it. */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(2.6em + 12px);
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+}
+
+.goal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  padding: 14px;
+  overflow: auto;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.goal-label {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.goal-name {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.15;
+}
+
+.goal-formula,
+.win-formula {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--theme);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .goal-formula,
+  :root:not([data-theme="light"]) .win-formula {
+    color: #b9a6ff;
+  }
+}
+
+.goal-picture {
+  width: 100%;
+  max-height: 240px;
+  margin: 6px 0;
+}
+
+.goal-mystery {
+  margin: 6px 0;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.goal.is-hard .goal-name {
+  font-size: 1.8rem;
+}
+
+.goal-atoms {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px 2px 2px;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  font-weight: 900;
+}
+
+.chip svg {
+  width: 26px;
+  height: 26px;
+}
+
+.chip.is-done {
+  background: #c9f2d6;
+  color: #1e5a35;
+}
+
+.chip.is-over {
+  background: #ffd0cc;
+  color: #8a1c14;
+}
+
+/* ---------- Atoms in the workspace ---------- */
+
+.bond-lines line {
+  stroke: var(--bond);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.bond-hit {
+  stroke: transparent;
+  stroke-width: 30;
+  stroke-linecap: round;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .bond:hover .bond-lines line {
+    stroke: #e5453c;
+  }
+}
+
+.atom {
+  cursor: grab;
+  outline: none;
+}
+
+.atom-body {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.ball {
+  stroke: rgb(20 10 40 / 0.4);
+  stroke-width: 2;
+}
+
+.shine {
+  fill: rgb(255 255 255 / 0.5);
+  pointer-events: none;
+}
+
+.symbol {
+  font-family: var(--font);
+  font-weight: 900;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.pick-ring {
+  fill: none;
+  stroke: none;
+  stroke-width: 4;
+  stroke-dasharray: 7 6;
+}
+
+.atom.is-selected .pick-ring {
+  stroke: var(--theme);
+  animation: ring-spin 3s linear infinite;
+}
+
+.atom:focus-visible .pick-ring {
+  stroke: var(--sun);
+}
+
+@keyframes ring-spin {
+  to { stroke-dashoffset: -52; }
+}
+
+.hand-arm {
+  stroke: var(--hand-arm);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.hand {
+  fill: var(--hand);
+  stroke: #2b2140;
+  stroke-width: 1.5;
+}
+
+.atom.is-new .atom-body {
+  animation: atom-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes atom-pop {
+  from { transform: scale(0.2); }
+}
+
+.atom.is-nope .atom-body {
+  animation: atom-nope 0.4s ease;
+}
+
+@keyframes atom-nope {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.workspace.is-won .atom-body {
+  animation: atom-cheer 0.6s ease 2;
+}
+
+.workspace.is-won .atom:nth-child(2n) .atom-body {
+  animation-delay: 0.1s;
+}
+
+.workspace.is-won .atom:nth-child(3n) .atom-body {
+  animation-delay: 0.2s;
+}
+
+@keyframes atom-cheer {
+  40% { transform: translateY(-14px) scale(1.12); }
+}
+
+/* ---------- Atom tray ---------- */
+
+.tray {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tray-atom {
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px 4px 8px;
+  border-radius: 18px;
+}
+
+.tray-atom svg {
+  width: 44px;
+  height: 44px;
+}
+
+.tray-name {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray-hands {
+  display: flex;
+  gap: 3px;
+}
+
+.tray-hands i {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #2b2140;
+  border-radius: 50%;
+  background: var(--hand);
+}
+
+/* ---------- Levels dialog ---------- */
+
+.levels-dialog,
+.win-dialog {
+  padding: 0;
+  border: 4px solid var(--line);
+  border-radius: 24px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 8px 0 var(--line);
+}
+
+.levels-dialog::backdrop,
+.win-dialog::backdrop {
+  background: rgb(20 12 40 / 0.55);
+}
+
+.levels-dialog {
+  width: min(94vw, 720px);
+  max-height: 86vh;
+  max-height: 86dvh;
+}
+
+.levels-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px 12px;
+  border-bottom: 2px dashed var(--ink-soft);
+  background: var(--surface);
+}
+
+.levels-head h2 {
+  margin: 0;
+}
+
+.levels-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 14px 18px 18px;
+  list-style: none;
+}
+
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 8px 10px;
+  border: 3px solid var(--line);
+  border-radius: 16px;
+  background: var(--bench);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 800;
+  box-shadow: 0 4px 0 var(--line);
+  cursor: pointer;
+}
+
+.level-card.is-current {
+  outline: 3px dashed var(--theme);
+  outline-offset: 3px;
+}
+
+.level-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.level-index {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.level-picture {
+  width: 100%;
+  height: 72px;
+  margin-top: 14px;
+}
+
+.level-name {
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+
+.level-mark {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 1rem;
+}
+
+.level-mark.is-easy {
+  color: #2f8f55;
+}
+
+.level-mark.is-hard {
+  color: var(--star);
+  -webkit-text-stroke: 1px var(--line);
+}
+
+/* ---------- Win ---------- */
+
+.win-dialog {
+  width: min(92vw, 440px);
+  padding: 22px;
+  text-align: center;
+}
+
+.win-picture {
+  width: 100%;
+  max-height: 180px;
+}
+
+.win-dialog h2 {
+  margin: 8px 0 4px;
+  font-size: 1.7rem;
+}
+
+.win-fact {
+  margin: 10px 0;
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.win-hard {
+  margin: 6px 0;
+  font-weight: 900;
+  color: #b07800;
+}
+
+.win-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.next-level {
+  background: var(--theme);
+  color: #fff;
+}
+
+.next-level:disabled {
+  background: var(--sun);
+  color: #2b2140;
+  opacity: 1;
+}
+
+/* ---------- Phones and narrow screens ---------- */
+
+/* The goal card sits above the bench: words on the left, picture on the right. */
+@media (max-width: 720px) {
+  .lab-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .goal {
+    order: -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
+    align-items: center;
+    justify-items: start;
+    gap: 2px 10px;
+    padding: 8px 12px;
+    overflow: visible;
+    text-align: left;
+  }
+
+  .goal > * {
+    grid-column: 1;
+  }
+
+  .goal .goal-picture {
+    grid-column: 2;
+    grid-row: 1 / span 6;
+    justify-self: stretch;
+    max-height: 110px;
+    margin: 0;
+  }
+
+  .goal-name {
+    font-size: 1.2rem;
+  }
+
+  .goal.is-hard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .goal.is-hard .goal-name {
+    font-size: 1.4rem;
+  }
+
+  .goal-formula {
+    font-size: 1.05rem;
+  }
+
+  .goal-mystery {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+
+  .goal-atoms {
+    justify-content: flex-start;
+  }
+
+  .chip svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .hint-button {
+    min-height: 36px;
+    padding: 4px 14px;
+  }
+
+  .level-bar {
+    gap: 6px;
+  }
+
+  .level-bar .icon-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .mode label {
+    padding: 6px 10px;
+  }
+
+  .tray {
+    gap: 5px;
+  }
+
+  .tray-atom {
+    padding: 4px 2px 6px;
+    border-radius: 14px;
+  }
+
+  .tray-atom svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .tray-name {
+    font-size: 0.72rem;
+  }
+
+  .status {
+    font-size: 0.82rem;
+  }
+}
+
+/* Phones: the ball already shows the symbol, and full names don't fit. */
+@media (max-width: 480px) {
+  .tray-name {
+    display: none;
+  }
+}
+
+/* Very narrow: the mode switch gets its own row. */
+@media (max-width: 400px) {
+  .mode {
+    flex: 1 0 100%;
+    justify-content: center;
+  }
+
+  .mode label {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* ---------- Focus mode ---------- */
+
+body.is-immersive main.lab {
+  height: calc(var(--app-height) - 16px - env(safe-area-inset-bottom));
+  max-height: none;
+  padding-left: 8px;
+  padding-right: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+}

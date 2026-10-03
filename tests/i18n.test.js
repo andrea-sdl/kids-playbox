@@ -5,11 +5,13 @@ import { LANGUAGES, allStrings, matchLanguage } from '../shared/i18n.js';
 import '../games/dice/strings.js';
 import '../games/memory/strings.js';
 import '../games/blocks/strings.js';
+import '../games/molecules/strings.js';
 import { GAMES } from '../shared/games.js';
 import { SHAPES, TEXTURES } from '../games/blocks/world.js';
 import { CHARACTERS } from '../games/dice/logic.js';
 import { THEMES, CARD_BACKS } from '../games/memory/logic.js';
 import { THEME_INFO } from '../games/memory/themes.js';
+import { ELEMENT_ORDER, MOLECULES } from '../games/molecules/logic.js';
 
 const dictionaries = allStrings();
 const codes = LANGUAGES.map((language) => language.code);
@@ -69,6 +71,8 @@ test('everything shown by name has a translation', () => {
     ...THEME_INFO.animals.items.map((item) => `animal.${item.key}`),
     ...THEME_INFO.space.items.flatMap((item) => [`space.${item.key}.name`, `space.${item.key}.fact`]),
     ...THEME_INFO.countries.items.flatMap((item) => [`country.${item.key}.name`, `country.${item.key}.fact`]),
+    ...ELEMENT_ORDER.map((el) => `element.${el}`),
+    ...MOLECULES.flatMap((item) => [`molecule.${item.id}.name`, `molecule.${item.id}.fact`]),
   ];
   const missing = needed.filter((key) => dictionaries.en[key] === undefined);
   assert.deepEqual(missing, []);

@@ -140,6 +140,15 @@
       "./games/memory/sound.js",
       "./games/memory/strings.js",
       "./games/memory/themes.js"
+    ],
+    "molecules": [
+      "./games/molecules/",
+      "./games/molecules/index.html",
+      "./games/molecules/logic.js",
+      "./games/molecules/molecules.css",
+      "./games/molecules/molecules.js",
+      "./games/molecules/sound.js",
+      "./games/molecules/strings.js"
     ]
   }
 }

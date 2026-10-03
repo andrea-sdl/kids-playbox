@@ -8,6 +8,13 @@
 
 export const RELEASES = [
   {
+    version: 13,
+    date: '2026-10-03',
+    changes: [
+      { target: 'molecules', type: 'new', text: 'changes.v13.molecules' },
+    ],
+  },
+  {
     version: 12,
     date: '2026-09-27',
     changes: [
