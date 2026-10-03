@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 17,
+    date: '2026-10-03',
+    changes: [
+      { target: 'drive', type: 'updated', text: 'changes.v17.steerYourself' },
+      { target: 'app', type: 'fixed', text: 'changes.v17.rotate' },
+    ],
+  },
+  {
     version: 16,
     date: '2026-10-03',
     changes: [

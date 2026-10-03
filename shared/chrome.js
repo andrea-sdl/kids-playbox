@@ -9,6 +9,36 @@ import { readJSON, writeJSON } from './store.js';
 
 const UPDATE_CHECK_MS = 30 * 60 * 1000;
 
+// Full-height game screens use --app-height. CSS gives a first guess
+// (100dvh), but iOS can keep the old height after the phone is turned, so
+// measure the space the page really has whenever the size changes. iOS
+// reports the new size late, so check again a moment later too.
+function measureAppHeight() {
+  const height = document.body?.clientHeight;
+  if (height) {
+    document.documentElement.style.setProperty('--app-height', `${height}px`);
+  }
+  window.scrollTo(0, 0);
+}
+
+function watchAppHeight() {
+  const settle = () => {
+    measureAppHeight();
+    setTimeout(measureAppHeight, 250);
+    setTimeout(measureAppHeight, 700);
+  };
+  window.addEventListener('resize', settle);
+  window.addEventListener('orientationchange', settle);
+  window.visualViewport?.addEventListener('resize', settle);
+  if (document.body) {
+    settle();
+  } else {
+    document.addEventListener('DOMContentLoaded', settle);
+  }
+}
+
+watchAppHeight();
+
 // Translate the static page text and add the language menu. Call once each
 // page's own strings have been added.
 export function setupLanguage() {

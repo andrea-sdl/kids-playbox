@@ -164,8 +164,6 @@ function angleBetween(a, b) {
 
 function drive(dt) {
   const samples = track.samples;
-  const sample = samples[state.index];
-  const roadHeading = Math.atan2(sample.dx, sample.dz);
 
   // Steering: smooth, and weaker when slow (you can't turn standing still).
   let steerInput = 0;
@@ -179,15 +177,6 @@ function drive(dt) {
   const grip = Math.min(1, state.speed / 6);
   const turnRate = (1.9 - 0.55 * Math.min(1, state.speed / TOP_SPEED)) * grip;
   state.heading -= state.steer * turnRate * dt;
-
-  // A helper for small hands: with no steering, the car follows the bends
-  // and drifts back to the middle (turning right lowers the heading).
-  const fromMiddle = sideOffset(sample, state.x, state.z);
-  const wanted = roadHeading - Math.max(-0.35, Math.min(0.35, fromMiddle * 0.05));
-  const offRoadAngle = angleBetween(wanted, state.heading);
-  if (steerInput === 0 && Math.abs(offRoadAngle) < 0.8) {
-    state.heading += (state.speed * sample.curve + offRoadAngle * 2.5) * dt * grip;
-  }
 
   // Speed: the car always accelerates (like Asphalt); brake and nitro help.
   const braking = input.brake || input.keys.has('brake');
