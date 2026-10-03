@@ -88,6 +88,7 @@
       "./games/drive/sound.js",
       "./games/drive/strings.js",
       "./games/drive/textures.js",
+      "./games/drive/tilt.js",
       "./games/drive/tracks.js",
       "./games/drive/world.js",
       "./vendor/three/LICENSE",

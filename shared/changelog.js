@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 20,
+    date: '2026-10-03',
+    changes: [
+      { target: 'drive', type: 'new', text: 'changes.v20.tilt' },
+      { target: 'drive', type: 'new', text: 'changes.v20.customize' },
+    ],
+  },
+  {
     version: 19,
     date: '2026-10-03',
     changes: [

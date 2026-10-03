@@ -128,15 +128,26 @@ test('times read as minutes, seconds and tenths', () => {
 });
 
 test('bad saves fall back safely', () => {
-  assert.deepEqual(normalizeSave(null), { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, track: null, best: {} });
+  const defaults = normalizeSave(null);
+  assert.deepEqual(defaults.custom, { finish: 'gloss', stripes: 'none', stripeColor: '#ffffff', rims: 'silver', wing: 'auto', glow: 'auto' });
+  assert.equal(defaults.control, 'buttons');
+  delete defaults.custom;
+  delete defaults.control;
+  assert.deepEqual(defaults, { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, track: null, best: {} });
   const save = normalizeSave({
     scenario: 'moon', difficulty: 'hard', car: 'rover', paint: 'pink', sound: false, music: false, track: '../x',
     best: { 'city-easy': 42.5, 'city-impossible': 3, 'jungle-hard': -1, 'track-tabc1-medium': 61.2, 'track-bad id-easy': 5 },
   });
+  delete save.custom;
+  delete save.control;
   assert.deepEqual(save, {
     scenario: 'city', difficulty: 'hard', car: 'rover', paint: PAINTS[0], sound: false, music: false, track: null,
     best: { 'city-easy': 42.5, 'track-tabc1-medium': 61.2 },
   });
+  const custom = normalizeSave({ control: 'tilt', custom: { finish: 'chrome', stripes: 'double', rims: 'plaid', glow: '#ff3fa4', extra: 1 } });
+  assert.equal(custom.control, 'tilt');
+  assert.deepEqual(custom.custom, { finish: 'chrome', stripes: 'double', stripeColor: '#ffffff', rims: 'silver', wing: 'auto', glow: '#ff3fa4' });
+  assert.equal(normalizeSave({ control: 'mind' }).control, 'buttons');
   assert.equal(normalizeSave({ track: 'tabc1' }).track, 'tabc1');
   assert.equal(normalizeSave({ music: 'loud' }).music, true);
 });

@@ -6,6 +6,7 @@ import { recordPlay } from '../../shared/progress.js';
 import * as THREE from '../../vendor/three/three.min.js';
 import {
   CARS,
+  CUSTOM_OPTIONS,
   DIFFICULTIES,
   PAINTS,
   ROAD_WIDTH,
@@ -26,6 +27,7 @@ import { createSounds } from './sound.js';
 import { createMusic } from './music.js';
 import { normalizeTracks, trackPoints } from './tracks.js';
 import { createBuilder } from './editor.js';
+import { createTilt, tiltAvailable } from './tilt.js';
 
 const GAME_ID = 'drive';
 const STORE_KEY = 'game:drive';
@@ -59,6 +61,11 @@ const els = {
   scenarioOptions: $('.scenario-options'),
   carOptions: $('.car-options'),
   paintOptions: $('.paint-options'),
+  customRows: $('.custom-rows'),
+  steeringPick: $('.steering-pick'),
+  controlOptions: $('.control-options'),
+  controlNote: $('.control-note'),
+  view: $('.view'),
   difficultyOptions: $('.difficulty-options'),
   difficultyBlurb: $('.difficulty-blurb'),
   bestLine: $('.best-line'),
@@ -139,7 +146,7 @@ function setCar() {
   if (car) {
     view.scene.remove(car.group);
   }
-  car = buildCar(save.car, save.paint);
+  car = buildCar(save.car, save.paint, save.custom);
   car.setHeadlights(view.headlights);
   view.scene.add(car.group);
   placeCarAtStart();
@@ -196,12 +203,16 @@ function drive(dt) {
   const samples = track.samples;
 
   // Steering: smooth, and weaker when slow (you can't turn standing still).
+  // Tilting the phone steers smoothly; keys and buttons still work.
   let steerInput = 0;
+  if (tiltOn()) {
+    steerInput = tilt.steer();
+  }
   if (input.left || input.keys.has('left')) {
-    steerInput -= 1;
+    steerInput = -1;
   }
   if (input.right || input.keys.has('right')) {
-    steerInput += 1;
+    steerInput = 1;
   }
   state.steer += (steerInput - state.steer) * Math.min(1, dt * 7);
   const grip = Math.min(1, state.speed / 6);
@@ -442,6 +453,8 @@ function renderHud() {
   els.speed.textContent = String(Math.round(state.speed * SPEEDO_SCALE));
   els.boostBar.style.transform = `scaleX(${(state.boost / BOOST_SECONDS).toFixed(3)})`;
   els.speedo.classList.toggle('is-boosting', state.usingNitro);
+  // The steering buttons hide only once tilt readings really arrive.
+  document.body.classList.toggle('is-tilt', tiltOn());
   document.body.classList.toggle('is-nitro', state.usingNitro);
 }
 
@@ -533,8 +546,16 @@ function resetRun() {
   renderHud();
 }
 
-function startRun() {
+async function startRun() {
   sounds.unlock();
+  // iPhones only allow the motion sensor after a tap, each visit.
+  if (save.control === 'tilt' && !tilt.ready) {
+    const allowed = await tilt.enable();
+    if (!allowed) {
+      useButtons();
+      toast(t('drive.tiltDenied'), 3500);
+    }
+  }
   resetRun();
   setMode('countdown');
   chaseCamera(0, true);
@@ -554,7 +575,12 @@ function startRun() {
     els.countdown.textContent = t('drive.countGo');
     sounds.count(true);
     setMode('driving');
-    toast(t('drive.collectAll'), 2200);
+    tilt.recenter();
+    if (tiltOn()) {
+      toast(t('drive.tiltHint'), 2600);
+    } else {
+      toast(t('drive.collectAll'), 2200);
+    }
     setTimeout(() => els.countdown.classList.remove('is-on'), 700);
   }, 800);
 }
@@ -600,6 +626,7 @@ function pause() {
 
 function resume() {
   setMode('driving');
+  tilt.recenter();
 }
 
 function toGarage() {
@@ -795,6 +822,8 @@ function renderGarage() {
     },
   )));
   renderMyTracks();
+  renderCustom();
+  renderControls();
   els.carOptions.replaceChildren(...CARS.map((design) => radioCard(
     'car',
     design,
@@ -836,6 +865,96 @@ function renderGarage() {
     els.bestLine.textContent = t('drive.best', { time: formatTime(best) });
   }
 }
+
+/* ---------- Car extras ---------- */
+
+// A row of choices for one extra: words, or color dots for colors.
+function customRow(key) {
+  const row = document.createElement('div');
+  row.className = 'custom-row';
+  const title = document.createElement('p');
+  title.textContent = t(`drive.custom.${key}`);
+  const options = document.createElement('div');
+  options.className = 'custom-options';
+  options.setAttribute('role', 'radiogroup');
+  options.setAttribute('aria-label', title.textContent);
+  options.append(...CUSTOM_OPTIONS[key].map((value, i) => {
+    let inner = `<strong>${t(`drive.${key}.${value}`)}</strong>`;
+    if (value.startsWith('#')) {
+      inner = `<span class="swatch" style="--paint: ${value}"></span>`;
+    }
+    const card = radioCard(`custom-${key}`, value, save.custom[key] === value, inner, () => {
+      save.custom[key] = value;
+      store();
+      setCar();
+      renderCustom();
+    });
+    card.classList.add('card-custom');
+    if (value.startsWith('#')) {
+      card.classList.add('card-paint');
+      card.setAttribute('aria-label', t('drive.colorChoice', { number: i + 1 }));
+    }
+    return card;
+  }));
+  row.append(title, options);
+  return row;
+}
+
+function renderCustom() {
+  const keys = Object.keys(CUSTOM_OPTIONS).filter((key) => key !== 'stripeColor' || save.custom.stripes !== 'none');
+  els.customRows.replaceChildren(...keys.map(customRow));
+}
+
+/* ---------- Steering ---------- */
+
+const tilt = createTilt();
+
+function tiltOn() {
+  return save.control === 'tilt' && tilt.ready;
+}
+
+function useButtons() {
+  save.control = 'buttons';
+  store();
+  tilt.disable();
+  renderControls();
+}
+
+// Buttons or tilt. Only offered where there's a motion sensor; asking for
+// it has to happen in the tap itself, so this listens to clicks.
+function renderControls() {
+  els.steeringPick.hidden = !tiltAvailable();
+  els.controlNote.textContent = '';
+  if (save.control === 'tilt') {
+    els.controlNote.textContent = t('drive.tiltNote');
+  }
+  els.controlOptions.replaceChildren(...['buttons', 'tilt'].map((control) => {
+    const card = radioCard('control', control, save.control === control, `<strong>${t(`drive.control.${control}`)}</strong>`, () => {});
+    card.querySelector('input').addEventListener('click', async () => {
+      if (control === 'buttons') {
+        useButtons();
+        return;
+      }
+      const allowed = await tilt.enable();
+      if (!allowed) {
+        useButtons();
+        els.controlNote.textContent = t('drive.tiltDenied');
+        return;
+      }
+      save.control = 'tilt';
+      store();
+      renderControls();
+    });
+    return card;
+  }));
+}
+
+// With tilt steering, a tap on the road straightens up.
+els.view.addEventListener('pointerdown', (event) => {
+  if (tiltOn() && mode === 'driving' && !event.target.closest('button')) {
+    tilt.recenter();
+  }
+});
 
 /* ---------- Built tracks ---------- */
 

@@ -127,6 +127,60 @@ function shadowTexture() {
   return new THREE.CanvasTexture(canvas);
 }
 
+const RIM_COLORS = {
+  silver: { color: 0xe2e6ee, metalness: 1, roughness: 0.18 },
+  black: { color: 0x1b1c22, metalness: 0.7, roughness: 0.35 },
+  gold: { color: 0xd8a830, metalness: 1, roughness: 0.22 },
+  red: { color: 0xd0202c, metalness: 0.6, roughness: 0.3 },
+};
+
+// The paint's look: shiny clear coat, flat matte, or mirror chrome.
+function paintMaterial(finish) {
+  if (finish === 'matte') {
+    return new THREE.MeshPhysicalMaterial({ metalness: 0.05, roughness: 0.72, clearcoat: 0, envMapIntensity: 0.6 });
+  }
+  if (finish === 'chrome') {
+    return new THREE.MeshPhysicalMaterial({ metalness: 1, roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 1.6 });
+  }
+  return new THREE.MeshPhysicalMaterial({ metalness: 0.45, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.1 });
+}
+
+// Racing stripes run the length of the car, so the paint texture only has
+// to change across it: u goes from one side of the car (0) to the other (1).
+function stripeTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 4;
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function paintStripes(texture, paint, stripes, stripeColor) {
+  const ctx = texture.image.getContext('2d');
+  ctx.fillStyle = paint;
+  ctx.fillRect(0, 0, 256, 4);
+  ctx.fillStyle = stripeColor;
+  if (stripes === 'single') {
+    ctx.fillRect(108, 0, 40, 4);
+  }
+  if (stripes === 'double') {
+    ctx.fillRect(84, 0, 26, 4);
+    ctx.fillRect(146, 0, 26, 4);
+  }
+  texture.needsUpdate = true;
+}
+
+function acrossUv(geometry, width) {
+  const position = geometry.attributes.position;
+  const uvs = new Float32Array(position.count * 2);
+  for (let i = 0; i < position.count; i += 1) {
+    uvs[i * 2] = position.getX(i) / width + 0.5;
+    uvs[i * 2 + 1] = 0.5;
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+}
+
 function makeWheel(radius, materials) {
   const wheel = new THREE.Group();
   const tire = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.78, radius * 0.24, 16, 40), materials.tire);
@@ -149,18 +203,31 @@ function makeWheel(radius, materials) {
   return wheel;
 }
 
-// Returns { group, setColor, setHeadlights, emitters, update }.
-export function buildCar(design, color) {
+// custom: { finish, stripes, stripeColor, rims, wing, glow } (see
+// CUSTOM_OPTIONS in world.js). Returns { group, setColor, setHeadlights,
+// emitters, update }.
+export function buildCar(design, color, custom) {
   const spec = DESIGNS[design];
-  const materials = sharedMaterials();
-  const paint = new THREE.MeshPhysicalMaterial({
-    color,
-    metalness: 0.45,
-    roughness: 0.3,
-    clearcoat: 1,
-    clearcoatRoughness: 0.04,
-    envMapIntensity: 1.1,
-  });
+  const materials = { ...sharedMaterials() };
+  materials.rim = new THREE.MeshStandardMaterial(RIM_COLORS[custom.rims]);
+  const paint = paintMaterial(custom.finish);
+  // Body panels: with stripes, the color comes from the stripe texture.
+  const bodyPaint = paintMaterial(custom.finish);
+  let stripes = null;
+  function applyColor(next) {
+    paint.color.set(next);
+    if (custom.stripes === 'none') {
+      bodyPaint.color.set(next);
+      return;
+    }
+    paintStripes(stripes, next, custom.stripes, custom.stripeColor);
+  }
+  if (custom.stripes !== 'none') {
+    stripes = stripeTexture();
+    bodyPaint.map = stripes;
+    bodyPaint.color.set(0xffffff);
+  }
+  applyColor(color);
 
   const group = new THREE.Group();
   // The body rolls on its own; the wheels stay put.
@@ -168,7 +235,9 @@ export function buildCar(design, color) {
   body.position.y = spec.ride;
   group.add(body);
 
-  body.add(new THREE.Mesh(sideSolid(bodyShape(spec.body), spec.width, 0.16), paint));
+  const shell = sideSolid(bodyShape(spec.body), spec.width, 0.16);
+  acrossUv(shell, spec.width);
+  body.add(new THREE.Mesh(shell, bodyPaint));
   body.add(new THREE.Mesh(sideSolid(cabinShape(spec.cabin), spec.cabinWidth, 0.12), materials.glass));
 
   const front = Math.max(...spec.body.map(([x]) => x));
@@ -225,17 +294,30 @@ export function buildCar(design, color) {
     exhaustSpots.push(spot);
   });
 
-  if (spec.wing) {
+  // A rear wing: the car's own choice, none, a small lip, or a big wing.
+  let wingStyle = custom.wing;
+  if (wingStyle === 'auto') {
+    wingStyle = spec.wing ? 'big' : 'none';
+  }
+  const tailTop = spec.body[spec.body.length - 2][1];
+  if (wingStyle === 'small') {
+    const lip = new THREE.Mesh(new THREE.BoxGeometry(spec.width - 0.3, 0.06, 0.3), materials.carbon);
+    lip.position.set(0, tailTop + 0.08, back + 0.22);
+    lip.rotation.x = -0.25;
+    body.add(lip);
+  }
+  if (wingStyle === 'big') {
+    const height = tailTop + 0.36;
     const wing = new THREE.Mesh(new THREE.BoxGeometry(spec.width, 0.06, 0.44), materials.carbon);
-    wing.position.set(0, 1.3, back + 0.3);
+    wing.position.set(0, height, back + 0.3);
     wing.rotation.x = -0.1;
     body.add(wing);
     [-1, 1].forEach((side) => {
       const strut = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.2), materials.carbon);
-      strut.position.set(side * 0.55, 1.12, back + 0.32);
+      strut.position.set(side * 0.55, height - 0.18, back + 0.32);
       body.add(strut);
       const plate = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.5), paint);
-      plate.position.set(side * spec.width / 2, 1.33, back + 0.3);
+      plate.position.set(side * spec.width / 2, height + 0.03, back + 0.3);
       body.add(plate);
     });
   }
@@ -279,7 +361,11 @@ export function buildCar(design, color) {
   beams.position.set(0, 0.08, front - 0.3);
   beams.visible = false;
   group.add(beams);
-  const glowMaterial = new THREE.MeshBasicMaterial({ map: materials.dot, color: new THREE.Color(spec.underglow).multiplyScalar(1.4), transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
+  let glowColor = spec.underglow;
+  if (custom.glow.startsWith('#')) {
+    glowColor = custom.glow;
+  }
+  const glowMaterial = new THREE.MeshBasicMaterial({ map: materials.dot, color: new THREE.Color(glowColor).multiplyScalar(1.4), transparent: true, opacity: 0.45, blending: THREE.AdditiveBlending, depthWrite: false });
   const underglow = new THREE.Mesh(new THREE.PlaneGeometry(spec.width + 1.2, front - back + 1.2), glowMaterial);
   underglow.rotation.x = -Math.PI / 2;
   underglow.position.y = 0.06;
@@ -299,11 +385,16 @@ export function buildCar(design, color) {
   return {
     group,
     setColor(next) {
-      paint.color.set(next);
+      applyColor(next);
     },
+    // Night lights. A chosen underglow color shows everywhere; the car's
+    // own ('auto') only at night, and 'off' never.
     setHeadlights(on) {
       beams.visible = on;
-      underglow.visible = on;
+      underglow.visible = custom.glow !== 'off';
+      if (custom.glow === 'auto') {
+        underglow.visible = on;
+      }
     },
     // Where particles come from, in world space: the rear tires (for
     // smoke and dust) and the exhausts (for nitro sparks).

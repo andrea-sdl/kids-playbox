@@ -11,6 +11,20 @@ export const SAMPLE_SPACING = 2;
 export const SCENARIOS = ['city', 'jungle', 'wasteland'];
 export const DIFFICULTIES = ['easy', 'medium', 'hard'];
 export const CARS = ['comet', 'racer', 'rover'];
+// Steering: on-screen buttons, or tilting the phone like a wheel.
+export const CONTROLS = ['buttons', 'tilt'];
+
+// Car extras. 'auto' keeps each car's own look (the Racer's wing, the city
+// underglow at night).
+export const CUSTOM_OPTIONS = {
+  finish: ['gloss', 'matte', 'chrome'],
+  stripes: ['none', 'single', 'double'],
+  stripeColor: ['#ffffff', '#16161c', '#ffd23f', '#e3242b', '#35f2ff'],
+  rims: ['silver', 'black', 'gold', 'red'],
+  wing: ['auto', 'none', 'small', 'big'],
+  glow: ['auto', 'off', '#35f2ff', '#ff3fa4', '#39ff88', '#ffd23f'],
+};
+
 export const PAINTS = ['#e3242b', '#1e6fff', '#ffc21a', '#19c37d', '#8b3dff', '#ff6a00', '#f2f2f2', '#1b1b22'];
 
 export const CIRCUITS = {
@@ -251,7 +265,8 @@ const TRACK_BEST = /^track-t[a-z0-9]{1,20}-(easy|medium|hard)$/;
 
 export function normalizeSave(raw) {
   // track: the id of a built track being driven, or null for the scenario's own.
-  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, track: null, best: {} };
+  const custom = Object.fromEntries(Object.entries(CUSTOM_OPTIONS).map(([key, values]) => [key, values[0]]));
+  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], custom, control: 'buttons', sound: true, music: true, track: null, best: {} };
   if (!raw || typeof raw !== 'object') {
     return save;
   }
@@ -272,6 +287,16 @@ export function normalizeSave(raw) {
   }
   if (typeof raw.music === 'boolean') {
     save.music = raw.music;
+  }
+  if (CONTROLS.includes(raw.control)) {
+    save.control = raw.control;
+  }
+  if (raw.custom && typeof raw.custom === 'object') {
+    Object.entries(CUSTOM_OPTIONS).forEach(([key, values]) => {
+      if (values.includes(raw.custom[key])) {
+        save.custom[key] = raw.custom[key];
+      }
+    });
   }
   if (typeof raw.track === 'string' && TRACK_ID.test(raw.track)) {
     save.track = raw.track;
