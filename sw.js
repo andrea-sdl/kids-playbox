@@ -10,7 +10,7 @@
 // The file lists live in offline.json. Bump VERSION on every release so
 // players get the update on their next visit.
 
-const VERSION = 'playbox-v15';
+const VERSION = 'playbox-v16';
 const MANIFEST_URL = './offline.json';
 
 async function fetchManifest() {
@@ -50,35 +50,51 @@ async function copyFiles(fromCache, files) {
   }));
 }
 
+// A game counts as saved in an old version if its page is there. (Its file
+// list may have changed since, so the list itself can't be compared.)
+async function savedIn(oldKeys, id) {
+  for (const key of oldKeys) {
+    const oldCache = await caches.open(key);
+    if (await oldCache.match(`./games/${id}/index.html`)) {
+      return oldCache;
+    }
+  }
+  return null;
+}
+
+// Games saved in the old version are saved again for this one while
+// installing, when the old version still runs the app. Doing it on
+// activate would hold up every page the app opens until the downloads end.
+async function carryOverSavedGames(manifest) {
+  const oldKeys = (await caches.keys()).filter((key) => key !== VERSION);
+  for (const [id, files] of Object.entries(manifest.games)) {
+    const oldCache = await savedIn(oldKeys, id);
+    if (!oldCache) {
+      continue;
+    }
+    try {
+      await saveFiles(files);
+    } catch {
+      await copyFiles(oldCache, files);
+    }
+  }
+}
+
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    fetchManifest()
-      .then((manifest) => saveFiles(manifest.shell))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil((async () => {
+    const manifest = await fetchManifest();
+    await saveFiles(manifest.shell);
+    await carryOverSavedGames(manifest);
+    await self.skipWaiting();
+  })());
 });
 
+// Keep this quick: pages wait for it before they can load anything. Old
+// copies are deleted afterwards, without holding anything up (if that gets
+// cut short, the next update cleans up).
 self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const manifest = await readManifest();
-    const oldKeys = (await caches.keys()).filter((key) => key !== VERSION);
-    for (const key of oldKeys) {
-      const oldCache = await caches.open(key);
-      for (const files of Object.values(manifest.games)) {
-        const wasSaved = await hasAll(oldCache, files.filter((file) => !file.endsWith('/')));
-        if (!wasSaved) {
-          continue;
-        }
-        try {
-          await saveFiles(files);
-        } catch {
-          await copyFiles(oldCache, files);
-        }
-      }
-      await caches.delete(key);
-    }
-    await self.clients.claim();
-  })());
+  event.waitUntil(self.clients.claim());
+  caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== VERSION).map((key) => caches.delete(key))));
 });
 
 async function gameStatus() {

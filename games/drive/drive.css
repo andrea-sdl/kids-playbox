@@ -568,14 +568,30 @@ body[data-scenario="wasteland"] .hud-icon {
   bottom: 12px;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  gap: 10px;
 }
 
-.steer,
-.pedals {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
+/* Wide screens: brake by the left thumb, nitro by the right thumb, with
+   the open middle for the speedometer. */
+.controls-gap {
+  flex: 0 0 0;
+}
+
+.controls .gap-middle {
+  flex: 1 1 0;
+}
+
+/* Tall screens: steering at the edges, brake and nitro side by side in
+   the middle. */
+@media (orientation: portrait) {
+  .controls .gap-left,
+  .controls .gap-right {
+    flex: 1 1 0;
+  }
+
+  .controls .gap-middle {
+    flex: 0 0 0;
+  }
 }
 
 .pad {
@@ -807,8 +823,7 @@ body.is-nitro .view::after {
     height: 74px;
   }
 
-  .steer,
-  .pedals {
+  .controls {
     gap: 6px;
   }
 
@@ -823,6 +838,19 @@ body.is-nitro .view::after {
 
   .toast {
     font-size: 1.05rem;
+  }
+}
+
+/* Phones on their side: the game fits the short screen, so the pads stay
+   in view. */
+@media (max-height: 520px) {
+  .raceway {
+    min-height: 260px;
+  }
+
+  .minimap {
+    width: 84px;
+    height: 84px;
   }
 }
 

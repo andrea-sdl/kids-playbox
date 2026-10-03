@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 16,
+    date: '2026-10-03',
+    changes: [
+      { target: 'drive', type: 'updated', text: 'changes.v16.driveMusic' },
+      { target: 'app', type: 'fixed', text: 'changes.v16.fastUpdate' },
+    ],
+  },
+  {
     version: 15,
     date: '2026-10-03',
     changes: [

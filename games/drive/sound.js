@@ -121,7 +121,7 @@ export function createSounds() {
       low.frequency.setTargetAtTime(pitch, now, 0.05);
       high.frequency.setTargetAtTime(pitch * 2.01, now, 0.05);
       filter.frequency.setTargetAtTime(500 + speed * 1600 + (nitro ? 800 : 0), now, 0.08);
-      gain.gain.setTargetAtTime(0.045 + speed * 0.05, now, 0.1);
+      gain.gain.setTargetAtTime(0.018 + speed * 0.022, now, 0.1);
     },
     // Higher and higher pickups in a row.
     collect(streak) {

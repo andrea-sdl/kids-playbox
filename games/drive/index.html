@@ -22,6 +22,10 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
     <h1 data-i18n="game.drive.title">Turbo Drive</h1>
+    <button class="chunky-button icon-button music-button" type="button" aria-pressed="true" aria-label="Music" data-i18n-attr="aria-label:drive.music">
+      <svg class="music-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor"/></svg>
+      <svg class="music-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".45"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor" opacity=".45"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor" opacity=".45"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+    </button>
     <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound" data-i18n-attr="aria-label:common.sound">
       <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
       <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
@@ -79,19 +83,21 @@
           <strong class="speed-value">0</strong><small>km/h</small>
           <span class="nitro-bar"><i></i></span>
         </div>
+        <!-- Steer left at the far left, steer right at the far right. Brake
+             and nitro sit together in the middle on a tall screen, and next
+             to the steering on a wide one (see drive.css). -->
         <div class="controls">
-          <div class="steer">
-            <button class="pad steer-left" type="button" aria-label="Steer left" data-i18n-attr="aria-label:drive.left">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="pad steer-right" type="button" aria-label="Steer right" data-i18n-attr="aria-label:drive.right">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>
-          <div class="pedals">
-            <button class="pad brake-button" type="button"><span data-i18n="drive.brake">Brake</span></button>
-            <button class="pad nitro-button" type="button"><span data-i18n="drive.nitro">Nitro</span></button>
-          </div>
+          <button class="pad steer-left" type="button" aria-label="Steer left" data-i18n-attr="aria-label:drive.left">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span class="controls-gap gap-left" aria-hidden="true"></span>
+          <button class="pad brake-button" type="button"><span data-i18n="drive.brake">Brake</span></button>
+          <span class="controls-gap gap-middle" aria-hidden="true"></span>
+          <button class="pad nitro-button" type="button"><span data-i18n="drive.nitro">Nitro</span></button>
+          <span class="controls-gap gap-right" aria-hidden="true"></span>
+          <button class="pad steer-right" type="button" aria-label="Steer right" data-i18n-attr="aria-label:drive.right">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
         <p class="keys-hint" data-i18n="drive.keys">Arrows or A and D to steer · Space for nitro · Down or S to brake</p>
       </div>

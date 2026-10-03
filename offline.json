@@ -82,6 +82,7 @@
       "./games/drive/drive.js",
       "./games/drive/effects.js",
       "./games/drive/index.html",
+      "./games/drive/music.js",
       "./games/drive/scene.js",
       "./games/drive/sound.js",
       "./games/drive/strings.js",

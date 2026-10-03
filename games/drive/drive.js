@@ -21,6 +21,7 @@ import {
 import { buildCar, carOutline } from './cars.js';
 import { createScene } from './scene.js';
 import { createSounds } from './sound.js';
+import { createMusic } from './music.js';
 
 const GAME_ID = 'drive';
 const STORE_KEY = 'game:drive';
@@ -76,11 +77,15 @@ const els = {
   again: $('.again-button'),
   changeButtons: document.querySelectorAll('.change-button'),
   sound: $('.sound-button'),
+  music: $('.music-button'),
   favorite: $('.favorite-button'),
 };
 
 let save = normalizeSave(readJSON(STORE_KEY, null));
 const sounds = createSounds();
+const music = createMusic();
+// Browsers only play sound after the first tap or key press.
+let heardTap = false;
 const view = createScene(els.holder);
 
 function store() {
@@ -138,6 +143,7 @@ function loadScenario() {
     setTimeout(() => {
       track = view.setScenario(save.scenario);
       car?.setHeadlights(view.headlights);
+      updateMusic();
       placeCarAtStart();
       els.loading.hidden = true;
       drawMinimap();
@@ -679,7 +685,29 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
     pause();
   }
+  updateMusic();
 });
+
+// Each track has its own song, playing in the garage and on the road.
+function updateMusic() {
+  if (save.music && heardTap && document.visibilityState === 'visible') {
+    music.play(save.scenario);
+    return;
+  }
+  music.stop();
+}
+
+function firstTap() {
+  if (heardTap) {
+    return;
+  }
+  heardTap = true;
+  sounds.unlock();
+  updateMusic();
+}
+
+document.addEventListener('pointerdown', firstTap);
+document.addEventListener('keydown', firstTap);
 
 window.addEventListener('blur', () => {
   input.keys.clear();
@@ -786,6 +814,26 @@ function renderSound() {
   }
 }
 
+function renderMusic() {
+  els.music.setAttribute('aria-pressed', String(save.music));
+  let label = t('drive.musicOff');
+  if (save.music) {
+    label = t('drive.musicOn');
+  }
+  els.music.setAttribute('aria-label', label);
+  els.music.title = label;
+  els.music.querySelector('.music-on').toggleAttribute('hidden', !save.music);
+  els.music.querySelector('.music-off').toggleAttribute('hidden', save.music);
+  music.setEnabled(save.music);
+}
+
+els.music.addEventListener('click', () => {
+  save.music = !save.music;
+  store();
+  renderMusic();
+  updateMusic();
+});
+
 els.sound.addEventListener('click', () => {
   save.sound = !save.sound;
   store();
@@ -806,6 +854,7 @@ els.favorite.innerHTML = STAR_SVG;
 setupFavoriteButton(els.favorite, GAME_ID, t('game.drive.title'));
 setupFullscreen($('.fullscreen-button'), { slot: $('.focus-slot'), onChange: resize });
 renderSound();
+renderMusic();
 renderGarage();
 setMode('garage');
 resize();

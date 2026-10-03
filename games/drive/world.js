@@ -216,7 +216,7 @@ export function bestKey(scenario, difficulty) {
 }
 
 export function normalizeSave(raw) {
-  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, best: {} };
+  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, best: {} };
   if (!raw || typeof raw !== 'object') {
     return save;
   }
@@ -234,6 +234,9 @@ export function normalizeSave(raw) {
   }
   if (typeof raw.sound === 'boolean') {
     save.sound = raw.sound;
+  }
+  if (typeof raw.music === 'boolean') {
+    save.music = raw.music;
   }
   if (raw.best && typeof raw.best === 'object') {
     SCENARIOS.forEach((scenario) => {
