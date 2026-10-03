@@ -13,13 +13,11 @@ import { manifestText } from '../scripts/offline-manifest.mjs';
 const root = fileURLToPath(new URL('..', import.meta.url));
 const IGNORED = new Set(['.git', 'node_modules', 'tests', 'art-src', 'docs', 'scripts', '.github', '.claude']);
 const NOT_SHIPPED = new Set(['sw.js', 'offline.json', 'package.json', 'package-lock.json', 'README.md', '.gitignore', 'LICENSE', '.nojekyll']);
-// Small next to the games (several MB), so the first visit stays quick.
-// It grows a little with each release, as What's new is in five languages.
-const SHELL_BUDGET_BYTES = 200 * 1024;
+const SHELL_BUDGET_BYTES = 150 * 1024;
 
 const manifest = JSON.parse(readFileSync(join(root, 'offline.json'), 'utf8'));
 const gameLists = Object.values(manifest.games);
-const listed = new Set([...manifest.shell, ...gameLists.flat()]);
+const listed = new Set([...manifest.shell, ...gameLists.flat(), ...manifest.notes]);
 
 test('offline.json is up to date (run `npm run offline` to fix)', () => {
   assert.equal(readFileSync(join(root, 'offline.json'), 'utf8'), manifestText());

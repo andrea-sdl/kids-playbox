@@ -194,6 +194,32 @@ const whatsNewDot = document.querySelector('.whats-new-dot');
 const whatsNewDialog = document.querySelector('.whats-new');
 const releaseList = document.querySelector('.release-list');
 
+// The release notes aren't part of the first download: they load in the
+// background on Wi-Fi, or when What's new is opened. Once fetched, the
+// service worker keeps a copy for offline use.
+let notes = null;
+let notesState = 'waiting';
+
+function loadNotes() {
+  if (!notes) {
+    notesState = 'loading';
+    notes = import('./notes/release-notes.js').then(
+      () => {
+        notesState = 'ready';
+      },
+      () => {
+        notesState = 'failed';
+        notes = null;
+      },
+    );
+  }
+  return notes;
+}
+
+if (onUnmeteredConnection()) {
+  loadNotes();
+}
+
 function renderReleases() {
   const dateFormat = new Intl.DateTimeFormat(getLanguage(), { dateStyle: 'long' });
   const items = RELEASES.map((release) => {
@@ -213,12 +239,23 @@ function renderReleases() {
       if (change.target !== 'app') {
         row.querySelector('strong').textContent = `${t(`game.${change.target}.title`)}: `;
       }
-      row.querySelector('.change-text').textContent = t(change.text);
+      if (notesState === 'ready') {
+        row.querySelector('.change-text').textContent = t(change.text);
+      }
       changes.append(row);
     });
     item.append(heading, changes);
     return item;
   });
+  if (notesState !== 'ready') {
+    const note = document.createElement('li');
+    note.className = 'release-note';
+    note.textContent = t('whatsNew.loading');
+    if (notesState === 'failed') {
+      note.textContent = t('whatsNew.offline');
+    }
+    items.unshift(note);
+  }
   releaseList.replaceChildren(...items);
 }
 
@@ -227,8 +264,10 @@ function renderWhatsNewDot() {
 }
 
 whatsNewButton.addEventListener('click', () => {
+  const loading = loadNotes();
   renderReleases();
   whatsNewDialog.showModal();
+  loading.then(() => renderReleases());
   const seen = readSeen();
   seen.release = latestVersion();
   writeSeen(seen);

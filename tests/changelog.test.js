@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { RELEASES, badgesFor, hasUnseenReleases, latestVersion, normalizeSeen } from '../shared/changelog.js';
 import { GAMES } from '../shared/games.js';
 import { allStrings } from '../shared/i18n.js';
+import '../notes/release-notes.js';
 
 const TYPES = ['new', 'updated', 'fixed'];
 const targets = ['app', ...GAMES.map((game) => game.id)];

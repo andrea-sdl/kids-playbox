@@ -32,7 +32,7 @@ mkdirSync(site);
 try {
   execSync(`git archive HEAD | tar -x -C "${source}"`, { cwd: root });
   const manifest = JSON.parse(readFileSync(join(source, 'offline.json'), 'utf8'));
-  const files = [...manifest.shell, ...Object.values(manifest.games).flat()]
+  const files = [...manifest.shell, ...Object.values(manifest.games).flat(), ...manifest.notes]
     .filter((file) => !file.endsWith('/'))
     .concat(['./sw.js', './offline.json']);
   new Set(files).forEach((file) => {

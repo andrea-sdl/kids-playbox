@@ -8,6 +8,8 @@ import { latestVersion, normalizeSeen } from './changelog.js';
 import { readJSON, writeJSON } from './store.js';
 
 const UPDATE_CHECK_MS = 30 * 60 * 1000;
+// When the app comes back to the front, check at most this often.
+const SHOWN_CHECK_MS = 60 * 1000;
 
 // Full-height game screens use --app-height. CSS gives a first guess
 // (100dvh), but iOS can keep the old height after the phone is turned, so
@@ -97,18 +99,40 @@ function showUpdateBanner() {
   document.body.append(banner);
 }
 
-// A new version installs quietly in the background. When it takes over
-// this page, offer a refresh instead of reloading by surprise (a game could
-// be in progress). Apps left open for days check again when shown.
+// A new version installs quietly in the background, then takes over the
+// open pages. The page reloads by itself to show it, unless someone is in
+// the middle of something: then a banner offers the refresh, and it happens
+// the next time the app goes to the background. Checks run when the app is
+// shown again (an installed app can stay open for days) and every half hour.
 function watchForUpdates(registration, hadController) {
+  let busy = false;
+  let updateWaiting = false;
+  // "Busy" means someone tapped or typed since the page was last shown.
+  const markBusy = () => {
+    busy = true;
+  };
+  document.addEventListener('pointerdown', markBusy, { capture: true });
+  document.addEventListener('keydown', markBusy, { capture: true });
+
+  // The very first install also takes over the page; that's not an update.
+  // Every takeover after that is.
+  let controlled = hadController;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (hadController) {
-      showUpdateBanner();
+    if (!controlled) {
+      controlled = true;
+      return;
     }
+    if (document.visibilityState === 'hidden' || !busy) {
+      location.reload();
+      return;
+    }
+    updateWaiting = true;
+    showUpdateBanner();
   });
+
   let lastCheck = Date.now();
-  const check = () => {
-    if (Date.now() - lastCheck < UPDATE_CHECK_MS) {
+  const check = (minimumGap) => {
+    if (Date.now() - lastCheck < minimumGap) {
       return;
     }
     lastCheck = Date.now();
@@ -117,11 +141,16 @@ function watchForUpdates(registration, hadController) {
     });
   };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      check();
+    if (document.visibilityState === 'hidden') {
+      if (updateWaiting) {
+        location.reload();
+      }
+      return;
     }
+    busy = false;
+    check(SHOWN_CHECK_MS);
   });
-  setInterval(check, UPDATE_CHECK_MS);
+  setInterval(() => check(UPDATE_CHECK_MS), UPDATE_CHECK_MS);
 }
 
 // Pass the game's id on a game page: once the page has loaded, all of that

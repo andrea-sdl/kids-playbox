@@ -226,6 +226,12 @@
   list-style: none;
 }
 
+.release-note {
+  margin: 12px 0 4px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
 .release-list h3 {
   margin: 14px 0 8px;
   font-size: 1rem;

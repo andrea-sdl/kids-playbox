@@ -10,7 +10,7 @@
 // The file lists live in offline.json. Bump VERSION on every release so
 // players get the update on their next visit.
 
-const VERSION = 'playbox-v20';
+const VERSION = 'playbox-v21';
 const MANIFEST_URL = './offline.json';
 
 async function fetchManifest() {
@@ -80,11 +80,29 @@ async function carryOverSavedGames(manifest) {
   }
 }
 
+// Release notes already read keep working offline after an update.
+async function carryOverNotes(manifest) {
+  const oldKeys = (await caches.keys()).filter((key) => key !== VERSION);
+  for (const key of oldKeys) {
+    const oldCache = await caches.open(key);
+    if (!(await hasAll(oldCache, manifest.notes))) {
+      continue;
+    }
+    try {
+      await saveFiles(manifest.notes);
+    } catch {
+      await copyFiles(oldCache, manifest.notes);
+    }
+    return;
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const manifest = await fetchManifest();
     await saveFiles(manifest.shell);
     await carryOverSavedGames(manifest);
+    await carryOverNotes(manifest);
     await self.skipWaiting();
   })());
 });
@@ -158,8 +176,10 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(respond(event, request));
 });
 
+// Always ask the server (cheap when nothing changed), so a copy the
+// browser kept in its own cache can't hide an update.
 async function refresh(request) {
-  const response = await fetch(request);
+  const response = await fetch(request, { cache: 'no-cache' });
   if (response.ok) {
     const cache = await caches.open(VERSION);
     await cache.put(request, response.clone());

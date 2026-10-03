@@ -3,6 +3,7 @@
 //   games  – everything inside games/<id>/, plus any extra files a game
 //            needs from elsewhere (like a vendored library), saved when the
 //            game is opened
+//   notes  – the release notes for What's new, saved when first read
 //
 // Run `npm run offline` after adding, renaming or removing files.
 
@@ -44,7 +45,7 @@ export function buildManifest() {
       const extras = (GAME_EXTRAS[id] || []).flatMap(listFiles);
       games[id] = [`./games/${id}/`, ...listFiles(`games/${id}`), ...extras];
     });
-  return { shell, games };
+  return { shell, games, notes: listFiles('notes') };
 }
 
 export function manifestText() {

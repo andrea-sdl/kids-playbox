@@ -4,9 +4,17 @@
 //
 // target: a game id, or 'app' for the whole app.
 // type:   'new', 'updated' or 'fixed'.
-// text:   a translation key (see shared/i18n.js).
+// text:   a translation key, in notes/release-notes.js.
 
 export const RELEASES = [
+  {
+    version: 21,
+    date: '2026-10-03',
+    changes: [
+      { target: 'app', type: 'fixed', text: 'changes.v21.autoUpdate' },
+      { target: 'app', type: 'updated', text: 'changes.v21.lighterStart' },
+    ],
+  },
   {
     version: 20,
     date: '2026-10-03',

@@ -169,5 +169,8 @@
       "./games/molecules/sound.js",
       "./games/molecules/strings.js"
     ]
-  }
+  },
+  "notes": [
+    "./notes/release-notes.js"
+  ]
 }
