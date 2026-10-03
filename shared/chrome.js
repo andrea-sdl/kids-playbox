@@ -41,12 +41,32 @@ function watchAppHeight() {
 
 watchAppHeight();
 
+const SOURCE_URL = 'https://github.com/andrea-sdl/kids-playbox';
+
 // Translate the static page text and add the language menu. Call once each
 // page's own strings have been added.
 export function setupLanguage() {
   translatePage();
   mountLanguagePicker();
+  showPromise();
   showVersion();
+}
+
+// Every footer says what Playbox doesn't do, and where its code is.
+function showPromise() {
+  const footer = document.querySelector('.site-footer');
+  if (!footer) {
+    return;
+  }
+  const promise = document.createElement('p');
+  promise.className = 'site-promise';
+  const link = document.createElement('a');
+  link.href = SOURCE_URL;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = t('common.openSource');
+  promise.append(`${t('common.promise')} `, link);
+  footer.querySelector('p')?.after(promise);
 }
 
 // The version this page is running, in the footer. If it's older than the

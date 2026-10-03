@@ -224,6 +224,13 @@ button {
   margin: 0 0 10px;
 }
 
+.site-footer .site-promise {
+  max-width: 34em;
+  margin: 0 auto 12px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 /* More specific than `.site-footer p`, which would otherwise zero the gap. */
 .site-footer .app-version {
   margin: 24px 0 0;
