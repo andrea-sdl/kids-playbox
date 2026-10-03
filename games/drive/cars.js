@@ -5,7 +5,7 @@
 // Every car faces +z, sits on y = 0 and is about 4.6 m long.
 
 import * as THREE from '../../vendor/three/three.min.js';
-import { headlightTexture, softDotTexture } from './textures.js';
+import { decalTexture, headlightTexture, softDotTexture } from './textures.js';
 
 const DESIGNS = {
   // A low, wedge-shaped hypercar.
@@ -181,6 +181,82 @@ function acrossUv(geometry, width) {
   geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 }
 
+// The height of the top of the body at `along` meters (forward is +), read
+// from the outline's top edge (from the nose back to the tail).
+function topHeight(spec, along) {
+  const top = spec.body.slice(2);
+  for (let i = 0; i < top.length - 1; i += 1) {
+    const [x1, y1] = top[i];
+    const [x2, y2] = top[i + 1];
+    if (along <= x1 && along >= x2) {
+      return y1 + ((x1 - along) / (x1 - x2)) * (y2 - y1);
+    }
+  }
+  return top[0][1];
+}
+
+// Side graphics: a flat sheet the shape of the car's side, laid just
+// outside each flat side panel. One texture maps the car's length and
+// height (meters) onto the canvas.
+function sideGraphics(spec, kind, color) {
+  const texture = decalTexture(kind, color);
+  texture.repeat.set(1 / 5, 1 / 1.3);
+  texture.offset.set(0.5, -0.1 / 1.3);
+  const material = new THREE.MeshPhysicalMaterial({
+    map: texture,
+    transparent: true,
+    roughness: 0.3,
+    clearcoat: 1,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+  });
+  const shape = bodyShape(spec.body);
+  const geometry = new THREE.ShapeGeometry(shape, 24);
+  // Pull in a little from the edges, which are rounded on the body.
+  geometry.translate(0, -0.6, 0);
+  geometry.scale(0.97, 0.92, 1);
+  geometry.translate(0, 0.6, 0);
+  const sides = new THREE.Group();
+  const right = new THREE.Mesh(geometry, material);
+  right.rotation.y = -Math.PI / 2;
+  right.position.x = -(spec.width / 2 + 0.004);
+  const left = right.clone();
+  left.scale.x = -1;
+  left.position.x = spec.width / 2 + 0.004;
+  sides.add(right, left);
+  return sides;
+}
+
+// Something sticking out of the hood: a scoop, or a supercharger.
+function hoodPart(spec, kind, paint, materials) {
+  const along = (spec.body[3][0] + spec.cabin[0][0]) / 2;
+  const front = topHeight(spec, along + 0.4);
+  const back = topHeight(spec, along - 0.4);
+  const part = new THREE.Group();
+  part.position.set(0, topHeight(spec, along) + 0.1, along);
+  part.rotation.x = Math.atan2(back - front, 0.8);
+  if (kind === 'scoop') {
+    const scoop = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.13, 0.7), paint);
+    scoop.position.y = 0.05;
+    const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.04), materials.dark);
+    mouth.position.set(0, 0.06, 0.35);
+    part.add(scoop, mouth);
+    return part;
+  }
+  const blower = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.26, 0.6), materials.rim);
+  blower.position.y = 0.12;
+  const intake = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.2, 0.42), materials.dark);
+  intake.position.set(0, 0.34, -0.04);
+  const mouth = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.12, 0.04), materials.carbon);
+  mouth.position.set(0, 0.36, 0.18);
+  const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 20), materials.dark);
+  pulley.rotation.x = Math.PI / 2;
+  pulley.position.set(0, 0.12, 0.33);
+  part.add(blower, intake, mouth, pulley);
+  return part;
+}
+
 function makeWheel(radius, materials) {
   const wheel = new THREE.Group();
   const tire = new THREE.Mesh(new THREE.TorusGeometry(radius * 0.78, radius * 0.24, 16, 40), materials.tire);
@@ -238,6 +314,9 @@ export function buildCar(design, color, custom) {
   const shell = sideSolid(bodyShape(spec.body), spec.width, 0.16);
   acrossUv(shell, spec.width);
   body.add(new THREE.Mesh(shell, bodyPaint));
+  if (custom.decal !== 'none') {
+    body.add(sideGraphics(spec, custom.decal, custom.decalColor));
+  }
   body.add(new THREE.Mesh(sideSolid(cabinShape(spec.cabin), spec.cabinWidth, 0.12), materials.glass));
 
   const front = Math.max(...spec.body.map(([x]) => x));
@@ -320,6 +399,10 @@ export function buildCar(design, color, custom) {
       plate.position.set(side * spec.width / 2, height + 0.03, back + 0.3);
       body.add(plate);
     });
+  }
+
+  if (custom.hood !== 'none') {
+    body.add(hoodPart(spec, custom.hood, paint, materials));
   }
 
   if (spec.rack) {

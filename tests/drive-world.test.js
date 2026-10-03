@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   CIRCUITS,
   DIFFICULTIES,
+  CUSTOM_OPTIONS,
   PAINTS,
+  PRESETS,
   ROAD_WIDTH,
   SAMPLE_SPACING,
   SCENARIOS,
@@ -11,6 +13,7 @@ import {
   lapChange,
   nearestSample,
   normalizeSave,
+  presetCustom,
   placeBoosts,
   placePoints,
   pointCount,
@@ -129,7 +132,7 @@ test('times read as minutes, seconds and tenths', () => {
 
 test('bad saves fall back safely', () => {
   const defaults = normalizeSave(null);
-  assert.deepEqual(defaults.custom, { finish: 'gloss', stripes: 'none', stripeColor: '#ffffff', rims: 'silver', wing: 'auto', glow: 'auto' });
+  assert.deepEqual(defaults.custom, { finish: 'gloss', stripes: 'none', stripeColor: '#ffffff', decal: 'none', decalColor: '#2f6bff', rims: 'silver', wing: 'auto', hood: 'none', glow: 'auto' });
   assert.equal(defaults.control, 'buttons');
   delete defaults.custom;
   delete defaults.control;
@@ -146,7 +149,7 @@ test('bad saves fall back safely', () => {
   });
   const custom = normalizeSave({ control: 'tilt', custom: { finish: 'chrome', stripes: 'double', rims: 'plaid', glow: '#ff3fa4', extra: 1 } });
   assert.equal(custom.control, 'tilt');
-  assert.deepEqual(custom.custom, { finish: 'chrome', stripes: 'double', stripeColor: '#ffffff', rims: 'silver', wing: 'auto', glow: '#ff3fa4' });
+  assert.deepEqual(custom.custom, { finish: 'chrome', stripes: 'double', stripeColor: '#ffffff', decal: 'none', decalColor: '#2f6bff', rims: 'silver', wing: 'auto', hood: 'none', glow: '#ff3fa4' });
   assert.equal(normalizeSave({ control: 'mind' }).control, 'buttons');
   assert.equal(normalizeSave({ track: 'tabc1' }).track, 'tabc1');
   assert.equal(normalizeSave({ music: 'loud' }).music, true);
@@ -163,5 +166,19 @@ test('boost pads: spread around every circuit, on straight road, on the road', (
     });
     const indexes = boosts.map((boost) => boost.index).sort((a, b) => a - b);
     indexes.slice(1).forEach((index, i) => assert.ok(index - indexes[i] > 30, `${scenario} pads too close together`));
+  });
+});
+
+test('presets only use real paints and options, and fill in every extra', () => {
+  assert.equal(new Set(PRESETS.map((preset) => preset.id)).size, PRESETS.length);
+  PRESETS.forEach((preset) => {
+    assert.ok(PAINTS.includes(preset.paint), `${preset.id} paint`);
+    const custom = presetCustom(preset);
+    assert.deepEqual(Object.keys(custom), Object.keys(CUSTOM_OPTIONS));
+    Object.entries(custom).forEach(([key, value]) => {
+      assert.ok(CUSTOM_OPTIONS[key].includes(value), `${preset.id} ${key}: ${value}`);
+    });
+    // A saved preset survives a reload unchanged.
+    assert.deepEqual(normalizeSave({ paint: preset.paint, custom }).custom, custom);
   });
 });

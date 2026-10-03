@@ -348,6 +348,25 @@ body[data-scenario="wasteland"] {
   padding: 3px;
 }
 
+.card-preset {
+  flex-direction: row;
+  gap: 6px;
+  padding: 5px 12px 5px 5px;
+  border: 2px solid var(--glass-line);
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The paint with a slash of its graphics color. */
+.preset-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--paint) 55%, var(--accent) 55% 72%, var(--paint) 72%);
+  box-shadow: inset 0 -3px 6px rgb(0 0 0 / 0.35);
+}
+
 .control-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

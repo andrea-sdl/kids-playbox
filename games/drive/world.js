@@ -19,13 +19,52 @@ export const CONTROLS = ['buttons', 'tilt'];
 export const CUSTOM_OPTIONS = {
   finish: ['gloss', 'matte', 'chrome'],
   stripes: ['none', 'single', 'double'],
-  stripeColor: ['#ffffff', '#16161c', '#ffd23f', '#e3242b', '#35f2ff'],
+  stripeColor: ['#ffffff', '#16161c', '#ffd23f', '#e3242b', '#35f2ff', '#2f6bff'],
+  decal: ['none', 'swirl', 'tribal', 'flames'],
+  decalColor: ['#2f6bff', '#16161c', '#ffffff', '#8b3dff', '#39ff88', '#ff3fa4'],
   rims: ['silver', 'black', 'gold', 'red'],
   wing: ['auto', 'none', 'small', 'big'],
-  glow: ['auto', 'off', '#35f2ff', '#ff3fa4', '#39ff88', '#ffd23f'],
+  hood: ['none', 'scoop', 'blower'],
+  glow: ['auto', 'off', '#35f2ff', '#2f6bff', '#ff3fa4', '#39ff88', '#ffd23f'],
 };
 
-export const PAINTS = ['#e3242b', '#1e6fff', '#ffc21a', '#19c37d', '#8b3dff', '#ff6a00', '#f2f2f2', '#1b1b22'];
+export const PAINTS = ['#e3242b', '#1e6fff', '#ffc21a', '#19c37d', '#8b3dff', '#ff6a00', '#f2f2f2', '#1b1b22', '#c9ced6', '#7dff3a', '#ff4fc8'];
+
+// Ready-made looks in the style of early-2000s street racers: paint plus
+// extras. Picking one sets everything; it can still be changed after.
+export const PRESETS = [
+  {
+    id: 'muscle',
+    paint: '#1b1b22',
+    custom: { finish: 'gloss', stripes: 'none', decal: 'none', rims: 'black', wing: 'none', hood: 'blower', glow: 'off' },
+  },
+  {
+    id: 'silverGt',
+    paint: '#c9ced6',
+    custom: { finish: 'gloss', stripes: 'double', stripeColor: '#2f6bff', decal: 'swirl', decalColor: '#2f6bff', rims: 'silver', wing: 'big', hood: 'none', glow: '#2f6bff' },
+  },
+  {
+    id: 'limeTuner',
+    paint: '#7dff3a',
+    custom: { finish: 'gloss', stripes: 'none', decal: 'tribal', decalColor: '#8b3dff', rims: 'silver', wing: 'big', hood: 'scoop', glow: '#39ff88' },
+  },
+  {
+    id: 'orangeRocket',
+    paint: '#ff6a00',
+    custom: { finish: 'gloss', stripes: 'none', decal: 'tribal', decalColor: '#16161c', rims: 'silver', wing: 'big', hood: 'scoop', glow: 'off' },
+  },
+  {
+    id: 'neonPink',
+    paint: '#ff4fc8',
+    custom: { finish: 'gloss', stripes: 'single', stripeColor: '#ffffff', decal: 'swirl', decalColor: '#ffffff', rims: 'silver', wing: 'small', hood: 'none', glow: '#ff3fa4' },
+  },
+];
+
+// A preset's full set of extras: anything it leaves out goes back to the
+// first (plain) choice.
+export function presetCustom(preset) {
+  return Object.fromEntries(Object.entries(CUSTOM_OPTIONS).map(([key, values]) => [key, preset.custom[key] ?? values[0]]));
+}
 
 export const CIRCUITS = {
   // A neon city at dusk: long avenues, a hairpin and a chicane.

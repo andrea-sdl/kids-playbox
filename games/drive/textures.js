@@ -561,6 +561,65 @@ export function boostTexture() {
   return toTexture(canvas);
 }
 
+// Side graphics for a car, on a see-through canvas laid over each side:
+// left of the canvas is the back of the car, right is the front, the
+// bottom is the bottom of the car. 'swirl' is long swooshes, 'tribal' is
+// pointed blades, 'flames' licks back from the front wheel.
+export function decalTexture(kind, color) {
+  const canvas = makeCanvas(1024, 256);
+  const ctx = canvas.getContext('2d');
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (kind === 'swirl') {
+    const swoosh = (width, lift) => {
+      ctx.beginPath();
+      ctx.moveTo(990, 205 - lift);
+      ctx.bezierCurveTo(760, 230 - lift, 600, 90 - lift, 330, 120 - lift);
+      ctx.bezierCurveTo(200, 135 - lift, 110, 95 - lift, 40, 70 - lift);
+      ctx.lineWidth = width;
+      ctx.stroke();
+    };
+    [[30, 0], [16, 34], [9, 58]].forEach(([width, lift]) => {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+      swoosh(width + 8, lift);
+      ctx.strokeStyle = color;
+      swoosh(width, lift);
+    });
+  }
+  if (kind === 'tribal') {
+    ctx.fillStyle = color;
+    // Blades fanning back from the front wheel, each ending in a point.
+    [[560, 70, 34], [470, 120, 30], [380, 165, 26], [640, 205, 24], [300, 210, 18]].forEach(([tipX, tipY, thick]) => {
+      ctx.beginPath();
+      ctx.moveTo(960, 150);
+      ctx.quadraticCurveTo(820, tipY - thick, tipX, tipY);
+      ctx.quadraticCurveTo(820, tipY + thick * 1.6, 960, 205);
+      ctx.closePath();
+      ctx.fill();
+    });
+  }
+  if (kind === 'flames') {
+    const gradient = ctx.createLinearGradient(980, 0, 380, 0);
+    gradient.addColorStop(0, '#ffe14a');
+    gradient.addColorStop(0.5, '#ff8a1a');
+    gradient.addColorStop(1, '#e3242b');
+    ctx.fillStyle = gradient;
+    ctx.strokeStyle = '#7a1010';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(1000, 120);
+    [[760, 70, 690, 110], [560, 60, 480, 120], [620, 135, 420, 165], [600, 190, 520, 215], [780, 215, 1000, 225]].forEach(([cx, cy, x, y]) => {
+      ctx.quadraticCurveTo(cx, cy, x, y);
+      ctx.quadraticCurveTo((x + 1000) / 2, (y + cy) / 2, Math.min(1000, x + 160), y + 4);
+    });
+    ctx.lineTo(1000, 225);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  return toTexture(canvas, { repeat: false });
+}
+
 // Light thrown on the road by headlights: a soft fan.
 export function headlightTexture() {
   const canvas = makeCanvas(256, 256);

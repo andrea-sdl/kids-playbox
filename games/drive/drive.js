@@ -8,6 +8,7 @@ import {
   CARS,
   CUSTOM_OPTIONS,
   DIFFICULTIES,
+  PRESETS,
   PAINTS,
   ROAD_WIDTH,
   SCENARIOS,
@@ -18,6 +19,7 @@ import {
   normalizeSave,
   placeBoosts,
   placePoints,
+  presetCustom,
   sideMeters,
   sideOffset,
 } from './world.js';
@@ -900,9 +902,46 @@ function customRow(key) {
   return row;
 }
 
+// Ready-made looks: one tap sets the paint and every extra.
+function presetRow() {
+  const row = document.createElement('div');
+  row.className = 'custom-row';
+  const title = document.createElement('p');
+  title.textContent = t('drive.presets');
+  const options = document.createElement('div');
+  options.className = 'custom-options';
+  options.append(...PRESETS.map((preset) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'card card-custom card-preset';
+    const accent = preset.custom.decalColor ?? preset.custom.stripeColor ?? preset.paint;
+    button.innerHTML = `<span class="preset-dot" style="--paint: ${preset.paint}; --accent: ${accent}" aria-hidden="true"></span><strong></strong>`;
+    button.querySelector('strong').textContent = t(`drive.preset.${preset.id}`);
+    button.addEventListener('click', () => {
+      save.paint = preset.paint;
+      save.custom = presetCustom(preset);
+      store();
+      setCar();
+      renderGarage();
+    });
+    return button;
+  }));
+  row.append(title, options);
+  return row;
+}
+
 function renderCustom() {
-  const keys = Object.keys(CUSTOM_OPTIONS).filter((key) => key !== 'stripeColor' || save.custom.stripes !== 'none');
-  els.customRows.replaceChildren(...keys.map(customRow));
+  const keys = Object.keys(CUSTOM_OPTIONS).filter((key) => {
+    if (key === 'stripeColor') {
+      return save.custom.stripes !== 'none';
+    }
+    // Flames have their own fiery colors.
+    if (key === 'decalColor') {
+      return save.custom.decal !== 'none' && save.custom.decal !== 'flames';
+    }
+    return true;
+  });
+  els.customRows.replaceChildren(presetRow(), ...keys.map(customRow));
 }
 
 /* ---------- Steering ---------- */
