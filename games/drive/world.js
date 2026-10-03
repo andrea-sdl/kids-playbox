@@ -196,6 +196,33 @@ export function pointCount(difficulty) {
   return POINT_COUNTS[difficulty];
 }
 
+// Boost pads: about one every BOOST_SPACING meters, each moved to the
+// straightest bit of road nearby (boosting into a bend would be no fun),
+// in the middle, left or right lane in turn. Returns [{ index, side }].
+export const BOOST_SPACING = 220;
+const BOOST_SIDES = [0, 0.45, -0.45];
+
+export function placeBoosts(samples) {
+  const total = samples.length;
+  const length = total * SAMPLE_SPACING;
+  const count = Math.max(2, Math.round(length / BOOST_SPACING));
+  const reach = Math.round(40 / SAMPLE_SPACING);
+  const boosts = [];
+  for (let i = 0; i < count; i += 1) {
+    // Start a little after the line, like the points.
+    const center = Math.round(total * (0.08 + (0.9 * i) / count));
+    let best = center;
+    for (let offset = -reach; offset <= reach; offset += 1) {
+      const index = (center + offset + total) % total;
+      if (Math.abs(samples[index].curve) < Math.abs(samples[best % total].curve)) {
+        best = index;
+      }
+    }
+    boosts.push({ index: best % total, side: BOOST_SIDES[i % BOOST_SIDES.length] });
+  }
+  return boosts;
+}
+
 // Meters from the middle of the road for a point's side value.
 export function sideMeters(side) {
   return side * (ROAD_WIDTH / 2 - 2.2);

@@ -536,6 +536,31 @@ export function beamTexture() {
   return toTexture(canvas, { repeat: false });
 }
 
+// A boost pad: bright chevrons on a dark strip, pointing toward the bottom
+// of the canvas (the pad turns that way down the road). It scrolls.
+export function boostTexture() {
+  const canvas = makeCanvas(128, 256);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = 'rgba(20, 60, 110, 0.55)';
+  ctx.fillRect(0, 0, 128, 256);
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 18;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  [40, 125, 210].forEach((y) => {
+    ctx.beginPath();
+    ctx.moveTo(18, y - 30);
+    ctx.lineTo(64, y + 10);
+    ctx.lineTo(110, y - 30);
+    ctx.stroke();
+  });
+  // Bright edges.
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 6, 256);
+  ctx.fillRect(122, 0, 6, 256);
+  return toTexture(canvas);
+}
+
 // Light thrown on the road by headlights: a soft fan.
 export function headlightTexture() {
   const canvas = makeCanvas(256, 256);

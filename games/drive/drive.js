@@ -15,7 +15,9 @@ import {
   lapChange,
   nearestSample,
   normalizeSave,
+  placeBoosts,
   placePoints,
+  sideMeters,
   sideOffset,
 } from './world.js';
 import { buildCar, carOutline } from './cars.js';
@@ -33,7 +35,10 @@ const TOP_SPEED = 38;
 const NITRO_SPEED = 54;
 const ACCELERATION = 13;
 const NITRO_ACCELERATION = 26;
-const BRAKING = 32;
+// How fast the car slows to a stop after the finish.
+const FINISH_SLOWDOWN = 13;
+// A boost pad gives this many seconds of nitro.
+const BOOST_SECONDS = 2.4;
 const SPEEDO_SCALE = 3.6 * 1.6;
 const PICKUP_RADIUS = 3.6;
 const CAR_HALF_WIDTH = 1.1;
@@ -70,11 +75,10 @@ const els = {
   toast: $('.toast'),
   countdown: $('.countdown'),
   speed: $('.speed-value'),
-  nitroBar: $('.nitro-bar i'),
+  boostBar: $('.boost-bar i'),
+  speedo: $('.speedo'),
   steerLeft: $('.steer-left'),
   steerRight: $('.steer-right'),
-  brake: $('.brake-button'),
-  nitro: $('.nitro-button'),
   pause: $('.pause-button'),
   pausePanel: $('.pause-panel'),
   resume: $('.resume-button'),
@@ -120,10 +124,12 @@ let points = [];
 let car = null;
 const state = {
   x: 0, y: 0, z: 0, heading: 0, speed: 0, steer: 0,
-  index: 0, lap: 0, time: 0, collected: 0, nitro: 0.5,
+  index: 0, lap: 0, time: 0, collected: 0, boost: 0,
   usingNitro: false, streak: 0, lastPickup: -10, wallTouch: false, wrongWay: 0, shake: 0,
 };
-const input = { left: false, right: false, brake: false, nitro: false, keys: new Set() };
+const input = { left: false, right: false, keys: new Set() };
+// Boost pads on the road: [{ index, side, armed }].
+let boosts = [];
 let toastTimer = null;
 let countdownTimer = null;
 
@@ -202,30 +208,21 @@ function drive(dt) {
   const turnRate = (1.9 - 0.55 * Math.min(1, state.speed / TOP_SPEED)) * grip;
   state.heading -= state.steer * turnRate * dt;
 
-  // Speed: the car always accelerates (like Asphalt); brake and nitro help.
-  const braking = input.brake || input.keys.has('brake');
-  const wantsNitro = input.nitro || input.keys.has('nitro');
-  const nitroOn = wantsNitro && state.nitro > 0.01 && !braking && mode === 'driving';
-  if (nitroOn && !state.usingNitro) {
-    sounds.nitro();
-  }
+  // Speed: the car always accelerates (like Asphalt); boost pads add nitro.
+  state.boost = Math.max(0, state.boost - dt);
+  const nitroOn = state.boost > 0 && mode === 'driving';
   state.usingNitro = nitroOn;
   let target = TOP_SPEED;
   let accel = ACCELERATION;
   if (nitroOn) {
     target = NITRO_SPEED;
     accel = NITRO_ACCELERATION;
-    state.nitro = Math.max(0, state.nitro - dt * 0.32);
-  } else {
-    state.nitro = Math.min(1, state.nitro + dt * 0.025);
   }
   if (mode === 'finished') {
     target = 0;
-    accel = BRAKING * 0.4;
+    accel = FINISH_SLOWDOWN;
   }
-  if (braking) {
-    state.speed = Math.max(0, state.speed - BRAKING * dt);
-  } else if (state.speed < target) {
+  if (state.speed < target) {
     state.speed = Math.min(target, state.speed + accel * dt * (1 - 0.5 * (state.speed / target)));
   } else {
     state.speed = Math.max(target, state.speed - 18 * dt);
@@ -298,7 +295,6 @@ function collectPoints() {
     point.collected = true;
     view.collectPoint(i);
     state.collected += 1;
-    state.nitro = Math.min(1, state.nitro + 0.22);
     if (state.time - state.lastPickup < STREAK_SECONDS) {
       state.streak += 1;
     } else {
@@ -312,6 +308,31 @@ function collectPoints() {
     if (state.collected === points.length) {
       finish();
     }
+  });
+}
+
+// Driving over a boost pad gives a burst of nitro. Each pad works once per
+// pass: it re-arms when the car is well away from it.
+function hitBoosts() {
+  const count = track.samples.length;
+  const sample = track.samples[state.index];
+  const side = sideOffset(sample, state.x, state.z);
+  boosts.forEach((boost, i) => {
+    const apart = Math.abs(state.index - boost.index);
+    const along = Math.min(apart, count - apart);
+    if (along > 20) {
+      boost.armed = true;
+      return;
+    }
+    if (!boost.armed || along > 3 || Math.abs(side - sideMeters(boost.side)) > 3.6) {
+      return;
+    }
+    boost.armed = false;
+    if (state.boost === 0) {
+      sounds.nitro();
+    }
+    state.boost = BOOST_SECONDS;
+    view.hitBoost(i);
   });
 }
 
@@ -419,9 +440,8 @@ function renderHud() {
   // The car starts just behind the line; lap 1 begins when it crosses.
   els.lap.textContent = t('drive.lap', { lap: Math.max(1, state.lap) });
   els.speed.textContent = String(Math.round(state.speed * SPEEDO_SCALE));
-  els.nitroBar.style.transform = `scaleX(${state.nitro.toFixed(3)})`;
-  els.nitro.classList.toggle('is-empty', state.nitro < 0.02);
-  els.nitro.classList.toggle('is-on', state.usingNitro);
+  els.boostBar.style.transform = `scaleX(${(state.boost / BOOST_SECONDS).toFixed(3)})`;
+  els.speedo.classList.toggle('is-boosting', state.usingNitro);
   document.body.classList.toggle('is-nitro', state.usingNitro);
 }
 
@@ -448,11 +468,16 @@ function drawMinimap() {
     const sample = samples[point.index];
     return `<circle class="map-point" data-i="${i}" cx="${sample.x.toFixed(1)}" cy="${sample.z.toFixed(1)}" r="${(mapBox.width / 55).toFixed(1)}"/>`;
   }).join('');
+  const pads = boosts.map((boost) => {
+    const sample = samples[boost.index];
+    return `<circle class="map-boost" cx="${sample.x.toFixed(1)}" cy="${sample.z.toFixed(1)}" r="${(mapBox.width / 70).toFixed(1)}"/>`;
+  }).join('');
   const start = samples[0];
   els.minimap.innerHTML = `
     <polygon class="map-road-edge" points="${road}"/>
     <polygon class="map-road" points="${road}"/>
     <circle class="map-start" cx="${start.x}" cy="${start.z}" r="${(mapBox.width / 50).toFixed(1)}"/>
+    ${pads}
     ${dots}
     <circle class="map-car" r="${(mapBox.width / 34).toFixed(1)}"/>`;
   els.minimap.style.setProperty('--map-stroke', `${(mapBox.width / 26).toFixed(1)}px`);
@@ -496,9 +521,11 @@ function setMode(next) {
 function resetRun() {
   points = placePoints(track.samples, save.difficulty).map((point) => ({ ...point, collected: false }));
   view.setPoints(points);
+  boosts = placeBoosts(track.samples).map((boost) => ({ ...boost, armed: true }));
+  view.setBoosts(boosts);
   placeCarAtStart();
   Object.assign(state, {
-    lap: 0, time: 0, collected: 0, nitro: 0.5, usingNitro: false, streak: 0, lastPickup: -10,
+    lap: 0, time: 0, collected: 0, boost: 0, usingNitro: false, streak: 0, lastPickup: -10,
     wallTouch: false, wrongWay: 0, shake: 0,
   });
   drawMinimap();
@@ -610,6 +637,7 @@ function step(dt) {
       }
       drive(dt);
       collectPoints();
+      hitBoosts();
       syncCar(dt);
       kickUp(dt);
       chaseCamera(dt);
@@ -638,8 +666,6 @@ function step(dt) {
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
-  ArrowDown: 'brake', KeyS: 'brake',
-  Space: 'nitro', ArrowUp: 'nitro', KeyW: 'nitro', ShiftLeft: 'nitro', ShiftRight: 'nitro',
 };
 
 document.addEventListener('keydown', (event) => {
@@ -686,8 +712,6 @@ function holdPad(button, name) {
 
 holdPad(els.steerLeft, 'left');
 holdPad(els.steerRight, 'right');
-holdPad(els.brake, 'brake');
-holdPad(els.nitro, 'nitro');
 
 els.pause.addEventListener('click', pause);
 els.resume.addEventListener('click', resume);

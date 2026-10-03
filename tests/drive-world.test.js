@@ -11,6 +11,7 @@ import {
   lapChange,
   nearestSample,
   normalizeSave,
+  placeBoosts,
   placePoints,
   pointCount,
   sampleTrack,
@@ -138,4 +139,18 @@ test('bad saves fall back safely', () => {
   });
   assert.equal(normalizeSave({ track: 'tabc1' }).track, 'tabc1');
   assert.equal(normalizeSave({ music: 'loud' }).music, true);
+});
+
+test('boost pads: spread around every circuit, on straight road, on the road', () => {
+  SCENARIOS.forEach((scenario) => {
+    const { samples, length } = tracks[scenario];
+    const boosts = placeBoosts(samples);
+    assert.ok(boosts.length >= Math.floor(length / 300), `${scenario} has ${boosts.length} pads`);
+    boosts.forEach((boost) => {
+      assert.ok(Math.abs(samples[boost.index].curve) < 1 / 60, `${scenario} pad at ${boost.index} sits in a bend`);
+      assert.ok(Math.abs(sideMeters(boost.side)) < ROAD_WIDTH / 2 - 3, 'pads stay on the road');
+    });
+    const indexes = boosts.map((boost) => boost.index).sort((a, b) => a - b);
+    indexes.slice(1).forEach((index, i) => assert.ok(index - indexes[i] > 30, `${scenario} pads too close together`));
+  });
 });

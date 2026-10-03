@@ -802,6 +802,10 @@ body[data-scenario="wasteland"] .hud-icon {
   stroke-width: calc(var(--map-stroke) * 0.3);
 }
 
+.map-boost {
+  fill: #3ab8ff;
+}
+
 .map-point {
   fill: var(--accent);
 }
@@ -879,7 +883,8 @@ body[data-scenario="wasteland"] .hud-icon {
   opacity: 0.85;
 }
 
-.nitro-bar {
+/* The boost left: shown only while a boost pad's nitro lasts. */
+.boost-bar {
   position: relative;
   width: 130px;
   height: 9px;
@@ -888,9 +893,20 @@ body[data-scenario="wasteland"] .hud-icon {
   border: 1.5px solid rgb(255 255 255 / 0.5);
   border-radius: 6px;
   background: rgb(0 0 0 / 0.45);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.nitro-bar i {
+.speedo.is-boosting .boost-bar {
+  opacity: 1;
+}
+
+.speedo.is-boosting .speed-value {
+  color: #9fe8ff;
+  text-shadow: 0 0 14px #35c8ff, 0 2px 0 rgb(0 0 0 / 0.6);
+}
+
+.boost-bar i {
   position: absolute;
   inset: 0;
   background: linear-gradient(90deg, #35a0ff, #35f2ff, #c47bff);
@@ -904,30 +920,7 @@ body[data-scenario="wasteland"] .hud-icon {
   bottom: 12px;
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-}
-
-/* Wide screens: brake by the left thumb, nitro by the right thumb, with
-   the open middle for the speedometer. */
-.controls-gap {
-  flex: 0 0 0;
-}
-
-.controls .gap-middle {
-  flex: 1 1 0;
-}
-
-/* Tall screens: steering at the edges, brake and nitro side by side in
-   the middle. */
-@media (orientation: portrait) {
-  .controls .gap-left,
-  .controls .gap-right {
-    flex: 1 1 0;
-  }
-
-  .controls .gap-middle {
-    flex: 0 0 0;
-  }
+  justify-content: space-between;
 }
 
 .pad {
@@ -965,28 +958,9 @@ body[data-scenario="wasteland"] .hud-icon {
   transform: scale(0.94);
 }
 
-.brake-button {
-  width: 64px;
-  height: 64px;
-  border-color: rgb(255 120 120 / 0.6);
-}
 
-.nitro-button {
-  width: 88px;
-  height: 88px;
-  border-color: #8fe8ff;
-  background: radial-gradient(circle at 40% 35%, rgb(120 220 255 / 0.55), rgb(70 40 160 / 0.6));
-  box-shadow: 0 0 18px rgb(53 200 255 / 0.5);
-}
 
-.nitro-button.is-empty {
-  opacity: 0.45;
-  box-shadow: none;
-}
 
-.nitro-button.is-on {
-  box-shadow: 0 0 30px #35f2ff, 0 0 60px rgb(196 123 255 / 0.6);
-}
 
 .keys-hint {
   display: none;
@@ -1149,19 +1123,8 @@ body.is-nitro .view::after {
     height: 64px;
   }
 
-  .brake-button {
-    width: 54px;
-    height: 54px;
-  }
 
-  .nitro-button {
-    width: 74px;
-    height: 74px;
-  }
 
-  .controls {
-    gap: 6px;
-  }
 
   /* The speed sits above the pads on narrow screens. */
   .speedo {

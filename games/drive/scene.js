@@ -7,6 +7,7 @@ import * as THREE from '../../vendor/three/three.min.js';
 import { CIRCUITS, ROAD_WIDTH, sampleTrack, sideMeters, snowiness } from './world.js';
 import {
   beamTexture,
+  boostTexture,
   checkerTexture,
   facadeTextures,
   fernTexture,
@@ -871,6 +872,8 @@ export function createScene(container) {
   let scenarioName = 'city';
   let points = [];
   let pointGlow = '#ffffff';
+  let boosts = [];
+  let boostMap = null;
   let width = 1;
   let height = 1;
 
@@ -896,6 +899,7 @@ export function createScene(container) {
     });
     world = null;
     points = [];
+    boosts = [];
   }
 
   function applyLook(look) {
@@ -1113,6 +1117,32 @@ export function createScene(container) {
     });
   }
 
+  // Boost pads: glowing strips of chevrons flat on the road.
+  function buildBoosts(group, placed) {
+    boostMap?.dispose();
+    boostMap = boostTexture();
+    boostMap.repeat.set(1, 1.5);
+    const geometry = new THREE.PlaneGeometry(6, 10);
+    geometry.rotateX(-Math.PI / 2);
+    boosts = placed.map((boost) => {
+      const sample = track.samples[boost.index];
+      const side = sideMeters(boost.side);
+      const material = new THREE.MeshBasicMaterial({
+        map: boostMap,
+        color: glowColor('#3ab8ff', 2.2),
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const pad = new THREE.Mesh(geometry, material);
+      pad.position.set(sample.x + sample.nx * side, sample.y + 0.14, sample.z + sample.nz * side);
+      pad.rotation.y = Math.atan2(sample.dx, sample.dz);
+      pad.renderOrder = 2;
+      group.add(pad);
+      return { pad, flash: 0 };
+    });
+  }
+
   function setRatio(ratio) {
     pixelRatio = ratio;
     renderer.setPixelRatio(ratio);
@@ -1186,6 +1216,21 @@ export function createScene(container) {
       buildPoints(world, placed);
     },
 
+    setBoosts(placed) {
+      boosts.forEach(({ pad }) => {
+        world.remove(pad);
+        pad.material.dispose();
+      });
+      buildBoosts(world, placed);
+    },
+
+    // A pad flashes when driven over.
+    hitBoost(index) {
+      if (boosts[index]) {
+        boosts[index].flash = 1;
+      }
+    },
+
     collectPoint(index) {
       const point = points[index];
       if (point && !point.collected) {
@@ -1209,6 +1254,16 @@ export function createScene(container) {
     // Spin and bob the points, play the collect pop, follow the weather.
     animate(dt, time, carT, cameraPosition) {
       skyMaterial.uniforms.time.value = time;
+      if (boostMap) {
+        boostMap.offset.y = (boostMap.offset.y + dt * 1.6) % 1;
+      }
+      boosts.forEach((boost) => {
+        if (boost.flash <= 0) {
+          return;
+        }
+        boost.flash = Math.max(0, boost.flash - dt * 2);
+        boost.pad.material.color.copy(glowColor('#3ab8ff', 2.2 + boost.flash * 2.2));
+      });
       points.forEach((point, i) => {
         if (point.collected && point.pop === 0) {
           return;
