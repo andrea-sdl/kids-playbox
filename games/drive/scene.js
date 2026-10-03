@@ -354,28 +354,70 @@ function frondGeometry() {
 
 /* ---------- Where scenery can go ---------- */
 
+// Answers "how far is the road?" quickly, for tracks of any length: road
+// points are sorted into a grid of square cells, and only nearby cells are
+// searched.
+const CELL = 40;
+
 class Clearance {
   constructor(samples) {
+    this.cells = new Map();
     // Every few meters is enough to know if a spot is on the road.
-    this.points = samples.filter((sample, i) => i % 3 === 0);
+    samples.forEach((sample, i) => {
+      if (i % 3 !== 0) {
+        return;
+      }
+      const key = this.key(Math.floor(sample.x / CELL), Math.floor(sample.z / CELL));
+      if (!this.cells.has(key)) {
+        this.cells.set(key, []);
+      }
+      this.cells.get(key).push(sample);
+    });
+    this.fallback = samples[0];
   }
 
-  // Nearest road point to (x, z): { sample, distance }.
+  key(cx, cz) {
+    return `${cx},${cz}`;
+  }
+
+  // Nearest road point to (x, z): { sample, distance }. Searches rings of
+  // cells outward until nothing closer can be found.
   nearest(x, z) {
+    const cx = Math.floor(x / CELL);
+    const cz = Math.floor(z / CELL);
     let best = null;
     let bestDistance = Infinity;
-    this.points.forEach((sample) => {
-      const distance = (sample.x - x) ** 2 + (sample.z - z) ** 2;
-      if (distance < bestDistance) {
-        best = sample;
-        bestDistance = distance;
+    for (let ring = 0; ring < 400; ring += 1) {
+      if (best && (ring - 1) * CELL > Math.sqrt(bestDistance)) {
+        break;
       }
-    });
+      for (let dx = -ring; dx <= ring; dx += 1) {
+        for (let dz = -ring; dz <= ring; dz += 1) {
+          if (Math.max(Math.abs(dx), Math.abs(dz)) !== ring) {
+            continue;
+          }
+          const cell = this.cells.get(this.key(cx + dx, cz + dz));
+          if (!cell) {
+            continue;
+          }
+          cell.forEach((sample) => {
+            const distance = (sample.x - x) ** 2 + (sample.z - z) ** 2;
+            if (distance < bestDistance) {
+              best = sample;
+              bestDistance = distance;
+            }
+          });
+        }
+      }
+    }
+    if (!best) {
+      return { sample: this.fallback, distance: Infinity };
+    }
     return { sample: best, distance: Math.sqrt(bestDistance) };
   }
 
   isClear(x, z, radius) {
-    return this.points.every((sample) => (sample.x - x) ** 2 + (sample.z - z) ** 2 > (HALF + 3 + radius) ** 2);
+    return this.nearest(x, z).distance > HALF + 3 + radius;
   }
 }
 
@@ -384,7 +426,9 @@ class Clearance {
 // road are skipped.
 function roadsideSpots(samples, clearance, rand, { step, from, to, radius, sides = [1, -1] }) {
   const spots = [];
-  const stride = Math.max(1, Math.round(step / 2));
+  // Very long built tracks get their scenery spread out, so they stay quick.
+  const spread = Math.max(1, samples[samples.length - 1].s / 2600);
+  const stride = Math.max(1, Math.round((step * spread) / 2));
   for (let i = 0; i < samples.length; i += stride) {
     sides.forEach((side) => {
       const sample = samples[(i + Math.floor(rand() * stride)) % samples.length];
@@ -930,7 +974,8 @@ export function createScene(container) {
       maxZ = Math.max(maxZ, sample.z);
     });
     const size = Math.max(maxX - minX, maxZ - minZ) + 1400;
-    const segments = 160;
+    // About one ground point every 14 m, so it hugs the road on big tracks.
+    const segments = Math.min(280, Math.max(160, Math.round(size / 14)));
     const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
     geometry.rotateX(-Math.PI / 2);
     geometry.translate((minX + maxX) / 2, 0, (minZ + maxZ) / 2);
@@ -1086,11 +1131,12 @@ export function createScene(container) {
     effects,
     quality: quality.name,
 
-    // Builds a scenario. Returns the track samples and length.
-    setScenario(name) {
+    // Builds a scenario, on its own circuit or on a built track's points.
+    // Returns the track samples and length.
+    setScenario(name, points = CIRCUITS[name]) {
       disposeWorld();
       scenarioName = name;
-      track = sampleTrack(CIRCUITS[name]);
+      track = sampleTrack(points);
       if (name === 'wasteland') {
         applyLook(LOOKS.snow);
       } else {

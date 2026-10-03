@@ -22,6 +22,8 @@ import { buildCar, carOutline } from './cars.js';
 import { createScene } from './scene.js';
 import { createSounds } from './sound.js';
 import { createMusic } from './music.js';
+import { normalizeTracks, trackPoints } from './tracks.js';
+import { createBuilder } from './editor.js';
 
 const GAME_ID = 'drive';
 const STORE_KEY = 'game:drive';
@@ -37,6 +39,8 @@ const PICKUP_RADIUS = 3.6;
 const CAR_HALF_WIDTH = 1.1;
 const WALL = ROAD_WIDTH / 2 - CAR_HALF_WIDTH;
 const STREAK_SECONDS = 4;
+// Top speed while scraping a barrier (meters per second).
+const SCRAPE_SPEED = 4;
 
 registerServiceWorker(GAME_ID);
 setupLanguage();
@@ -53,6 +57,10 @@ const els = {
   difficultyOptions: $('.difficulty-options'),
   difficultyBlurb: $('.difficulty-blurb'),
   bestLine: $('.best-line'),
+  trackOptions: $('.track-options'),
+  buildTrack: $('.build-button'),
+  editTrack: $('.edit-button'),
+  builder: $('.builder'),
   go: $('.garage .go-button'),
   hud: $('.hud'),
   points: $('.points-count'),
@@ -81,7 +89,18 @@ const els = {
   favorite: $('.favorite-button'),
 };
 
-let save = normalizeSave(readJSON(STORE_KEY, null));
+const stored = readJSON(STORE_KEY, null);
+let save = normalizeSave(stored);
+// Tracks people built (see tracks.js). A selected track that's gone falls
+// back to the scenario's own circuit.
+save.tracks = normalizeTracks(stored?.tracks, t('drive.defaultName'));
+if (!save.tracks.some((built) => built.id === save.track)) {
+  save.track = null;
+}
+
+function builtTrack() {
+  return save.tracks.find((built) => built.id === save.track) || null;
+}
 const sounds = createSounds();
 const music = createMusic();
 // Browsers only play sound after the first tap or key press.
@@ -141,7 +160,12 @@ function loadScenario() {
   // Let the "building" message show before the work starts.
   return new Promise((resolve) => {
     setTimeout(() => {
-      track = view.setScenario(save.scenario);
+      const built = builtTrack();
+      if (built) {
+        track = view.setScenario(built.scenario, trackPoints(built.pieces));
+      } else {
+        track = view.setScenario(save.scenario);
+      }
       car?.setHeadlights(view.headlights);
       updateMusic();
       placeCarAtStart();
@@ -219,7 +243,8 @@ function drive(dt) {
   const here = samples[state.index];
   state.y += (here.y - state.y) * Math.min(1, dt * 10);
 
-  // The barriers: slide along them, losing some speed.
+  // The barriers stop the car going through, and scraping one slows it to
+  // a crawl. They never turn the car: steering away is up to the driver.
   const side = sideOffset(here, state.x, state.z);
   if (Math.abs(side) > WALL) {
     const push = side - Math.sign(side) * WALL;
@@ -239,8 +264,7 @@ function drive(dt) {
       const direction = forward();
       view.effects.sparks(here.x + here.nx * edge, state.y + 0.5, here.z + here.nz * edge, direction.x * state.speed, direction.z * state.speed);
     }
-    state.heading += angleBetween(hereHeading, state.heading) * Math.min(1, dt * 5);
-    state.speed = Math.max(0, state.speed - 6 * dt);
+    state.speed = Math.min(state.speed, SCRAPE_SPEED + Math.cos(angleBetween(hereHeading, state.heading)) ** 2 * 3);
   } else {
     state.wallTouch = false;
   }
@@ -456,7 +480,8 @@ function setMode(next) {
   }
   document.body.classList.toggle('is-garage', next === 'garage');
   els.garage.hidden = next !== 'garage';
-  els.hud.hidden = next === 'garage';
+  els.builder.hidden = next !== 'builder';
+  els.hud.hidden = next === 'garage' || next === 'builder';
   els.pause.hidden = next !== 'driving' && next !== 'countdown';
   els.pausePanel.hidden = next !== 'paused';
   els.finishPanel.hidden = next !== 'finished' || !els.finishPanel.dataset.ready;
@@ -511,7 +536,7 @@ function finish() {
   setMode('finished');
   sounds.stopEngine();
   sounds.finish();
-  const key = bestKey(save.scenario, save.difficulty);
+  const key = bestKey(save.scenario, save.difficulty, save.track);
   const previous = save.best[key];
   const isBest = !previous || state.time < previous;
   if (isBest) {
@@ -600,7 +625,8 @@ function step(dt) {
       syncCar(dt);
       showroomCamera(clock);
     }
-    if (mode !== 'paused') {
+    // The builder covers the view, so the 3D scene can rest.
+    if (mode !== 'paused' && mode !== 'builder') {
       view.animate(dt, clock, track.samples[state.index].t, view.camera.position);
       view.render();
     }
@@ -734,15 +760,17 @@ function renderGarage() {
   els.scenarioOptions.replaceChildren(...SCENARIOS.map((scenario) => radioCard(
     'scenario',
     scenario,
-    save.scenario === scenario,
+    !save.track && save.scenario === scenario,
     `<span class="card-art art-${scenario}" aria-hidden="true"></span><strong>${t(`drive.scenario.${scenario}`)}</strong><small>${t(`drive.scenarioBlurb.${scenario}`)}</small>`,
     async (value) => {
       save.scenario = value;
+      save.track = null;
       store();
       renderGarage();
       await loadScenario();
     },
   )));
+  renderMyTracks();
   els.carOptions.replaceChildren(...CARS.map((design) => radioCard(
     'car',
     design,
@@ -778,12 +806,92 @@ function renderGarage() {
     },
   )));
   els.difficultyBlurb.textContent = t(`drive.difficultyBlurb.${save.difficulty}`);
-  const best = save.best[bestKey(save.scenario, save.difficulty)];
+  const best = save.best[bestKey(save.scenario, save.difficulty, save.track)];
   els.bestLine.textContent = t('drive.noBest');
   if (best) {
     els.bestLine.textContent = t('drive.best', { time: formatTime(best) });
   }
 }
+
+/* ---------- Built tracks ---------- */
+
+function renderMyTracks() {
+  els.trackOptions.replaceChildren(...save.tracks.map((built) => {
+    const card = radioCard(
+      'scenario',
+      built.id,
+      save.track === built.id,
+      `<span class="track-dot art-${built.scenario}" aria-hidden="true"></span><strong></strong>`,
+      async () => {
+        save.track = built.id;
+        save.scenario = built.scenario;
+        store();
+        renderGarage();
+        await loadScenario();
+      },
+    );
+    card.classList.add('card-track');
+    card.querySelector('strong').textContent = built.name;
+    return card;
+  }));
+  els.editTrack.hidden = !builtTrack();
+}
+
+function keepTrack(built) {
+  const index = save.tracks.findIndex((existing) => existing.id === built.id);
+  if (index === -1) {
+    save.tracks.push(built);
+  } else {
+    save.tracks[index] = built;
+  }
+  store();
+}
+
+const builder = createBuilder(els.builder, {
+  isSaved: (id) => save.tracks.some((built) => built.id === id),
+  onSave(built) {
+    keepTrack(built);
+  },
+  async onDrive(built) {
+    keepTrack(built);
+    save.track = built.id;
+    save.scenario = built.scenario;
+    store();
+    setMode('garage');
+    renderGarage();
+    await loadScenario();
+  },
+  async onDelete(id) {
+    save.tracks = save.tracks.filter((built) => built.id !== id);
+    Object.keys(save.best).filter((key) => key.startsWith(`track-${id}-`)).forEach((key) => {
+      delete save.best[key];
+    });
+    const wasDriving = save.track === id;
+    if (wasDriving) {
+      save.track = null;
+    }
+    store();
+    setMode('garage');
+    renderGarage();
+    if (wasDriving) {
+      await loadScenario();
+    }
+  },
+  onClose() {
+    setMode('garage');
+    renderGarage();
+  },
+});
+
+els.buildTrack.addEventListener('click', () => {
+  builder.open(null, save.scenario);
+  setMode('builder');
+});
+
+els.editTrack.addEventListener('click', () => {
+  builder.open(builtTrack());
+  setMode('builder');
+});
 
 /* ---------- Sound, chrome, sizing ---------- */
 

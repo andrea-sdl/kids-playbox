@@ -53,6 +53,12 @@
         <fieldset class="pick">
           <legend data-i18n="drive.where">Where to?</legend>
           <div class="scenario-options"></div>
+          <p class="my-tracks-title" data-i18n="drive.myTracks">My tracks</p>
+          <div class="track-options"></div>
+          <div class="track-actions">
+            <button class="panel-button build-button" type="button" data-i18n="drive.buildTrack">+ Build a track</button>
+            <button class="panel-button edit-button" type="button" hidden data-i18n="drive.editTrack">Edit this track</button>
+          </div>
         </fieldset>
         <fieldset class="pick">
           <legend data-i18n="drive.car">Your car</legend>
@@ -67,6 +73,59 @@
         <div class="garage-go">
           <p class="best-line"></p>
           <button class="go-button" type="button"><span data-i18n="drive.go">Drive!</span></button>
+        </div>
+      </section>
+
+      <!-- Track builder: road pieces, a map from above, saving and sharing. -->
+      <section class="builder" hidden aria-labelledby="builder-title">
+        <div class="builder-head">
+          <h2 id="builder-title" data-i18n="drive.builder">Track builder</h2>
+          <button class="hud-button builder-close" type="button" aria-label="Close" data-i18n-attr="aria-label:drive.closeBuilder title:drive.closeBuilder">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="builder-map">
+          <svg class="builder-svg" role="img" aria-label="Track map" data-i18n-attr="aria-label:drive.trackMap"></svg>
+        </div>
+        <p class="builder-status" aria-live="polite"></p>
+        <div class="builder-controls">
+          <div class="builder-pieces" role="group" aria-label="Road pieces" data-i18n-attr="aria-label:drive.pieces">
+            <button class="piece-button" type="button" data-piece="L">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M8 30V20a10 10 0 0 1 10-10h10" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>
+              <span data-i18n="drive.curveLeft">Curve left</span>
+            </button>
+            <button class="piece-button" type="button" data-piece="S">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 30V2" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>
+              <span data-i18n="drive.straight">Straight</span>
+            </button>
+            <button class="piece-button" type="button" data-piece="R">
+              <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M24 30V20a10 10 0 0 0-10-10H4" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>
+              <span data-i18n="drive.curveRight">Curve right</span>
+            </button>
+            <button class="piece-button undo-piece" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7L4 12l5 5M4 12h10a6 6 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -3)"/></svg>
+              <span data-i18n="drive.undo">Undo</span>
+            </button>
+            <button class="piece-button clear-pieces" type="button" data-i18n="drive.clearTrack">Clear</button>
+          </div>
+          <label class="builder-name"><span data-i18n="drive.trackName">Track name</span><input type="text" maxlength="32" autocomplete="off"></label>
+          <div class="builder-look" role="radiogroup" aria-label="Scenery" data-i18n-attr="aria-label:drive.trackLook"></div>
+          <div class="builder-actions">
+            <button class="go-button builder-drive" type="button"><span data-i18n="drive.tryTrack">Save and drive</span></button>
+            <button class="panel-button builder-save" type="button" data-i18n="drive.saveTrack">Save</button>
+            <button class="panel-button builder-export" type="button" data-i18n="drive.export">Export</button>
+            <button class="panel-button builder-copy" type="button" data-i18n="drive.copyCode">Copy code</button>
+            <button class="panel-button builder-import" type="button" data-i18n="drive.import">Import</button>
+            <button class="panel-button builder-delete" type="button" hidden data-i18n="drive.deleteTrack">Delete</button>
+          </div>
+          <div class="builder-importer" hidden>
+            <p data-i18n="drive.importHelp">Paste a track code, or choose a track file.</p>
+            <textarea class="import-code" rows="2" aria-label="Track code" data-i18n-attr="aria-label:drive.importCode"></textarea>
+            <div class="builder-actions">
+              <button class="panel-button import-load" type="button" data-i18n="drive.loadCode">Load</button>
+              <label class="panel-button import-file"><input class="visually-hidden" type="file" accept=".json,.txt,application/json,text/plain"><span data-i18n="drive.chooseFile">Choose file</span></label>
+            </div>
+          </div>
         </div>
       </section>
 

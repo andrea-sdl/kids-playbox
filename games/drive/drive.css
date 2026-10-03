@@ -353,6 +353,342 @@ body[data-scenario="wasteland"] {
   outline-offset: 3px;
 }
 
+/* My tracks, under the three places. */
+.my-tracks-title {
+  margin: 12px 0 6px;
+  font-size: 0.8rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.my-tracks-title:has(+ .track-options:empty) {
+  display: none;
+}
+
+.track-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-track {
+  flex-direction: row;
+  gap: 8px;
+  padding: 6px 12px 6px 8px;
+  border-radius: 999px;
+}
+
+.track-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.track-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.track-actions .panel-button {
+  min-height: 38px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+/* ---------- Track builder ---------- */
+
+.builder {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas: "head head" "map controls" "status controls";
+  gap: 10px;
+  padding: 12px;
+  background: rgb(12 8 28 / 0.94);
+  /* Typing a name and pasting a code need normal touch and selection. */
+  touch-action: auto;
+  user-select: auto;
+  -webkit-user-select: auto;
+}
+
+.builder-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  /* Room for the full-screen buttons in the corner. */
+  padding-right: 110px;
+}
+
+.builder-head h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.builder-map {
+  grid-area: map;
+  min-height: 0;
+  border: 2px solid var(--glass-line);
+  border-radius: 14px;
+  background:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px) 0 0 / 24px 24px,
+    #1a1530;
+}
+
+.builder-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.builder-road-edge,
+.builder-back-edge {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.85);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.builder-back-edge {
+  stroke: rgb(255 255 255 / 0.3);
+}
+
+.builder-road {
+  fill: none;
+  stroke: #3a3a46;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.builder-back {
+  fill: none;
+  stroke: #2a2838;
+  stroke-dasharray: 10 8;
+  stroke-linejoin: round;
+}
+
+.builder-middle {
+  fill: none;
+  stroke: #ffd23f;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 6;
+}
+
+.builder-start {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: 1.5;
+}
+
+.map-arrow {
+  fill: var(--accent);
+  stroke: #10081f;
+  stroke-width: 2;
+}
+
+.map-problem {
+  fill: rgb(255 70 70 / 0.25);
+  stroke: #ff4646;
+  stroke-width: 3;
+}
+
+.builder-status {
+  grid-area: status;
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.06);
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.builder-status.is-ok {
+  color: #7cff9a;
+}
+
+.builder-status.is-problem {
+  color: #ffb0a8;
+}
+
+.builder-controls {
+  grid-area: controls;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 0 6px 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.builder-pieces {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.piece-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 74px;
+  padding: 8px 4px;
+  border: 2px solid var(--glass-line);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.piece-button svg {
+  width: 30px;
+  height: 30px;
+  color: var(--accent);
+}
+
+.piece-button:active {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.piece-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.undo-piece,
+.clear-pieces {
+  min-height: 48px;
+}
+
+.undo-piece svg {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
+
+.builder-pieces .clear-pieces {
+  grid-column: span 2;
+}
+
+.builder-name {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.builder-name input,
+.import-code {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 2px solid var(--glass-line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+
+.builder-look {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.card-look .card-art {
+  height: 30px;
+}
+
+.card-look strong {
+  font-size: 0.78rem;
+}
+
+.builder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.builder-actions .go-button {
+  flex: 1 0 100%;
+  min-height: 52px;
+  font-size: 1.2rem;
+}
+
+.builder-actions .panel-button {
+  flex: 1 1 auto;
+  min-height: 42px;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+}
+
+.go-button:disabled,
+.panel-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.builder-delete {
+  border-color: rgb(255 120 120 / 0.7);
+}
+
+.import-file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.builder-importer {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 2px dashed var(--glass-line);
+  border-radius: 12px;
+}
+
+.builder-importer p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Tall screens: the map on top, the tools underneath. */
+@media (max-width: 720px), (orientation: portrait) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(160px, 1fr) auto auto;
+    grid-template-areas: "head" "map" "status" "controls";
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .builder-controls {
+    max-height: 48vh;
+  }
+
+  .piece-button {
+    min-height: 60px;
+  }
+}
+
 /* ---------- HUD ---------- */
 
 .hud {

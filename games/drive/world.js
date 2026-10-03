@@ -211,12 +211,20 @@ export function formatTime(seconds) {
   return `${minutes}:${rest}.${tenths}`;
 }
 
-export function bestKey(scenario, difficulty) {
+// Best times are kept per track and level. Built tracks use their id.
+export function bestKey(scenario, difficulty, trackId = null) {
+  if (trackId) {
+    return `track-${trackId}-${difficulty}`;
+  }
   return `${scenario}-${difficulty}`;
 }
 
+const TRACK_ID = /^t[a-z0-9]{1,20}$/;
+const TRACK_BEST = /^track-t[a-z0-9]{1,20}-(easy|medium|hard)$/;
+
 export function normalizeSave(raw) {
-  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, best: {} };
+  // track: the id of a built track being driven, or null for the scenario's own.
+  const save = { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, track: null, best: {} };
   if (!raw || typeof raw !== 'object') {
     return save;
   }
@@ -238,15 +246,18 @@ export function normalizeSave(raw) {
   if (typeof raw.music === 'boolean') {
     save.music = raw.music;
   }
+  if (typeof raw.track === 'string' && TRACK_ID.test(raw.track)) {
+    save.track = raw.track;
+  }
   if (raw.best && typeof raw.best === 'object') {
-    SCENARIOS.forEach((scenario) => {
-      DIFFICULTIES.forEach((difficulty) => {
-        const key = bestKey(scenario, difficulty);
-        const value = raw.best[key];
-        if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
-          save.best[key] = value;
-        }
-      });
+    Object.entries(raw.best).forEach(([key, value]) => {
+      const builtIn = SCENARIOS.some((scenario) => DIFFICULTIES.some((difficulty) => key === bestKey(scenario, difficulty)));
+      if (!builtIn && !TRACK_BEST.test(key)) {
+        return;
+      }
+      if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+        save.best[key] = value;
+      }
     });
   }
   return save;

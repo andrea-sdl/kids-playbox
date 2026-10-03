@@ -127,8 +127,15 @@ test('times read as minutes, seconds and tenths', () => {
 });
 
 test('bad saves fall back safely', () => {
-  assert.deepEqual(normalizeSave(null), { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, best: {} });
-  const save = normalizeSave({ scenario: 'moon', difficulty: 'hard', car: 'rover', paint: 'pink', sound: false, music: false, best: { 'city-easy': 42.5, 'city-impossible': 3, 'jungle-hard': -1 } });
-  assert.deepEqual(save, { scenario: 'city', difficulty: 'hard', car: 'rover', paint: PAINTS[0], sound: false, music: false, best: { 'city-easy': 42.5 } });
+  assert.deepEqual(normalizeSave(null), { scenario: 'city', difficulty: 'easy', car: 'comet', paint: PAINTS[0], sound: true, music: true, track: null, best: {} });
+  const save = normalizeSave({
+    scenario: 'moon', difficulty: 'hard', car: 'rover', paint: 'pink', sound: false, music: false, track: '../x',
+    best: { 'city-easy': 42.5, 'city-impossible': 3, 'jungle-hard': -1, 'track-tabc1-medium': 61.2, 'track-bad id-easy': 5 },
+  });
+  assert.deepEqual(save, {
+    scenario: 'city', difficulty: 'hard', car: 'rover', paint: PAINTS[0], sound: false, music: false, track: null,
+    best: { 'city-easy': 42.5, 'track-tabc1-medium': 61.2 },
+  });
+  assert.equal(normalizeSave({ track: 'tabc1' }).track, 'tabc1');
   assert.equal(normalizeSave({ music: 'loud' }).music, true);
 });

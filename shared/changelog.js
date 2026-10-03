@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 18,
+    date: '2026-10-03',
+    changes: [
+      { target: 'drive', type: 'new', text: 'changes.v18.trackBuilder' },
+      { target: 'drive', type: 'fixed', text: 'changes.v18.barriers' },
+    ],
+  },
+  {
     version: 17,
     date: '2026-10-03',
     changes: [
