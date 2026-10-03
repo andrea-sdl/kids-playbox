@@ -8,6 +8,13 @@
 
 export const RELEASES = [
   {
+    version: 15,
+    date: '2026-10-03',
+    changes: [
+      { target: 'drive', type: 'updated', text: 'changes.v15.driveLooks' },
+    ],
+  },
+  {
     version: 14,
     date: '2026-10-03',
     changes: [

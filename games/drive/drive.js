@@ -110,6 +110,7 @@ function setCar() {
     view.scene.remove(car.group);
   }
   car = buildCar(save.car, save.paint);
+  car.setHeadlights(view.headlights);
   view.scene.add(car.group);
   placeCarAtStart();
 }
@@ -136,6 +137,7 @@ function loadScenario() {
   return new Promise((resolve) => {
     setTimeout(() => {
       track = view.setScenario(save.scenario);
+      car?.setHeadlights(view.headlights);
       placeCarAtStart();
       els.loading.hidden = true;
       drawMinimap();
@@ -236,6 +238,12 @@ function drive(dt) {
       sounds.bump();
     }
     state.wallTouch = true;
+    // Sparks where the car's side meets the barrier.
+    if (state.speed > 8) {
+      const edge = Math.sign(side) * (WALL + CAR_HALF_WIDTH);
+      const direction = forward();
+      view.effects.sparks(here.x + here.nx * edge, state.y + 0.5, here.z + here.nz * edge, direction.x * state.speed, direction.z * state.speed);
+    }
     state.heading += angleBetween(hereHeading, state.heading) * Math.min(1, dt * 5);
     state.speed = Math.max(0, state.speed - 6 * dt);
   } else {
@@ -312,6 +320,19 @@ function syncCar(dt) {
     car.group.rotation.x = -Math.atan2(ahead.y - here.y, 4);
   }
   car.update(dt, { speed: state.speed, steer: state.steer, nitro: state.usingNitro });
+  view.follow(state.x, state.y, state.z);
+}
+
+// Smoke, dust, sand or snow from the rear tires, more when sliding.
+function kickUp(dt) {
+  const slide = Math.min(1, Math.abs(state.steer) * (state.speed / TOP_SPEED) * 1.4 + (state.wallTouch ? 0.6 : 0));
+  view.effects.wheels(dt, {
+    ...car.emitters(state.heading),
+    speed: state.speed,
+    slide,
+    kind: view.groundKind(track.samples[state.index].t),
+    nitro: state.usingNitro,
+  });
 }
 
 function chaseCamera(dt, snap = false) {
@@ -549,9 +570,13 @@ let clock = 0;
 let frame = 0;
 
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const elapsed = now - last;
+  const dt = Math.min(0.05, elapsed / 1000);
   last = now;
   step(dt);
+  if (mode !== 'paused' && document.visibilityState === 'visible') {
+    view.adapt(elapsed);
+  }
   requestAnimationFrame(loop);
 }
 
@@ -566,6 +591,7 @@ function step(dt) {
       drive(dt);
       collectPoints();
       syncCar(dt);
+      kickUp(dt);
       chaseCamera(dt);
       sounds.engine(Math.min(1.3, state.speed / TOP_SPEED), state.usingNitro);
       renderHud();

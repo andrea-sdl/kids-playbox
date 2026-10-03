@@ -80,10 +80,12 @@
       "./games/drive/cars.js",
       "./games/drive/drive.css",
       "./games/drive/drive.js",
+      "./games/drive/effects.js",
       "./games/drive/index.html",
       "./games/drive/scene.js",
       "./games/drive/sound.js",
       "./games/drive/strings.js",
+      "./games/drive/textures.js",
       "./games/drive/world.js",
       "./vendor/three/LICENSE",
       "./vendor/three/three.min.js"

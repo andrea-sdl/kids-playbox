@@ -56,6 +56,15 @@ body[data-scenario="wasteland"] {
   height: 100%;
 }
 
+/* A soft darkening at the edges, like a camera lens. */
+.canvas-holder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 0.38));
+  pointer-events: none;
+}
+
 .loading {
   position: absolute;
   inset: 0;
