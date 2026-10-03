@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-i18n="drive.pageTitle">Turbo Drive · Playbox</title>
+  <meta name="description" content="Drive fast cars through a neon city, a jungle and a wasteland, and collect the points. Works offline.">
+  <meta name="theme-color" content="#1a0b3d">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="drive.css">
+  <script type="module" src="drive.js"></script>
+</head>
+<body class="is-garage">
+  <header class="topbar">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games" data-i18n-attr="aria-label:common.back title:common.allGames">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1 data-i18n="game.drive.title">Turbo Drive</h1>
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound" data-i18n-attr="aria-label:common.sound">
+      <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button fullscreen-button" type="button" aria-pressed="false"></button>
+    <button class="chunky-button icon-button star-button favorite-button" type="button"></button>
+  </header>
+
+  <main class="raceway">
+    <div class="view">
+      <div class="canvas-holder" role="img" aria-label="Driving view" data-i18n-attr="aria-label:drive.area"></div>
+      <p class="loading" data-i18n="drive.loading">Building the track…</p>
+
+      <!-- Always reachable, so focus mode can be left from anywhere. -->
+      <div class="corner-buttons">
+        <button class="hud-button pause-button" type="button" hidden aria-label="Pause" data-i18n-attr="aria-label:drive.pause title:drive.pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="focus-slot"></div>
+      </div>
+
+      <!-- Garage: pick a track, a car and a level. -->
+      <section class="garage" aria-labelledby="garage-title">
+        <h2 id="garage-title" class="visually-hidden" data-i18n="game.drive.title">Turbo Drive</h2>
+        <fieldset class="pick">
+          <legend data-i18n="drive.where">Where to?</legend>
+          <div class="scenario-options"></div>
+        </fieldset>
+        <fieldset class="pick">
+          <legend data-i18n="drive.car">Your car</legend>
+          <div class="car-options"></div>
+          <div class="paint-options" role="radiogroup" aria-label="Paint" data-i18n-attr="aria-label:drive.paint"></div>
+        </fieldset>
+        <fieldset class="pick">
+          <legend data-i18n="drive.level">Level</legend>
+          <div class="difficulty-options"></div>
+          <p class="difficulty-blurb"></p>
+        </fieldset>
+        <div class="garage-go">
+          <p class="best-line"></p>
+          <button class="go-button" type="button"><span data-i18n="drive.go">Drive!</span></button>
+        </div>
+      </section>
+
+      <!-- While driving. -->
+      <div class="hud" hidden>
+        <div class="hud-top">
+          <p class="hud-pill hud-points"><span class="hud-icon" aria-hidden="true"></span><strong class="points-count">0/0</strong><span class="visually-hidden" data-i18n="drive.points">Points</span></p>
+          <p class="hud-pill hud-time"><span class="time-value">0:00.0</span><small class="lap-value"></small></p>
+          <svg class="minimap" aria-hidden="true"></svg>
+        </div>
+        <p class="toast" aria-live="polite"></p>
+        <p class="countdown" aria-live="assertive"></p>
+        <div class="speedo" aria-hidden="true">
+          <strong class="speed-value">0</strong><small>km/h</small>
+          <span class="nitro-bar"><i></i></span>
+        </div>
+        <div class="controls">
+          <div class="steer">
+            <button class="pad steer-left" type="button" aria-label="Steer left" data-i18n-attr="aria-label:drive.left">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="pad steer-right" type="button" aria-label="Steer right" data-i18n-attr="aria-label:drive.right">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="pedals">
+            <button class="pad brake-button" type="button"><span data-i18n="drive.brake">Brake</span></button>
+            <button class="pad nitro-button" type="button"><span data-i18n="drive.nitro">Nitro</span></button>
+          </div>
+        </div>
+        <p class="keys-hint" data-i18n="drive.keys">Arrows or A and D to steer · Space for nitro · Down or S to brake</p>
+      </div>
+
+      <section class="panel pause-panel" hidden aria-labelledby="pause-title">
+        <h2 id="pause-title" data-i18n="drive.paused">Paused</h2>
+        <button class="go-button resume-button" type="button"><span data-i18n="drive.resume">Keep driving</span></button>
+        <button class="panel-button restart-button" type="button" data-i18n="drive.restart">Start over</button>
+        <button class="panel-button change-button" type="button" data-i18n="drive.change">Change car or track</button>
+      </section>
+
+      <section class="panel finish-panel" hidden aria-labelledby="finish-title">
+        <h2 id="finish-title" data-i18n="drive.finishTitle">All points collected!</h2>
+        <p class="finish-time"></p>
+        <p class="finish-best"></p>
+        <button class="go-button again-button" type="button"><span data-i18n="drive.again">Drive again</span></button>
+        <button class="panel-button change-button" type="button" data-i18n="drive.change">Change car or track</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      <span data-i18n="common.footer">Brought to you by Andrea Grassi,</span>
+      <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    </p>
+    <div class="lang-slot"></div>
+  </footer>
+</body>
+</html>

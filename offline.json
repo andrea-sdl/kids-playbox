@@ -75,6 +75,19 @@
       "./games/dice/sound.js",
       "./games/dice/strings.js"
     ],
+    "drive": [
+      "./games/drive/",
+      "./games/drive/cars.js",
+      "./games/drive/drive.css",
+      "./games/drive/drive.js",
+      "./games/drive/index.html",
+      "./games/drive/scene.js",
+      "./games/drive/sound.js",
+      "./games/drive/strings.js",
+      "./games/drive/world.js",
+      "./vendor/three/LICENSE",
+      "./vendor/three/three.min.js"
+    ],
     "memory": [
       "./games/memory/",
       "./games/memory/art/animals/butterfly.webp",

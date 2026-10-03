@@ -1,0 +1,831 @@
+body {
+  --accent: #35f2ff;
+  --accent-2: #ff3fa4;
+  --glass: rgb(12 8 28 / 0.72);
+  --glass-line: rgb(255 255 255 / 0.18);
+  --race-font: var(--font);
+}
+
+body[data-scenario="jungle"] {
+  --accent: #7cff6a;
+  --accent-2: #ffd23f;
+}
+
+body[data-scenario="wasteland"] {
+  --accent: #ffa040;
+  --accent-2: #ff5f3a;
+}
+
+/* The game fills the screen below the top bar; the footer is below it. */
+.raceway {
+  flex: none;
+  height: calc(var(--app-height) - 76px);
+  min-height: 460px;
+  padding-bottom: 12px;
+}
+
+.view {
+  position: relative;
+  height: 100%;
+  /* clip, not hidden: nothing inside (like focusing a button) may scroll it. */
+  overflow: hidden;
+  overflow: clip;
+  border: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: #120c24;
+  box-shadow: var(--shadow);
+  color: #fff;
+  /* Keep taps on the game from selecting text or zooming. */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+/* Firefox doesn't round WebGL canvases with the parent's corners. */
+.canvas-holder {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: calc(var(--radius) - 3px);
+  clip-path: inset(0 round calc(var(--radius) - 3px));
+}
+
+.canvas-holder canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  background: rgb(18 12 36 / 0.85);
+  font-size: 1.2rem;
+  font-style: italic;
+  font-weight: 900;
+  z-index: 8;
+}
+
+/* Slanted, glassy, bold: the racing-game look. */
+.hud-pill,
+.go-button,
+.panel-button {
+  transform: skewX(-12deg);
+}
+
+.go-button > span,
+.hud-pill > * {
+  display: inline-block;
+  transform: skewX(12deg);
+}
+
+.corner-buttons {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  display: flex;
+  gap: 6px;
+}
+
+.corner-buttons .focus-slot {
+  gap: 6px;
+}
+
+/* In focus mode the top bar's buttons join these. */
+.corner-buttons .chunky-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+
+.hud-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--glass-line);
+  border-radius: 12px;
+  background: var(--glass);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Garage ---------- */
+
+.garage {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(420px, 48%);
+  padding: 14px;
+  overflow-y: auto;
+  border: 2px solid var(--glass-line);
+  border-radius: 18px;
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.pick {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.pick legend {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.85rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.scenario-options,
+.car-options,
+.difficulty-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  border: 2px solid var(--glass-line);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.06);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.card strong {
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.card small {
+  font-size: 0.72rem;
+  line-height: 1.2;
+  opacity: 0.75;
+}
+
+.card:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  box-shadow: 0 0 0 1px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.card:has(input:focus-visible) {
+  outline: 3px solid var(--sun);
+  outline-offset: 2px;
+}
+
+.card-art {
+  width: 100%;
+  height: 48px;
+  border-radius: 8px;
+}
+
+/* Tiny postcards of each place, drawn with gradients. */
+.art-city {
+  background:
+    linear-gradient(to top, #1a1030 0 22%, transparent 22%),
+    repeating-linear-gradient(90deg, transparent 0 6px, #2a1d4a 6px 16px, transparent 16px 22px, #34245c 22px 30px),
+    linear-gradient(#1a0b3d, #7a2a7a 55%, #ff8a4c);
+  background-size: 100% 100%, 100% 70%, 100% 100%;
+  background-position: 0 0, 0 100%, 0 0;
+  background-repeat: no-repeat;
+}
+
+.art-jungle {
+  background:
+    radial-gradient(circle at 20% 70%, #2a7a2c 0 22%, transparent 23%),
+    radial-gradient(circle at 75% 65%, #3fa53a 0 26%, transparent 27%),
+    radial-gradient(circle at 50% 85%, #226b28 0 30%, transparent 31%),
+    linear-gradient(#2f86d6, #8fd0ee 60%, #e8f3d0);
+}
+
+.art-wasteland {
+  background:
+    linear-gradient(100deg, #e9eef4 0 45%, #d9a25e 55%) 0 100% / 100% 30% no-repeat,
+    linear-gradient(100deg, #4c4f57 0 12%, transparent 12% 20%, #5d5f66 20% 28%, transparent 28%) 0 70% / 100% 40% no-repeat,
+    linear-gradient(100deg, #a9b4c2 0 45%, #e6b97e 55%);
+}
+
+.card-car svg {
+  width: 100%;
+  height: 36px;
+}
+
+.sil-body {
+  fill: rgb(255 255 255 / 0.85);
+}
+
+.card-car:has(input:checked) .sil-body {
+  fill: var(--accent);
+}
+
+.sil-cabin {
+  fill: #1c2233;
+}
+
+.sil-wheel {
+  fill: #0b0b10;
+  stroke: #9aa0ad;
+  stroke-width: 0.08;
+}
+
+.paint-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.card-paint {
+  padding: 3px;
+  border-radius: 50%;
+}
+
+.swatch {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.7), transparent 45%), var(--paint);
+  box-shadow: inset 0 -3px 6px rgb(0 0 0 / 0.35);
+}
+
+.difficulty-blurb {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* The Drive button stays in view while the choices scroll. */
+.garage-go {
+  position: sticky;
+  bottom: -14px;
+  display: grid;
+  gap: 6px;
+  margin: auto -14px -14px;
+  padding: 10px 14px 14px;
+  background: linear-gradient(transparent, rgb(12 8 28 / 0.92) 30%);
+}
+
+.best-line {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.go-button {
+  min-height: 58px;
+  padding: 10px 26px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent-2)));
+  color: #10081f;
+  font: inherit;
+  font-size: 1.5rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 5px 0 rgb(0 0 0 / 0.45);
+  cursor: pointer;
+}
+
+.go-button:active {
+  transform: skewX(-12deg) translateY(3px);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 55%, transparent), 0 2px 0 rgb(0 0 0 / 0.45);
+}
+
+.go-button:focus-visible,
+.panel-button:focus-visible,
+.pad:focus-visible,
+.hud-button:focus-visible {
+  outline: 3px solid var(--sun);
+  outline-offset: 3px;
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 120px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 16px;
+  border: 2px solid var(--glass-line);
+  border-radius: 10px;
+  background: var(--glass);
+  font-style: italic;
+  font-weight: 900;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hud-points strong {
+  font-size: 1.35rem;
+}
+
+.hud-points.is-bump {
+  animation: pill-bump 0.35s ease;
+}
+
+@keyframes pill-bump {
+  40% { transform: skewX(-12deg) scale(1.18); border-color: var(--accent); }
+}
+
+.hud-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c0, #ffcf3a 45%, #b07a00);
+  box-shadow: 0 0 10px #ffcf3a;
+}
+
+body[data-scenario="jungle"] .hud-icon {
+  border-radius: 0;
+  background: linear-gradient(135deg, #b5ffd6, #19e07a 50%, #08703c);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: none;
+}
+
+body[data-scenario="wasteland"] .hud-icon {
+  background: radial-gradient(circle, #2a1406 0 22%, transparent 23%), radial-gradient(circle at 35% 30%, #ffd2a0, #ff8a2a 50%, #a04400);
+  outline: 3px dotted #ff8a2a;
+  outline-offset: -1px;
+}
+
+.hud-time {
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-time .time-value {
+  font-size: 1.15rem;
+}
+
+.lap-value {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.minimap {
+  position: absolute;
+  top: 62px;
+  right: 10px;
+  width: 112px;
+  height: 112px;
+  padding: 6px;
+  border: 2px solid var(--glass-line);
+  border-radius: 14px;
+  background: rgb(12 8 28 / 0.55);
+}
+
+.map-road-edge {
+  fill: none;
+  stroke: rgb(0 0 0 / 0.6);
+  stroke-width: calc(var(--map-stroke) * 1.6);
+  stroke-linejoin: round;
+}
+
+.map-road {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.85);
+  stroke-width: var(--map-stroke);
+  stroke-linejoin: round;
+}
+
+.map-start {
+  fill: #fff;
+  stroke: #111;
+  stroke-width: calc(var(--map-stroke) * 0.3);
+}
+
+.map-point {
+  fill: var(--accent);
+}
+
+.map-car {
+  fill: #ff3b3b;
+  stroke: #fff;
+  stroke-width: calc(var(--map-stroke) * 0.45);
+}
+
+.toast {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  margin: 0;
+  padding: 8px 20px;
+  border-radius: 12px;
+  background: var(--glass);
+  font-size: 1.3rem;
+  font-style: italic;
+  font-weight: 900;
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.countdown {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(4rem, 14vw, 8rem);
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 30px var(--accent), 0 6px 0 rgb(0 0 0 / 0.5);
+  opacity: 0;
+  transform: translate(-50%, -50%) skewX(-10deg);
+  transition: opacity 0.2s ease;
+}
+
+.countdown.is-on {
+  opacity: 1;
+}
+
+.speedo {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  transform: translateX(-50%) skewX(-10deg);
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.6);
+}
+
+.speed-value {
+  font-size: 2.6rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.speedo small {
+  font-size: 0.75rem;
+  font-weight: 900;
+  opacity: 0.85;
+}
+
+.nitro-bar {
+  position: relative;
+  width: 130px;
+  height: 9px;
+  margin-top: 5px;
+  overflow: hidden;
+  border: 1.5px solid rgb(255 255 255 / 0.5);
+  border-radius: 6px;
+  background: rgb(0 0 0 / 0.45);
+}
+
+.nitro-bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #35a0ff, #35f2ff, #c47bff);
+  transform-origin: left center;
+}
+
+.controls {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.steer,
+.pedals {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.pad {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 0.4);
+  border-radius: 50%;
+  background: rgb(12 8 28 / 0.5);
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: transform 0.08s ease, background 0.08s ease;
+}
+
+.pad svg {
+  width: 34px;
+  height: 34px;
+}
+
+.pad.is-held {
+  background: color-mix(in srgb, var(--accent) 45%, rgb(12 8 28 / 0.5));
+  transform: scale(0.94);
+}
+
+.brake-button {
+  width: 64px;
+  height: 64px;
+  border-color: rgb(255 120 120 / 0.6);
+}
+
+.nitro-button {
+  width: 88px;
+  height: 88px;
+  border-color: #8fe8ff;
+  background: radial-gradient(circle at 40% 35%, rgb(120 220 255 / 0.55), rgb(70 40 160 / 0.6));
+  box-shadow: 0 0 18px rgb(53 200 255 / 0.5);
+}
+
+.nitro-button.is-empty {
+  opacity: 0.45;
+  box-shadow: none;
+}
+
+.nitro-button.is-on {
+  box-shadow: 0 0 30px #35f2ff, 0 0 60px rgb(196 123 255 / 0.6);
+}
+
+.keys-hint {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  margin: 0;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: rgb(12 8 28 / 0.5);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0.8;
+  transform: translateX(-50%);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .keys-hint {
+    display: block;
+  }
+}
+
+/* Nitro: streaks rush in from the edges of the screen. */
+.view::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: 2;
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 5deg, rgb(255 255 255 / 0.22) 5deg 5.6deg);
+  -webkit-mask: radial-gradient(circle, transparent 30%, #000 70%);
+  mask: radial-gradient(circle, transparent 30%, #000 70%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+body.is-nitro .view::after {
+  opacity: 1;
+  animation: streaks 0.25s linear infinite;
+}
+
+@keyframes streaks {
+  to { transform: rotate(3deg) scale(1.03); }
+}
+
+/* ---------- Pause and finish ---------- */
+
+.panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 7;
+  display: grid;
+  gap: 12px;
+  width: min(88%, 360px);
+  padding: 22px;
+  border: 2px solid var(--glass-line);
+  border-radius: 18px;
+  background: var(--glass);
+  text-align: center;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.7rem;
+  font-style: italic;
+  font-weight: 900;
+}
+
+.finish-time {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.finish-best {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 900;
+}
+
+.panel-button {
+  min-height: 46px;
+  padding: 8px 18px;
+  border: 2px solid rgb(255 255 255 / 0.5);
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-style: italic;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+/* ---------- Phones ---------- */
+
+@media (max-width: 640px) {
+  .garage {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    max-height: 68%;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .card small {
+    display: none;
+  }
+
+  .garage-go {
+    bottom: -10px;
+    margin: auto -10px -10px;
+    padding: 8px 10px 10px;
+  }
+
+  .paint-options {
+    gap: 4px;
+    margin-top: 8px;
+  }
+
+  .swatch {
+    width: 24px;
+    height: 24px;
+  }
+
+  .card-art {
+    height: 36px;
+  }
+
+  .go-button {
+    min-height: 50px;
+    font-size: 1.25rem;
+  }
+
+  .hud-top {
+    right: 104px;
+    gap: 6px;
+  }
+
+  .hud-pill {
+    padding: 4px 12px;
+  }
+
+  .minimap {
+    top: 60px;
+    width: 88px;
+    height: 88px;
+  }
+
+  .pad {
+    width: 64px;
+    height: 64px;
+  }
+
+  .brake-button {
+    width: 54px;
+    height: 54px;
+  }
+
+  .nitro-button {
+    width: 74px;
+    height: 74px;
+  }
+
+  .steer,
+  .pedals {
+    gap: 6px;
+  }
+
+  /* The speed sits above the pads on narrow screens. */
+  .speedo {
+    bottom: 92px;
+  }
+
+  .speed-value {
+    font-size: 2rem;
+  }
+
+  .toast {
+    font-size: 1.05rem;
+  }
+}
+
+/* ---------- Focus mode ---------- */
+
+body.is-immersive main.raceway {
+  height: calc(var(--app-height) - 16px - env(safe-area-inset-bottom));
+  max-width: none;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+body.is-immersive .view {
+  border-width: 2px;
+}

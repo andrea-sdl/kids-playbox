@@ -47,6 +47,22 @@ export const GAMES = [
       </svg>`,
   },
   {
+    id: 'drive',
+    path: 'games/drive/',
+    color: '#2a1758',
+    icon: `
+      <svg viewBox="0 0 64 64" aria-hidden="true" stroke="#2b2140" stroke-width="2.5" stroke-linejoin="round">
+        <path d="M4 40l4-9 14-3 8-7h14l9 8 6 2v9z" fill="#35f2ff"/>
+        <path d="M24 28l7-6h12l6 6z" fill="#1c2233"/>
+        <path d="M58 33l3 1" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="17" cy="42" r="6.5" fill="#1b1b22"/>
+        <circle cx="17" cy="42" r="2.6" fill="#d8dde6" stroke="none"/>
+        <circle cx="49" cy="42" r="6.5" fill="#1b1b22"/>
+        <circle cx="49" cy="42" r="2.6" fill="#d8dde6" stroke="none"/>
+        <path d="M2 50h14M24 52h22M50 50h12" stroke="#ff3fa4" stroke-width="3" stroke-linecap="round"/>
+      </svg>`,
+  },
+  {
     id: 'molecules',
     path: 'games/molecules/',
     color: '#6c4fd1',

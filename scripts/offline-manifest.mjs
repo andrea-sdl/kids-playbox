@@ -15,6 +15,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 // Files outside games/<id>/ that a game needs.
 const GAME_EXTRAS = {
   blocks: ['vendor/three'],
+  drive: ['vendor/three'],
 };
 
 function listFiles(path) {
