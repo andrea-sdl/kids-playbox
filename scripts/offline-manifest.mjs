@@ -17,6 +17,7 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const GAME_EXTRAS = {
   blocks: ['vendor/three'],
   drive: ['vendor/three'],
+  skate: ['vendor/three'],
 };
 
 function listFiles(path) {

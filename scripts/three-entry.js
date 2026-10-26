@@ -1,4 +1,4 @@
-// Everything the 3D games (Blocks, Turbo Drive) use from Three.js, bundled and minified into
+// Everything the 3D games (Blocks, Turbo Drive, Skate Star) use from Three.js, bundled and minified into
 // vendor/three/three.min.js by `npm run vendor`.
 export * from 'three';
 export { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';

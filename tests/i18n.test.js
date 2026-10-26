@@ -7,6 +7,7 @@ import '../games/memory/strings.js';
 import '../games/blocks/strings.js';
 import '../games/molecules/strings.js';
 import '../games/drive/strings.js';
+import '../games/skate/strings.js';
 import '../notes/release-notes.js';
 import { GAMES } from '../shared/games.js';
 import { SHAPES, TEXTURES } from '../games/blocks/world.js';
@@ -15,6 +16,7 @@ import { THEMES, CARD_BACKS } from '../games/memory/logic.js';
 import { THEME_INFO } from '../games/memory/themes.js';
 import { ELEMENT_ORDER, MOLECULES } from '../games/molecules/logic.js';
 import { CARS, DIFFICULTIES as DRIVE_LEVELS, SCENARIOS as DRIVE_SCENARIOS } from '../games/drive/world.js';
+import { BOARDS, LOOK_OPTIONS, MODES, PRESETS as SKATE_PRESETS, SCENARIOS as SKATE_SCENARIOS } from '../games/skate/world.js';
 
 const dictionaries = allStrings();
 const codes = LANGUAGES.map((language) => language.code);
@@ -79,6 +81,12 @@ test('everything shown by name has a translation', () => {
     ...DRIVE_SCENARIOS.flatMap((id) => [`drive.scenario.${id}`, `drive.scenarioBlurb.${id}`]),
     ...DRIVE_LEVELS.flatMap((id) => [`drive.difficulty.${id}`, `drive.difficultyBlurb.${id}`]),
     ...CARS.map((id) => `drive.car.${id}`),
+    ...SKATE_SCENARIOS.flatMap((id) => [`skate.scenario.${id}`, `skate.scenarioBlurb.${id}`]),
+    ...BOARDS.map((id) => `skate.boardType.${id}`),
+    ...MODES.flatMap((id) => [`skate.mode.${id}`, `skate.modeBlurb.${id}`]),
+    ...SKATE_PRESETS.map((preset) => `skate.preset.${preset.id}`),
+    ...Object.keys(LOOK_OPTIONS).map((key) => `skate.custom.${key}`),
+    ...Object.entries(LOOK_OPTIONS).flatMap(([key, values]) => values.filter((value) => !value.startsWith('#')).map((value) => `skate.${key}.${value}`)),
   ];
   const missing = needed.filter((key) => dictionaries.en[key] === undefined);
   assert.deepEqual(missing, []);

@@ -7,6 +7,7 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v24.skate': 'A brand-new game! Skate Star: ride a skateboard or a snowboard in a city plaza, on a hill above the sea, on a snowy peak and in a desert with an oasis. Jump, flip, grab and grind for big combos, find the hidden letters, and dress your rider and style your board.',
     'changes.v6.fullscreen': 'Every game has a full-screen button, to use the whole phone or tablet screen.',
     'changes.v12.installedTop': 'When Playbox is added to the iPhone Home Screen, the top of the screen no longer looks blurry.',
     'changes.v13.molecules': 'A brand-new game! Join atoms to build molecules, from water to benzene. Easy mode shows the picture; hard mode only the name.',
@@ -46,6 +47,7 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v24.skate': 'Un gioco tutto nuovo! Skate Star: vai in skateboard o in snowboard in una piazza di città, su una collina sopra il mare, su una vetta innevata e in un deserto con l’oasi. Salta, fai flip, grab e grind per combo enormi, trova le lettere nascoste, vesti il tuo rider e decora la tavola.',
     'changes.v6.fullscreen': 'Ogni gioco ha un pulsante per lo schermo intero, per usare tutto lo schermo di telefono o tablet.',
     'changes.v12.installedTop': 'Con Playbox aggiunto alla schermata Home dell’iPhone, la parte alta dello schermo non è più sfocata.',
     'changes.v13.molecules': 'Un gioco tutto nuovo! Unisci gli atomi per costruire molecole, dall’acqua al benzene. In modalità facile vedi il disegno, in quella difficile solo il nome.',
@@ -85,6 +87,7 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v24.skate': '¡Un juego nuevo! Skate Star: monta en monopatín o en snowboard en una plaza de la ciudad, en una colina sobre el mar, en una cumbre nevada y en un desierto con oasis. Salta, haz flips, grabs y grinds para combos enormes, encuentra las letras escondidas, viste a tu rider y decora tu tabla.',
     'changes.v6.fullscreen': 'Cada juego tiene un botón de pantalla completa, para usar toda la pantalla del teléfono o la tableta.',
     'changes.v12.installedTop': 'Con Playbox añadido a la pantalla de inicio del iPhone, la parte de arriba ya no se ve borrosa.',
     'changes.v13.molecules': '¡Un juego nuevo! Une átomos para construir moléculas, del agua al benceno. En modo fácil ves el dibujo; en modo difícil, solo el nombre.',
@@ -124,6 +127,7 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v24.skate': 'Um jogo novinho! Skate Star: ande de skate ou de snowboard numa praça da cidade, num morro sobre o mar, num pico nevado e num deserto com oásis. Pule, faça flips, grabs e grinds para combos enormes, encontre as letras escondidas, vista seu rider e decore sua prancha.',
     'changes.v6.fullscreen': 'Cada jogo tem um botão de tela cheia, para usar a tela toda do celular ou tablet.',
     'changes.v12.installedTop': 'Com o Playbox na tela de início do iPhone, o topo da tela não fica mais borrado.',
     'changes.v13.molecules': 'Um jogo novinho! Ligue átomos para montar moléculas, da água ao benzeno. No modo fácil você vê o desenho; no difícil, só o nome.',
@@ -163,6 +167,7 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v24.skate': 'Ein brandneues Spiel! Skate Star: Fahr Skateboard oder Snowboard auf einem Stadtplatz, auf einem Hügel über dem Meer, auf einem Schneegipfel und in einer Wüste mit Oase. Spring, mach Flips, Grabs und Grinds für riesige Kombos, finde die versteckten Buchstaben, zieh deine Figur an und gestalte dein Board.',
     'changes.v6.fullscreen': 'Jedes Spiel hat einen Vollbild-Knopf, um den ganzen Bildschirm von Handy oder Tablet zu nutzen.',
     'changes.v12.installedTop': 'Wenn Playbox auf dem iPhone-Home-Bildschirm liegt, ist der obere Bildschirmrand nicht mehr verschwommen.',
     'changes.v13.molecules': 'Ein ganz neues Spiel! Verbinde Atome zu Molekülen, von Wasser bis Benzol. Im leichten Modus siehst du das Bild, im schweren nur den Namen.',

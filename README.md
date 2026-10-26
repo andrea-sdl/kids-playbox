@@ -15,6 +15,7 @@ Plain HTML, CSS and JavaScript. No build step, and nothing to install to run it.
 | **Blocks** (`games/blocks/`) | Build anything with 3D toy blocks: nine shapes, any color, plain plastic or textures (brick, stone, wood and more). Turn, paint, remove, undo. The sky follows the time of day, including sunset and a starry night, or your real clock. |
 | **Molecules** (`games/molecules/`) | Join atoms into real molecules, from hydrogen gas to benzene. Each atom shows its free "hands" (bonds). Easy mode shows the molecule; hard mode only its name. Every molecule has a fun fact. |
 | **Turbo Drive** (`games/drive/`) | A 3D driving game in a neon city, a jungle and a snowy wasteland that turns into desert. Collect points around the circuit (harder levels put them at the edges), hit boost pads for nitro, steer with buttons or by tilting the phone, customize your car, and build and share your own tracks. Each track has its own music. |
+| **Skate Star** (`games/skate/`) | Tony Hawk-style tricks on a skateboard or a snowboard, in a city plaza, a seaside hill in anime style (the park looks down on the coast), a snow park on a mountain and a desert with an oasis. Jump, flip, grab and grind for combos; quarter pipes send you flying. Find the hidden letters in two-minute sessions, or ride freely. Dress your rider (hair, hats, glasses, tops, pants, shoes) and style your board (color, graphic, wheels or bindings). Each park has its own music. |
 
 Kids can star games to keep favorites at the top of the home page.
 
@@ -39,7 +40,7 @@ Uses Node's built-in test runner (Node 20+). The tests cover the dice logic, sav
 - `index.html`, `home.js`, `home.css`: the home page with the game list and favorites.
 - `shared/`: code every page uses. `store.js` wraps `localStorage` safely, `favorites.js` and `progress.js` hold per-game data, `games.js` lists the games.
 - `games/<id>/`: each game is its own folder and page.
-- `vendor/three/`: a trimmed, minified build of [Three.js](https://threejs.org) (MIT), used by Blocks and Turbo Drive.
+- `vendor/three/`: a trimmed, minified build of [Three.js](https://threejs.org) (MIT), used by Blocks, Turbo Drive and Skate Star.
 - `sw.js` and `offline.json`: offline support (see below).
 
 All saved data lives in the browser's `localStorage` under keys starting with `playbox:` (Memory's own photos are in IndexedDB).

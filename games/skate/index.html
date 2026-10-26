@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-i18n="skate.pageTitle">Skate Star · Playbox</title>
+  <meta name="description" content="Skate or snowboard through a city plaza, a seaside hill, a snowy peak and a desert oasis. Do tricks and dress your rider. Works offline.">
+  <meta name="theme-color" content="#14324f">
+  <link rel="manifest" href="../../manifest.webmanifest">
+  <link rel="icon" href="../../icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../../icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Playbox">
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="skate.css">
+  <script type="module" src="skate.js"></script>
+</head>
+<body class="is-shop">
+  <header class="topbar">
+    <a class="chunky-button icon-button" href="../../" aria-label="Back to all games" title="All games" data-i18n-attr="aria-label:common.back title:common.allGames">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <h1 data-i18n="game.skate.title">Skate Star</h1>
+    <button class="chunky-button icon-button music-button" type="button" aria-pressed="true" aria-label="Music" data-i18n-attr="aria-label:skate.music">
+      <svg class="music-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor"/></svg>
+      <svg class="music-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V5.5l10-2v12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" opacity=".45"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor" opacity=".45"/><circle cx="16.5" cy="15.5" r="3" fill="currentColor" opacity=".45"/><path d="M3 3l18 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button sound-button" type="button" aria-pressed="true" aria-label="Sound" data-i18n-attr="aria-label:common.sound">
+      <svg class="sound-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <svg class="sound-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="chunky-button icon-button fullscreen-button" type="button" aria-pressed="false"></button>
+    <button class="chunky-button icon-button star-button favorite-button" type="button"></button>
+  </header>
+
+  <main class="skatepark">
+    <div class="view">
+      <div class="canvas-holder" role="img" aria-label="Skate park view" data-i18n-attr="aria-label:skate.area"></div>
+      <p class="loading" data-i18n="skate.loading">Building the park…</p>
+
+      <!-- Always reachable, so focus mode can be left from anywhere. -->
+      <div class="corner-buttons">
+        <button class="hud-button pause-button" type="button" hidden aria-label="Pause" data-i18n-attr="aria-label:skate.pause title:skate.pause">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>
+        </button>
+        <div class="focus-slot"></div>
+      </div>
+
+      <!-- The shop: pick a park, a board and clothes. -->
+      <section class="shop" aria-labelledby="shop-title">
+        <h2 id="shop-title" class="visually-hidden" data-i18n="game.skate.title">Skate Star</h2>
+        <fieldset class="pick">
+          <legend data-i18n="skate.where">Where to ride?</legend>
+          <div class="scenario-options"></div>
+        </fieldset>
+        <fieldset class="pick">
+          <legend data-i18n="skate.board">Your board</legend>
+          <div class="board-options"></div>
+          <div class="deck-options" role="radiogroup" aria-label="Board color" data-i18n-attr="aria-label:skate.custom.deck"></div>
+          <details class="customize">
+            <summary data-i18n="skate.boardStyle">Board style</summary>
+            <div class="custom-rows board-rows"></div>
+          </details>
+        </fieldset>
+        <fieldset class="pick">
+          <legend data-i18n="skate.rider">Your rider</legend>
+          <p class="custom-label" data-i18n="skate.looks">Ready-made looks</p>
+          <div class="preset-options"></div>
+          <details class="customize">
+            <summary data-i18n="skate.clothes">Clothes and hair</summary>
+            <div class="custom-rows rider-rows"></div>
+          </details>
+        </fieldset>
+        <fieldset class="pick">
+          <legend data-i18n="skate.mode">Session</legend>
+          <div class="mode-options"></div>
+          <p class="mode-blurb"></p>
+        </fieldset>
+        <div class="shop-go">
+          <p class="best-line"></p>
+          <button class="go-button" type="button"><span data-i18n="skate.go">Ride!</span></button>
+        </div>
+      </section>
+
+      <!-- While riding. -->
+      <div class="hud" hidden>
+        <div class="hud-top">
+          <p class="hud-pill hud-score"><strong class="score-value">0</strong><span class="visually-hidden" data-i18n="skate.score">Score</span></p>
+          <p class="hud-pill hud-time"><span class="time-value">2:00</span></p>
+          <p class="hud-pill hud-letters" role="img"></p>
+        </div>
+        <p class="toast" aria-live="polite"></p>
+        <p class="countdown" aria-live="assertive"></p>
+        <div class="combo" aria-hidden="true">
+          <p class="combo-tricks"></p>
+          <p class="combo-points"></p>
+        </div>
+        <!-- Turning on the left; jump, flip and grab on the right. -->
+        <div class="controls">
+          <div class="pad-group">
+            <button class="pad steer-left" type="button" aria-label="Turn left" data-i18n-attr="aria-label:skate.left">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4l-8 8 8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="pad steer-right" type="button" aria-label="Turn right" data-i18n-attr="aria-label:skate.right">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4l8 8-8 8" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div class="pad-group actions">
+            <button class="pad trick-pad grab-button" type="button"><span data-i18n="skate.grab">Grab</span></button>
+            <button class="pad trick-pad flip-button" type="button"><span data-i18n="skate.flip">Flip</span></button>
+            <button class="pad jump-button" type="button"><span data-i18n="skate.jump">Jump</span></button>
+          </div>
+        </div>
+        <p class="keys-hint" data-i18n="skate.keys">Arrows or A and D to turn · Space to jump · J to flip · K to grab</p>
+      </div>
+
+      <section class="panel pause-panel" hidden aria-labelledby="pause-title">
+        <h2 id="pause-title" data-i18n="skate.paused">Paused</h2>
+        <button class="go-button resume-button" type="button"><span data-i18n="skate.resume">Keep riding</span></button>
+        <button class="panel-button restart-button" type="button" data-i18n="skate.restart">Start over</button>
+        <button class="panel-button change-button" type="button" data-i18n="skate.change">Change rider or park</button>
+      </section>
+
+      <section class="panel finish-panel" hidden aria-labelledby="finish-title">
+        <h2 id="finish-title" data-i18n="skate.finishTitle">Time’s up!</h2>
+        <p class="finish-score"></p>
+        <p class="finish-best"></p>
+        <ul class="goals"></ul>
+        <button class="go-button again-button" type="button"><span data-i18n="skate.again">Ride again</span></button>
+        <button class="panel-button change-button" type="button" data-i18n="skate.change">Change rider or park</button>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      <span data-i18n="common.footer">Brought to you by Andrea Grassi,</span>
+      <a href="https://givemethechills.com" target="_blank" rel="noopener">Givemethechills</a>
+    </p>
+    <div class="lang-slot"></div>
+  </footer>
+</body>
+</html>

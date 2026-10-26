@@ -63,6 +63,21 @@ export const GAMES = [
       </svg>`,
   },
   {
+    id: 'skate',
+    path: 'games/skate/',
+    color: '#1f8fd6',
+    icon: `
+      <svg viewBox="0 0 64 64" aria-hidden="true" stroke="#2b2140" stroke-width="2.5" stroke-linejoin="round">
+        <path d="M8 44c0-4 4-4 6-2l4 3h28l4-3c2-2 6-2 6 2l-5 3H13z" fill="#ff3fa4"/>
+        <circle cx="19" cy="52" r="4.5" fill="#ffd23f"/>
+        <circle cx="45" cy="52" r="4.5" fill="#ffd23f"/>
+        <path d="M24 12l8-6 8 6-3 2 2 14h-14l2-14z" fill="#35c8ff"/>
+        <circle cx="32" cy="10" r="6" fill="#f6d3b3"/>
+        <path d="M25.5 9a6.5 6.5 0 0 1 13 0z" fill="#e3242b"/>
+        <path d="M27 28l-4 14M37 28l4 14" stroke="#2440a8" stroke-width="5" stroke-linecap="round"/>
+      </svg>`,
+  },
+  {
     id: 'molecules',
     path: 'games/molecules/',
     color: '#6c4fd1',

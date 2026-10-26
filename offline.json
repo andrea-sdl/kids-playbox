@@ -168,6 +168,24 @@
       "./games/molecules/molecules.js",
       "./games/molecules/sound.js",
       "./games/molecules/strings.js"
+    ],
+    "skate": [
+      "./games/skate/",
+      "./games/skate/effects.js",
+      "./games/skate/index.html",
+      "./games/skate/music.js",
+      "./games/skate/physics.js",
+      "./games/skate/rider.js",
+      "./games/skate/scene.js",
+      "./games/skate/skate.css",
+      "./games/skate/skate.js",
+      "./games/skate/sound.js",
+      "./games/skate/strings.js",
+      "./games/skate/textures.js",
+      "./games/skate/tricks.js",
+      "./games/skate/world.js",
+      "./vendor/three/LICENSE",
+      "./vendor/three/three.min.js"
     ]
   },
   "notes": [
