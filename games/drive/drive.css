@@ -1097,6 +1097,21 @@ body.is-nitro .view::after {
   to { transform: rotate(3deg) scale(1.03); }
 }
 
+/* The ?stats overlay. */
+.stats-box {
+  position: absolute;
+  left: 12px;
+  top: 96px;
+  z-index: 9;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.65);
+  color: #9fff9f;
+  font: 700 11px/1.35 ui-monospace, monospace;
+  pointer-events: none;
+}
+
 /* ---------- Pause and finish ---------- */
 
 .panel {

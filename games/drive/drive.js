@@ -645,11 +645,55 @@ let last = performance.now();
 let clock = 0;
 let frame = 0;
 
+// Add ?stats to the address to see how hard the device is working.
+const statsBox = createStatsBox();
+let statsFrames = 0;
+let statsTime = 0;
+
+function createStatsBox() {
+  if (!new URLSearchParams(location.search).has('stats')) {
+    return null;
+  }
+  const box = document.createElement('pre');
+  box.className = 'stats-box';
+  document.querySelector('.view').append(box);
+  return box;
+}
+
+function onOff(value) {
+  if (value) {
+    return 'on';
+  }
+  return 'off';
+}
+
+function showStats(elapsed) {
+  statsFrames += 1;
+  statsTime += elapsed;
+  if (statsTime < 500) {
+    return;
+  }
+  const info = view.stats();
+  const fps = Math.round((statsFrames * 1000) / statsTime);
+  const ms = (statsTime / statsFrames).toFixed(1);
+  statsBox.textContent = [
+    `${fps} fps · ${ms} ms`,
+    `${info.calls} draws · ${Math.round(info.triangles / 1000)}k tris`,
+    `res ×${info.ratio} · ${view.quality}`,
+    `glow ${onOff(info.bloom)} · shadows ${onOff(info.shadows)}`,
+  ].join('\n');
+  statsFrames = 0;
+  statsTime = 0;
+}
+
 function loop(now) {
   const elapsed = now - last;
   const dt = Math.min(0.05, elapsed / 1000);
   last = now;
   step(dt);
+  if (statsBox) {
+    showStats(elapsed);
+  }
   if (mode !== 'paused' && document.visibilityState === 'visible') {
     view.adapt(elapsed);
   }

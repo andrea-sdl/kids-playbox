@@ -248,6 +248,33 @@ class Batch {
   }
 }
 
+// The same, split into square chunks of ground. Each chunk is its own mesh,
+// so the GPU can skip chunks the camera (or the shadow box) can't see,
+// instead of drawing a whole forest every frame.
+const CHUNK = 160;
+
+class ChunkedBatch {
+  constructor() {
+    this.chunks = new Map();
+  }
+
+  add(geometry, matrix, color, options) {
+    const x = Math.floor(matrix.elements[12] / CHUNK);
+    const z = Math.floor(matrix.elements[14] / CHUNK);
+    const key = `${x},${z}`;
+    if (!this.chunks.has(key)) {
+      this.chunks.set(key, new Batch());
+    }
+    this.chunks.get(key).add(geometry, matrix, color, options);
+  }
+
+  mesh(material, options) {
+    const group = new THREE.Group();
+    this.chunks.forEach((batch) => group.add(batch.mesh(material, options)));
+    return group;
+  }
+}
+
 const UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 UNIT_BOX.translate(0, 0.5, 0);
 
@@ -454,9 +481,9 @@ function glowColor(hex, strength) {
 function buildCity(group, samples, clearance, groundY, quality, dot) {
   const rand = random(101);
   const facade = facadeTextures('city');
-  const buildings = new Batch();
-  const roofs = new Batch();
-  const neon = new Batch();
+  const buildings = new ChunkedBatch();
+  const roofs = new ChunkedBatch();
+  const neon = new ChunkedBatch();
   const tints = ['#c9c4e8', '#b8c4ea', '#d8c6d8', '#c2b8dc', '#aebde0', '#d4d0e6'];
   const neonColors = ['#ff3fa4', '#35f2ff', '#a45bff', '#ffd23f', '#39ff88'];
   const addBuilding = (spot, width, depth, height, withSign) => {
@@ -502,9 +529,9 @@ function buildCity(group, samples, clearance, groundY, quality, dot) {
   group.add(neon.mesh(new THREE.MeshBasicMaterial({ vertexColors: true })));
 
   // Street lights, each with a warm pool of light on the road.
-  const poles = new Batch();
-  const bulbs = new Batch();
-  const pools = new Batch();
+  const poles = new ChunkedBatch();
+  const bulbs = new ChunkedBatch();
+  const pools = new ChunkedBatch();
   const poolShape = new THREE.PlaneGeometry(1, 1);
   poolShape.rotateX(-Math.PI / 2);
   roadsideSpots(samples, clearance, rand, { step: 34, from: 1.6, to: 1.6, radius: 0.3 }).forEach((spot) => {
@@ -534,9 +561,9 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     detail = 1;
   }
   const clumps = leafClumps(detail);
-  const trees = new Batch();
-  const fronds = new Batch();
-  const ferns = new Batch();
+  const trees = new ChunkedBatch();
+  const fronds = new ChunkedBatch();
+  const ferns = new ChunkedBatch();
   const trunk = new THREE.CylinderGeometry(0.3, 0.55, 1, 10, 4);
   trunk.translate(0, 0.5, 0);
   const palmTrunk = new THREE.CylinderGeometry(0.22, 0.38, 1, 10, 6);
@@ -595,13 +622,13 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     ferns.add(card, place(spot.x, y, spot.z, rand() * 6, size, size, size), rand() < 0.5 ? '#ffffff' : '#cfe8b0');
   });
   const leafy = { roughness: 0.85, vertexColors: true };
-  group.add(trees.mesh(new THREE.MeshStandardMaterial(leafy), { cast: true }));
+  group.add(trees.mesh(new THREE.MeshStandardMaterial(leafy), { cast: quality.sceneryShadows }));
   group.add(fronds.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: frondTexture(), alphaTest: 0.45, side: THREE.DoubleSide }), { cast: quality.sceneryShadows }));
   group.add(ferns.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: fernTexture(), alphaTest: 0.4, side: THREE.DoubleSide })));
 
   // Ancient stone: gateways over the road and stepped temples in the trees.
-  const stone = new Batch();
-  const moss = new Batch();
+  const stone = new ChunkedBatch();
+  const moss = new ChunkedBatch();
   [0.2, 0.55, 0.82].forEach((t) => {
     const sample = samples[Math.floor(t * samples.length)];
     const yaw = Math.atan2(sample.dx, sample.dz);
@@ -623,16 +650,16 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     }
     stone.add(UNIT_BOX, place(spot.x, y + 24, spot.z, spot.yaw, 6, 6, 6), '#857e68', { shade: true });
   });
-  group.add(stone.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), { cast: true }));
+  group.add(stone.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), { cast: quality.sceneryShadows }));
   group.add(moss.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })));
 }
 
 function buildWasteland(group, samples, clearance, groundY, quality) {
   const rand = random(303);
   const ruinFacade = facadeTextures('ruin');
-  const walls = new Batch();
-  const plain = new Batch();
-  const rocks = new Batch();
+  const walls = new ChunkedBatch();
+  const plain = new ChunkedBatch();
+  const rocks = new ChunkedBatch();
   const dune = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2);
 
   const addRuin = (x, y, z, yaw, snowy) => {
@@ -762,11 +789,14 @@ export function createScene(container) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.info.autoReset = false;
   container.append(renderer.domElement);
   const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 2500);
+  // The fog hides everything past about a kilometer, so nothing further is
+  // drawn (the sky is pinned to the far edge, so it still shows).
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.3, 1100);
 
   const hemisphere = new THREE.HemisphereLight(0xffffff, 0x444444, 1.3);
   scene.add(hemisphere);
@@ -1143,12 +1173,34 @@ export function createScene(container) {
     });
   }
 
+  // Phones blur the glow at half the usual size: it's soft anyway.
+  function sizeBloom() {
+    if (quality.name === 'low') {
+      bloom.setSize(Math.round((width * pixelRatio) / 2), Math.round((height * pixelRatio) / 2));
+    }
+  }
+
   function setRatio(ratio) {
     pixelRatio = ratio;
     renderer.setPixelRatio(ratio);
     composer.setPixelRatio(ratio);
     composer.setSize(width, height);
+    sizeBloom();
     effects.resize(height * ratio);
+  }
+
+  // When a device is still slow at the lowest resolution, the glow goes
+  // first, then the shadows.
+  let effectsLevel = 2;
+
+  function dropEffect() {
+    if (effectsLevel === 2) {
+      bloom.enabled = false;
+    }
+    if (effectsLevel === 1) {
+      sun.castShadow = false;
+    }
+    effectsLevel -= 1;
   }
 
   let frameAverage = 16;
@@ -1318,6 +1370,11 @@ export function createScene(container) {
         setRatio(Math.max(quality.minRatio, pixelRatio - 0.25));
         return;
       }
+      if (frameAverage > 28 && effectsLevel > 0 && now - lastAdapt > 3000) {
+        lastAdapt = now;
+        dropEffect();
+        return;
+      }
       if (frameAverage < 14 && pixelRatio < quality.maxRatio) {
         lastAdapt = now;
         setRatio(Math.min(quality.maxRatio, pixelRatio + 0.25));
@@ -1329,13 +1386,27 @@ export function createScene(container) {
       height = nextHeight;
       renderer.setSize(width, height, false);
       composer.setSize(width, height);
+      sizeBloom();
       effects.resize(height * pixelRatio);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     },
 
+    // Counted over the whole frame (scene, shadows and glow passes).
     render() {
+      renderer.info.reset();
       composer.render();
+    },
+
+    // For the ?stats overlay.
+    stats() {
+      return {
+        calls: renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        ratio: pixelRatio,
+        bloom: bloom.enabled,
+        shadows: sun.castShadow,
+      };
     },
   };
 }
