@@ -1,8 +1,10 @@
 // Surfaces drawn in code: asphalt, dirt, ground detail, building fronts,
 // rock and plants. Smooth noise (not square specks) keeps them crisp up
-// close, and everything tiles, so it can repeat along the road.
+// close, and everything tiles, so it can repeat along the road. Most come
+// with a bump (normal) map, and a map of where they are rough or shiny.
 
 import * as THREE from '../../vendor/three/three.min.js';
+import { normalMapFrom } from '../../gfx/surface.js';
 
 export function random(seed) {
   let value = seed;
@@ -96,6 +98,25 @@ function overlayNoise(ctx, width, height, noise, strength, mode = 'overlay') {
   ctx.restore();
 }
 
+// The brighter parts of a noise canvas, in one color with soft edges and
+// see-through everywhere else: puddles, moss, patches of snow.
+function patchesFrom(noise, from, to, [red, green, blue]) {
+  const canvas = makeCanvas(noise.width, noise.height);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(noise, 0, 0);
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const t = Math.min(1, Math.max(0, (data[i] / 255 - from) / (to - from)));
+    data[i] = red;
+    data[i + 1] = green;
+    data[i + 2] = blue;
+    data[i + 3] = t * t * (3 - 2 * t) * 255;
+  }
+  ctx.putImageData(image, 0, 0);
+  return canvas;
+}
+
 function toTexture(canvas, { color = true, repeat = true } = {}) {
   const texture = new THREE.CanvasTexture(canvas);
   if (color) {
@@ -122,8 +143,9 @@ function paintLine(ctx, x, y, width, height, wear) {
   ctx.restore();
 }
 
-// A road texture 18 m across and 16 m along, plus a roughness map (bright
-// = rough). The city road is slick in the tire tracks, so it shines.
+// A road texture 18 m across and 16 m along, a roughness map (bright =
+// rough) and a bump map. The city road is wet: puddles lie in its dips,
+// flat and mirror-smooth, so they reflect the neon and the sky.
 export function roadTextures(scenario) {
   const size = 1024;
   const color = makeCanvas(size, size);
@@ -175,7 +197,7 @@ export function roadTextures(scenario) {
     addGrain(ctx, size, size, 26, 6);
     roughCtx.fillStyle = '#e6e6e6';
     roughCtx.fillRect(0, 0, size, size);
-    return { map: toTexture(color), roughnessMap: toTexture(rough, { color: false }) };
+    return { map: toTexture(color), roughnessMap: toTexture(rough, { color: false }), normalMap: normalMapFrom(color, { strength: 3.2 }) };
   }
 
   // Asphalt: dark, with lighter stone chips and darker oil in the lanes.
@@ -257,10 +279,20 @@ export function roadTextures(scenario) {
     roughCtx.fillStyle = gradient;
     roughCtx.fillRect(size * (center - 0.07), 0, size * 0.14, size);
   });
+  // Bumps come from the picture itself: stone chips stand up, cracks and
+  // tire tracks sink in, paint sits on top.
+  const height = makeCanvas(size, size);
+  const heightCtx = height.getContext('2d');
+  heightCtx.drawImage(color, 0, 0);
   if (scenario === 'city') {
     overlayNoise(roughCtx, size, size, patches, 0.9, 'multiply');
+    roughCtx.drawImage(patchesFrom(patches, 0.52, 0.6, [14, 14, 14]), 0, 0, size, size);
+    heightCtx.drawImage(patchesFrom(patches, 0.5, 0.58, [70, 70, 74]), 0, 0, size, size);
+    ctx.globalAlpha = 0.5;
+    ctx.drawImage(patchesFrom(patches, 0.5, 0.6, [8, 8, 16]), 0, 0, size, size);
+    ctx.globalAlpha = 1;
   }
-  return { map: toTexture(color), roughnessMap: toTexture(rough, { color: false }) };
+  return { map: toTexture(color), roughnessMap: toTexture(rough, { color: false }), normalMap: normalMapFrom(height, { strength: 1.5 }) };
 }
 
 /* ---------- Ground ---------- */
@@ -327,41 +359,77 @@ export function groundDetail(kind) {
 
 /* ---------- Buildings ---------- */
 
-// A building front, 8 × 8 windows, with a glow map of the lit ones. The
-// bottom-left corner is plain wall, used for roofs.
+// A building front, 8 × 8 windows, with a glow map of the lit ones, a bump
+// map (ledges stick out, windows sit back) and a map of what is rough wall
+// and what is shiny glass. The strip under the bottom windows is plain
+// wall, used for roofs.
 export function facadeTextures(style) {
-  const size = 512;
+  const size = 1024;
   const cell = size / 8;
   const color = makeCanvas(size, size);
   const ctx = color.getContext('2d');
   const glow = makeCanvas(size, size);
   const glowCtx = glow.getContext('2d');
-  const rand = random(style === 'ruin' ? 41 : 43);
-  ctx.fillStyle = style === 'ruin' ? '#8a8680' : '#9a97a8';
+  const height = makeCanvas(size, size);
+  const heightCtx = height.getContext('2d');
+  // Green is roughness, blue is metalness (see MeshStandardMaterial).
+  const finish = makeCanvas(size, size);
+  const finishCtx = finish.getContext('2d');
+  const ruin = style === 'ruin';
+  const rand = random(ruin ? 41 : 43);
+  ctx.fillStyle = ruin ? '#8a8680' : '#9a97a8';
   ctx.fillRect(0, 0, size, size);
-  overlayNoise(ctx, size, size, noiseCanvas(128, 4, 4, 47), 0.5);
+  overlayNoise(ctx, size, size, noiseCanvas(256, 4, 5, 47), 0.5);
   glowCtx.fillStyle = '#000';
   glowCtx.fillRect(0, 0, size, size);
+  heightCtx.fillStyle = '#b4b4b4';
+  heightCtx.fillRect(0, 0, size, size);
+  overlayNoise(heightCtx, size, size, noiseCanvas(256, 24, 3, 49), ruin ? 0.5 : 0.18);
+  finishCtx.fillStyle = ruin ? 'rgb(0 240 0)' : 'rgb(0 205 0)';
+  finishCtx.fillRect(0, 0, size, size);
+
   for (let row = 0; row < 8; row += 1) {
+    // A ledge above each floor, lit on top and shaded below.
+    const ledge = row * cell;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.fillRect(0, ledge, size, 7);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, ledge + 7, size, 5);
+    heightCtx.fillStyle = '#ffffff';
+    heightCtx.fillRect(0, ledge, size, 8);
     for (let col = 0; col < 8; col += 1) {
-      const x = col * cell + cell * 0.16;
-      const y = row * cell + cell * 0.18;
-      const w = cell * 0.68;
-      const h = cell * 0.6;
+      const x = col * cell + cell * 0.17;
+      const y = row * cell + cell * 0.2;
+      const w = cell * 0.66;
+      const h = cell * 0.58;
+      // A pillar between windows.
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
+      ctx.fillRect(col * cell + 1, ledge + 12, 5, cell - 12);
+      heightCtx.fillStyle = '#dcdcdc';
+      heightCtx.fillRect(col * cell, ledge + 8, 8, cell - 8);
       // Frame and sill.
-      ctx.fillStyle = 'rgba(40, 38, 50, 0.55)';
-      ctx.fillRect(x - 3, y - 3, w + 6, h + 8);
-      if (style === 'ruin') {
+      ctx.fillStyle = 'rgba(34, 32, 44, 0.7)';
+      ctx.fillRect(x - 5, y - 5, w + 10, h + 13);
+      heightCtx.fillStyle = '#8c8c8c';
+      heightCtx.fillRect(x - 5, y - 5, w + 10, h + 13);
+      heightCtx.fillStyle = '#404040';
+      heightCtx.fillRect(x, y, w, h);
+      if (ruin) {
         const broken = rand() < 0.4;
         ctx.fillStyle = broken ? '#0c0c0e' : '#22262e';
         ctx.fillRect(x, y, w, h);
         if (!broken) {
           ctx.fillStyle = 'rgba(160, 170, 185, 0.18)';
           ctx.fillRect(x, y, w * 0.4, h);
+          finishCtx.fillStyle = 'rgb(0 70 90)';
+          finishCtx.fillRect(x, y, w, h);
+        } else {
+          heightCtx.fillStyle = '#101010';
+          heightCtx.fillRect(x, y, w, h);
         }
         continue;
       }
-      const lit = rand() < 0.45;
+      const lit = rand() < 0.42;
       if (lit) {
         const warm = ['#ffd38a', '#ffe7b5', '#a8e6ff', '#ffbf72', '#ffd0f0'][Math.floor(rand() * 5)];
         const gradient = ctx.createLinearGradient(0, y, 0, y + h);
@@ -369,42 +437,191 @@ export function facadeTextures(style) {
         gradient.addColorStop(1, '#6b4a2a');
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, w, h);
+        const power = 0.5 + rand() * 0.5;
         glowCtx.fillStyle = warm;
-        glowCtx.globalAlpha = 0.55 + rand() * 0.45;
+        glowCtx.globalAlpha = power;
         glowCtx.fillRect(x, y, w, h);
+        // Something in the room: a blind half down, or furniture in shadow.
+        const inside = rand();
+        if (inside < 0.4) {
+          const blind = h * (0.25 + rand() * 0.4);
+          ctx.fillStyle = 'rgba(60, 40, 30, 0.45)';
+          ctx.fillRect(x, y, w, blind);
+          glowCtx.globalAlpha = 0.55;
+          glowCtx.fillStyle = '#000';
+          glowCtx.fillRect(x, y, w, blind);
+        } else if (inside < 0.7) {
+          const wide = w * (0.2 + rand() * 0.3);
+          const at = x + rand() * (w - wide);
+          ctx.fillStyle = 'rgba(40, 24, 16, 0.6)';
+          ctx.fillRect(at, y + h * 0.5, wide, h * 0.5);
+          glowCtx.globalAlpha = 0.7;
+          glowCtx.fillStyle = '#000';
+          glowCtx.fillRect(at, y + h * 0.5, wide, h * 0.5);
+        }
         glowCtx.globalAlpha = 1;
+        finishCtx.fillStyle = 'rgb(0 90 0)';
+        finishCtx.fillRect(x, y, w, h);
       } else {
-        // Dark glass with a sky reflection.
+        // Dark glass with a sky reflection: smooth and mirror-like.
         const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
-        gradient.addColorStop(0, '#3a4a6e');
-        gradient.addColorStop(0.5, '#141a2a');
-        gradient.addColorStop(1, '#232c45');
+        gradient.addColorStop(0, '#46587e');
+        gradient.addColorStop(0.5, '#161c2e');
+        gradient.addColorStop(1, '#27314c');
         ctx.fillStyle = gradient;
         ctx.fillRect(x, y, w, h);
+        finishCtx.fillStyle = 'rgb(0 26 215)';
+        finishCtx.fillRect(x, y, w, h);
       }
-      // Mullion.
-      ctx.fillStyle = 'rgba(30, 28, 40, 0.8)';
-      ctx.fillRect(x + w / 2 - 1.5, y, 3, h);
+      // Mullions: one down the middle, one across.
+      ctx.fillStyle = 'rgba(26, 24, 36, 0.85)';
+      ctx.fillRect(x + w / 2 - 2.5, y, 5, h);
+      ctx.fillRect(x, y + h * 0.36, w, 3);
+      heightCtx.fillStyle = '#8c8c8c';
+      heightCtx.fillRect(x + w / 2 - 2.5, y, 5, h);
+      heightCtx.fillRect(x, y + h * 0.36, w, 3);
+      finishCtx.fillStyle = 'rgb(0 180 0)';
+      finishCtx.fillRect(x + w / 2 - 2.5, y, 5, h);
     }
   }
-  // Plain wall corner for roofs.
-  ctx.fillStyle = style === 'ruin' ? '#6e6a66' : '#5a586a';
-  ctx.fillRect(0, 0, 6, 6);
-  glowCtx.fillStyle = '#000';
-  glowCtx.fillRect(0, 0, 6, 6);
-  if (style === 'ruin') {
-    // Soot and streaks running down.
-    for (let i = 0; i < 60; i += 1) {
-      const x = rand() * size;
-      const gradient = ctx.createLinearGradient(0, rand() * size, 0, size);
-      gradient.addColorStop(0, 'rgba(20, 18, 16, 0.35)');
-      gradient.addColorStop(1, 'rgba(20, 18, 16, 0)');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, 0, 2 + rand() * 6, size);
-    }
+  // Rain streaks under the ledges, and soot on ruins.
+  const streaks = ruin ? 90 : 46;
+  for (let i = 0; i < streaks; i += 1) {
+    const x = rand() * size;
+    const from = Math.floor(rand() * 8) * cell + 8;
+    const gradient = ctx.createLinearGradient(0, from, 0, from + cell * (0.5 + rand() * (ruin ? 3 : 1)));
+    gradient.addColorStop(0, ruin ? 'rgba(20, 18, 16, 0.4)' : 'rgba(20, 18, 30, 0.22)');
+    gradient.addColorStop(1, 'rgba(20, 18, 16, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, from, 2 + rand() * 6, size);
   }
-  addGrain(ctx, size, size, 16, 53);
-  return { map: toTexture(color), emissiveMap: toTexture(glow) };
+  addGrain(ctx, size, size, 14, 53);
+  return {
+    map: toTexture(color),
+    emissiveMap: toTexture(glow),
+    normalMap: normalMapFrom(height, { strength: 3 }),
+    finishMap: toTexture(finish, { color: false }),
+  };
+}
+
+// Eight neon billboards in one picture (4 across, 2 down): simple glowing
+// drawings, no words, so they read the same in every language.
+export function signTexture() {
+  const width = 256;
+  const height = 128;
+  const canvas = makeCanvas(width * 4, height * 2);
+  const ctx = canvas.getContext('2d');
+  const colors = ['#ff3fa4', '#35f2ff', '#ffd23f', '#39ff88', '#a45bff', '#ff8a3a', '#35f2ff', '#ff3fa4'];
+  const drawings = [
+    // A star.
+    () => {
+      ctx.beginPath();
+      for (let i = 0; i < 10; i += 1) {
+        const radius = i % 2 === 0 ? 44 : 19;
+        const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    },
+    // Arrows racing to the right.
+    () => {
+      [-70, -20, 30].forEach((x) => {
+        ctx.beginPath();
+        ctx.moveTo(x, -34);
+        ctx.lineTo(x + 36, 0);
+        ctx.lineTo(x, 34);
+        ctx.stroke();
+      });
+    },
+    // A lightning bolt.
+    () => {
+      ctx.beginPath();
+      ctx.moveTo(16, -48);
+      ctx.lineTo(-22, 6);
+      ctx.lineTo(2, 6);
+      ctx.lineTo(-14, 48);
+      ctx.lineTo(26, -8);
+      ctx.lineTo(2, -8);
+      ctx.closePath();
+      ctx.stroke();
+    },
+    // Rings, like a target.
+    () => {
+      [44, 28, 12].forEach((radius) => {
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    },
+    // A wave.
+    () => {
+      [-18, 6, 30].forEach((y) => {
+        ctx.beginPath();
+        for (let x = -90; x <= 90; x += 6) {
+          ctx.lineTo(x, y + Math.sin(x / 15) * 12);
+        }
+        ctx.stroke();
+      });
+    },
+    // A heart.
+    () => {
+      ctx.beginPath();
+      ctx.moveTo(0, 40);
+      ctx.bezierCurveTo(-70, -4, -34, -58, 0, -22);
+      ctx.bezierCurveTo(34, -58, 70, -4, 0, 40);
+      ctx.stroke();
+    },
+    // Sound bars.
+    () => {
+      [30, 54, 78, 46, 66, 24, 58].forEach((tall, i) => {
+        ctx.strokeRect(-84 + i * 25, 42 - tall, 14, tall);
+      });
+    },
+    // A diamond in a diamond.
+    () => {
+      [46, 24].forEach((radius) => {
+        ctx.beginPath();
+        ctx.moveTo(0, -radius);
+        ctx.lineTo(radius * 1.5, 0);
+        ctx.lineTo(0, radius);
+        ctx.lineTo(-radius * 1.5, 0);
+        ctx.closePath();
+        ctx.stroke();
+      });
+    },
+  ];
+  drawings.forEach((draw, i) => {
+    const x = (i % 4) * width;
+    const y = Math.floor(i / 4) * height;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+    ctx.fillStyle = '#0b0714';
+    ctx.fillRect(x, y, width, height);
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    // A frame in a second color.
+    ctx.strokeStyle = colors[(i + 3) % colors.length];
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(x + 9, y + 9, width - 18, height - 18);
+    ctx.translate(x + width / 2, y + height / 2);
+    // Drawn twice: a wide soft glow, then a bright thin core.
+    ctx.strokeStyle = colors[i];
+    ctx.shadowColor = colors[i];
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 9;
+    draw();
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2.5;
+    draw();
+    ctx.restore();
+  });
+  return toTexture(canvas, { repeat: false });
 }
 
 // Layered rock for desert mesas.

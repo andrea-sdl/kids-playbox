@@ -41,6 +41,7 @@ Uses Node's built-in test runner (Node 20+). The tests cover the dice logic, sav
 - `shared/`: code every page uses. `store.js` wraps `localStorage` safely, `favorites.js` and `progress.js` hold per-game data, `games.js` lists the games.
 - `games/<id>/`: each game is its own folder and page.
 - `vendor/three/`: a trimmed, minified build of [Three.js](https://threejs.org) (MIT), used by Blocks, Turbo Drive and Skate Star.
+- `gfx/`: the look the three 3D games share. `post.js` finishes every frame like a film (glow, sun shafts, lens flares, speed blur, color grading, grain); phones get a short version. `sky.js` is the sky for Turbo Drive and Skate Star. `surface.js` works out bump (normal) maps from pictures, so nothing extra is downloaded.
 - `sw.js` and `offline.json`: offline support (see below).
 
 All saved data lives in the browser's `localStorage` under keys starting with `playbox:` (Memory's own photos are in IndexedDB).

@@ -8,6 +8,15 @@
 
 export const RELEASES = [
   {
+    version: 26,
+    date: '2026-11-11',
+    changes: [
+      { target: 'drive', type: 'updated', text: 'changes.v26.drive' },
+      { target: 'skate', type: 'updated', text: 'changes.v26.skate' },
+      { target: 'blocks', type: 'updated', text: 'changes.v26.blocks' },
+    ],
+  },
+  {
     version: 25,
     date: '2026-10-27',
     changes: [

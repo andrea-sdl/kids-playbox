@@ -19,7 +19,7 @@ import {
   presetLook,
   starsFor,
 } from './world.js';
-import { CRUISE, GRAVITY, createRider, placeAtStart, startBail, stepRider } from './physics.js';
+import { CRUISE, GRAVITY, MAX_SPEED, createRider, placeAtStart, startBail, stepRider } from './physics.js';
 import { createTricks, praise } from './tricks.js';
 import { buildRider } from './rider.js';
 import { createScene } from './scene.js';
@@ -56,9 +56,17 @@ const els = {
   go: $('.shop .go-button'),
   hud: $('.hud'),
   score: $('.score-value'),
+  scoreCard: $('.hud-score'),
+  scoreBar: $('.score-bar'),
+  stars: [...document.querySelectorAll('.hud-stars span')],
   time: $('.time-value'),
+  timeCard: $('.hud-time'),
+  ring: $('.ring-fill'),
   letters: $('.hud-letters'),
+  speedBar: $('.speed-bar i'),
+  speed: $('.speed-value'),
   combo: $('.combo'),
+  comboCount: $('.combo-count'),
   comboTricks: $('.combo-tricks'),
   comboPoints: $('.combo-points'),
   toast: $('.toast'),
@@ -261,9 +269,9 @@ function bankCombo(points) {
   }
   toast(text, 1500);
   sounds.combo(['nice', 'sweet', 'sick', 'insane'].indexOf(level) + 1);
-  els.score.parentElement.classList.remove('is-bump');
-  void els.score.offsetWidth;
-  els.score.parentElement.classList.add('is-bump');
+  els.scoreCard.classList.remove('is-bump');
+  void els.scoreCard.offsetWidth;
+  els.scoreCard.classList.add('is-bump');
 }
 
 function collectLetters() {
@@ -478,29 +486,67 @@ function renderLetters() {
   els.letters.setAttribute('aria-label', t('skate.lettersFound', { count: session.letters.filter(Boolean).length, total: letters.length }));
 }
 
-let shownCombo = '';
+// What the HUD showed last, so the page only changes when a value does.
+const shown = {};
+
+function show(key, element, text) {
+  if (shown[key] !== text) {
+    shown[key] = text;
+    element.textContent = text;
+  }
+}
 
 function renderHud() {
-  els.score.textContent = numbers.format(session.score);
+  show('score', els.score, numbers.format(session.score));
+  // Three stars to earn: two for the score, one for all the letters. The
+  // bar fills toward the next score star.
+  const found = session.letters.filter(Boolean).length;
+  const earned = [...SCORE_GOALS.map((goal) => session.score >= goal), found >= word().length];
+  els.stars.forEach((star, i) => star.classList.toggle('is-on', earned[i]));
+  const next = SCORE_GOALS.find((goal) => session.score < goal);
+  els.scoreBar.style.setProperty('--done', next ? (session.score / next).toFixed(3) : '1');
+
   if (save.mode === 'session') {
-    els.time.textContent = formatClock(session.time);
-    els.time.parentElement.classList.toggle('is-low', session.time < 10);
+    show('time', els.time, formatClock(session.time));
+    els.timeCard.classList.toggle('is-low', session.time < 10);
+    els.ring.style.strokeDashoffset = (100 - (session.time / SESSION_SECONDS) * 100).toFixed(1);
   } else {
-    els.time.textContent = t('skate.freeTime');
+    show('time', els.time, t('skate.freeTime'));
+    els.timeCard.classList.remove('is-low');
+    els.ring.style.strokeDashoffset = '0';
   }
+
+  els.speedBar.style.transform = `scaleX(${Math.min(1, rider.speed / MAX_SPEED).toFixed(2)})`;
+  show('speed', els.speed, String(Math.round(rider.speed * 3.6)));
+
   const combo = tricks.combo;
-  const text = combo.map((trick) => trick.name).join(' + ');
+  els.combo.classList.toggle('is-on', combo.length > 0);
   if (combo.length === 0) {
-    els.combo.classList.remove('is-on');
-  } else {
-    els.combo.classList.add('is-on');
-    if (text !== shownCombo) {
-      els.comboTricks.textContent = combo.length > 4 ? `… + ${combo.slice(-4).map((trick) => trick.name).join(' + ')}` : text;
-    }
-    const sum = Math.round(combo.reduce((total, trick) => total + trick.points, 0));
-    els.comboPoints.textContent = `${numbers.format(sum)} × ${combo.length}`;
+    return;
   }
-  shownCombo = text;
+  const names = combo.map((trick) => trick.name).join('|');
+  if (shown.combo !== names) {
+    shown.combo = names;
+    // The last few tricks, each on its own tag; older ones fold into "…".
+    const tags = combo.slice(-4).map((trick) => {
+      const tag = document.createElement('span');
+      tag.textContent = trick.name;
+      return tag;
+    });
+    if (combo.length > 4) {
+      const more = document.createElement('span');
+      more.className = 'is-more';
+      more.textContent = '…';
+      tags.unshift(more);
+    }
+    els.comboTricks.replaceChildren(...tags);
+    els.combo.classList.remove('is-bump');
+    void els.combo.offsetWidth;
+    els.combo.classList.add('is-bump');
+  }
+  const sum = Math.round(combo.reduce((total, trick) => total + trick.points, 0));
+  show('comboCount', els.comboCount, `×${combo.length}`);
+  show('comboPoints', els.comboPoints, numbers.format(sum * combo.length));
 }
 
 /* ---------- Game flow ---------- */

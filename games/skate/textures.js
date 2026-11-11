@@ -1,6 +1,7 @@
 // Surfaces drawn in code: park floors, ramps, board graphics, windows,
 // graffiti and the floating letters. Nothing to download, so it all works
-// offline. Smooth noise keeps surfaces from looking flat up close.
+// offline. Smooth noise keeps surfaces from looking flat up close, and the
+// scene works out bumps (normal maps) from these same pictures.
 
 import * as THREE from '../../vendor/three/three.min.js';
 
@@ -108,34 +109,62 @@ function toTexture(canvas, { color = true, repeat = true } = {}) {
 
 // The floor, 8 m square per repeat.
 export function floorTexture(scenario) {
-  const size = 512;
+  const size = scenario === 'city' ? 1024 : 512;
   const canvas = makeCanvas(size, size);
   const ctx = canvas.getContext('2d');
   const noise = noiseCanvas(128, 4, 4, 11);
   if (scenario === 'city') {
-    ctx.fillStyle = '#b9b8b4';
-    ctx.fillRect(0, 0, size, size);
-    overlayNoise(ctx, size, size, noise, 0.35);
-    // Concrete slabs, 2 m each, with dark seams.
-    ctx.strokeStyle = 'rgba(60, 58, 55, 0.55)';
-    ctx.lineWidth = 3;
+    // Concrete slabs, 2 m each. Every slab has its own tone, the seams are
+    // dark with a worn light edge, and the stone in the mix shows as specks.
+    const rand = random(4);
+    const slab = size / 4;
+    for (let row = 0; row < 4; row += 1) {
+      for (let col = 0; col < 4; col += 1) {
+        const tone = 172 + Math.round(rand() * 22);
+        ctx.fillStyle = `rgb(${tone + 4}, ${tone + 2}, ${tone - 3})`;
+        ctx.fillRect(col * slab, row * slab, slab, slab);
+      }
+    }
+    overlayNoise(ctx, size, size, noise, 0.4);
+    overlayNoise(ctx, size, size, noiseCanvas(256, 24, 3, 12), 0.22);
+    for (let i = 0; i < 5000; i += 1) {
+      const shade = rand() < 0.5 ? 235 : 90;
+      ctx.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${0.12 + rand() * 0.2})`;
+      ctx.fillRect(rand() * size, rand() * size, 1 + rand() * 2, 1 + rand() * 2);
+    }
     for (let i = 0; i <= 4; i += 1) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+      ctx.fillRect(i * slab - 6, 0, 12, size);
+      ctx.fillRect(0, i * slab - 6, size, 12);
+      ctx.fillStyle = 'rgba(38, 36, 34, 0.9)';
+      ctx.fillRect(i * slab - 2.5, 0, 5, size);
+      ctx.fillRect(0, i * slab - 2.5, size, 5);
+    }
+    // Oil spots, and a few hairline cracks.
+    for (let i = 0; i < 9; i += 1) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const spot = ctx.createRadialGradient(x, y, 0, x, y, 20 + rand() * 40);
+      spot.addColorStop(0, 'rgba(40, 38, 36, 0.22)');
+      spot.addColorStop(1, 'rgba(40, 38, 36, 0)');
+      ctx.fillStyle = spot;
+      ctx.fillRect(x - 70, y - 70, 140, 140);
+    }
+    ctx.strokeStyle = 'rgba(30, 28, 26, 0.6)';
+    ctx.lineWidth = 1.6;
+    for (let i = 0; i < 7; i += 1) {
+      let x = rand() * size;
+      let y = rand() * size;
       ctx.beginPath();
-      ctx.moveTo(i * 128, 0);
-      ctx.lineTo(i * 128, size);
-      ctx.moveTo(0, i * 128);
-      ctx.lineTo(size, i * 128);
+      ctx.moveTo(x, y);
+      for (let step = 0; step < 7; step += 1) {
+        x += (rand() - 0.5) * 60;
+        y += (rand() - 0.2) * 44;
+        ctx.lineTo(x, y);
+      }
       ctx.stroke();
     }
-    // A few oil spots and cracks.
-    const rand = random(4);
-    ctx.fillStyle = 'rgba(40, 38, 36, 0.12)';
-    for (let i = 0; i < 6; i += 1) {
-      ctx.beginPath();
-      ctx.ellipse(rand() * size, rand() * size, 10 + rand() * 20, 6 + rand() * 12, rand() * 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    addGrain(ctx, size, size, 18, 3);
+    addGrain(ctx, size, size, 14, 3);
   }
   if (scenario === 'sea') {
     // Pale stone pavers in a running bond.
@@ -351,40 +380,83 @@ export function boardTexture(deck, graphic, color) {
 
 // Building fronts: rows of windows, 4 m wide and 3.5 m tall per repeat.
 // The top left corner is plain wall, for roofs and sides without windows.
+// Three pictures come back: the colors, a height picture for bumps
+// (frames stick out, glass sits back) and a finish picture (green is
+// roughness, blue is metalness: glass is smooth and mirror-like).
 export function windowsTexture(style = 'city') {
-  const size = 128;
-  const canvas = makeCanvas(size, size);
-  const ctx = canvas.getContext('2d');
+  const size = 256;
+  const color = makeCanvas(size, size);
+  const ctx = color.getContext('2d');
+  const height = makeCanvas(size, size);
+  const heightCtx = height.getContext('2d');
+  const finish = makeCanvas(size, size);
+  const finishCtx = finish.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = 'rgba(0,0,0,0.06)';
-  ctx.fillRect(0, size - 10, size, 10);
+  overlayNoise(ctx, size, size, noiseCanvas(64, 4, 3, 51), 0.12, 'multiply');
+  heightCtx.fillStyle = '#b0b0b0';
+  heightCtx.fillRect(0, 0, size, size);
+  finishCtx.fillStyle = 'rgb(0 215 0)';
+  finishCtx.fillRect(0, 0, size, size);
+  // A ledge under each floor.
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+  ctx.fillRect(0, size - 18, size, 18);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.fillRect(0, size - 22, size, 4);
+  heightCtx.fillStyle = '#ffffff';
+  heightCtx.fillRect(0, size - 20, size, 14);
+
+  const pane = (x, y, w, h, frame, glassStops) => {
+    ctx.fillStyle = frame;
+    ctx.fillRect(x, y, w, h);
+    heightCtx.fillStyle = '#d8d8d8';
+    heightCtx.fillRect(x, y, w, h);
+    const glass = ctx.createLinearGradient(x, y, x + w, y + h);
+    glassStops.forEach(([stop, shade]) => glass.addColorStop(stop, shade));
+    ctx.fillStyle = glass;
+    ctx.fillRect(x + 6, y + 6, w - 12, h - 12);
+    heightCtx.fillStyle = '#505050';
+    heightCtx.fillRect(x + 6, y + 6, w - 12, h - 12);
+    finishCtx.fillStyle = 'rgb(0 22 205)';
+    finishCtx.fillRect(x + 6, y + 6, w - 12, h - 12);
+  };
   if (style === 'house') {
     // One wide window with a wooden frame and a little blind.
+    pane(60, 68, 136, 100, '#5a3d2a', [[0, '#b9e4f7'], [0.5, '#7fb4d6'], [1, '#a9d8f0']]);
     ctx.fillStyle = '#5a3d2a';
-    ctx.fillRect(30, 34, 68, 50);
-    ctx.fillStyle = '#9fd6f2';
-    ctx.fillRect(34, 38, 60, 42);
-    ctx.fillStyle = '#5a3d2a';
-    ctx.fillRect(62, 38, 4, 42);
-    ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillRect(34, 38, 60, 10);
+    ctx.fillRect(124, 74, 8, 88);
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillRect(66, 74, 124, 20);
+    heightCtx.fillStyle = '#d8d8d8';
+    heightCtx.fillRect(124, 74, 8, 88);
+    finishCtx.fillStyle = 'rgb(0 215 0)';
+    finishCtx.fillRect(124, 74, 8, 88);
+    finishCtx.fillRect(66, 74, 124, 20);
   } else {
-    [[14, 30], [72, 30]].forEach(([x, y]) => {
+    [[28, 60], [144, 60]].forEach(([x, y]) => {
+      pane(x, y, 84, 120, '#3b4a5c', [[0, '#c9e8ff'], [0.45, '#5f8bb6'], [0.55, '#7aa6cf'], [1, '#b4daf5']]);
+      // A bar across, and a streak of light on the glass.
       ctx.fillStyle = '#3b4a5c';
-      ctx.fillRect(x, y, 42, 60);
-      const glass = ctx.createLinearGradient(x, y, x + 42, y + 60);
-      glass.addColorStop(0, '#bfe3ff');
-      glass.addColorStop(0.5, '#6f9bc4');
-      glass.addColorStop(1, '#a8d2f0');
-      ctx.fillStyle = glass;
-      ctx.fillRect(x + 3, y + 3, 36, 54);
+      ctx.fillRect(x + 6, y + 44, 72, 5);
+      heightCtx.fillStyle = '#d8d8d8';
+      heightCtx.fillRect(x + 6, y + 44, 72, 5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(x + 14, y + 110);
+      ctx.lineTo(x + 40, y + 10);
+      ctx.lineTo(x + 54, y + 10);
+      ctx.lineTo(x + 28, y + 110);
+      ctx.fill();
     });
   }
   // Plain wall in the corner (sampled for tops and sides).
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 10, 10);
-  return toTexture(canvas);
+  ctx.fillRect(0, 0, 20, 20);
+  heightCtx.fillStyle = '#b0b0b0';
+  heightCtx.fillRect(0, 0, 20, 20);
+  finishCtx.fillStyle = 'rgb(0 215 0)';
+  finishCtx.fillRect(0, 0, 20, 20);
+  return { map: toTexture(color), height: toTexture(height, { color: false }), finish: toTexture(finish, { color: false }) };
 }
 
 // A graffiti wall for the city.
@@ -412,6 +484,26 @@ export function graffitiTexture() {
   ctx.fillStyle = '#ffffff';
   ctx.fillText('SKATE!', width / 2, 66);
   return toTexture(canvas, { repeat: false });
+}
+
+// Where a surface is rough and where it is smooth, as soft patches:
+// polished concrete, icy snow, damp stone. `low` and `high` are the
+// roughness of the smoothest and the roughest patches (0 to 1).
+export function finishTexture(seed, low, high) {
+  const canvas = noiseCanvas(128, 3, 4, seed);
+  const ctx = canvas.getContext('2d');
+  const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = image.data;
+  for (let i = 0; i < data.length; i += 4) {
+    // Stretch the middle of the noise, so there are clear patches.
+    const t = Math.min(1, Math.max(0, (data[i] / 255 - 0.36) / 0.28));
+    const value = (low + (high - low) * t * t * (3 - 2 * t)) * 255;
+    data[i] = value;
+    data[i + 1] = value;
+    data[i + 2] = value;
+  }
+  ctx.putImageData(image, 0, 0);
+  return toTexture(canvas, { color: false });
 }
 
 // Gentle bumps for water, sand dunes and snow.

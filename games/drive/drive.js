@@ -78,8 +78,16 @@ const els = {
   go: $('.garage .go-button'),
   hud: $('.hud'),
   points: $('.points-count'),
+  pointsCard: $('.hud-points'),
+  pointsBar: $('.points-bar'),
   time: $('.time-value'),
   lap: $('.lap-value'),
+  best: $('.best-value'),
+  streak: $('.streak'),
+  streakCount: $('.streak-count'),
+  streakBar: $('.streak-bar'),
+  gauge: $('.gauge'),
+  gear: $('.gear-value'),
   minimap: $('.minimap'),
   toast: $('.toast'),
   countdown: $('.countdown'),
@@ -134,7 +142,7 @@ let car = null;
 const state = {
   x: 0, y: 0, z: 0, heading: 0, speed: 0, steer: 0,
   index: 0, lap: 0, time: 0, collected: 0, boost: 0,
-  usingNitro: false, streak: 0, lastPickup: -10, wallTouch: false, wrongWay: 0, shake: 0,
+  usingNitro: false, streak: 0, lastPickup: -10, wallTouch: false, wrongWay: 0, shake: 0, rush: 0,
 };
 const input = { left: false, right: false, keys: new Set() };
 // Boost pads on the road: [{ index, side, armed }].
@@ -149,7 +157,7 @@ function setCar() {
     view.scene.remove(car.group);
   }
   car = buildCar(save.car, save.paint, save.custom);
-  car.setHeadlights(view.headlights);
+  car.setHeadlights(view.headlights, view.quality === 'high');
   view.scene.add(car.group);
   placeCarAtStart();
 }
@@ -181,7 +189,7 @@ function loadScenario() {
       } else {
         track = view.setScenario(save.scenario);
       }
-      car?.setHeadlights(view.headlights);
+      car?.setHeadlights(view.headlights, view.quality === 'high');
       updateMusic();
       placeCarAtStart();
       els.loading.hidden = true;
@@ -315,9 +323,9 @@ function collectPoints() {
     }
     state.lastPickup = state.time;
     sounds.collect(state.streak);
-    els.points.parentElement.classList.remove('is-bump');
-    void els.points.offsetWidth;
-    els.points.parentElement.classList.add('is-bump');
+    els.pointsCard.classList.remove('is-bump');
+    void els.pointsCard.offsetWidth;
+    els.pointsCard.classList.add('is-bump');
     if (state.collected === points.length) {
       finish();
     }
@@ -447,14 +455,93 @@ function toast(text, ms = 1600) {
   toastTimer = setTimeout(() => els.toast.classList.remove('is-on'), ms);
 }
 
+// The dial reads up to this (the speedometer's own, livelier km/h).
+const GAUGE_MAX = 320;
+// The dial is an arc of this many degrees, open at the bottom.
+const GAUGE_SWEEP = 240;
+const GEARS = 6;
+
+function gaugePoint(share, radius) {
+  const angle = ((150 + share * GAUGE_SWEEP) * Math.PI) / 180;
+  return `${(100 + Math.cos(angle) * radius).toFixed(1)} ${(100 + Math.sin(angle) * radius).toFixed(1)}`;
+}
+
+function gaugeArc(from, to, radius) {
+  const large = (to - from) * GAUGE_SWEEP > 180 ? 1 : 0;
+  return `M${gaugePoint(from, radius)} A${radius} ${radius} 0 ${large} 1 ${gaugePoint(to, radius)}`;
+}
+
+// Drawn once: the track, the part past top speed that only nitro reaches,
+// tick marks with numbers, the arc that fills with speed, and the needle.
+function drawGauge() {
+  const nitroFrom = (TOP_SPEED * SPEEDO_SCALE) / GAUGE_MAX;
+  let ticks = '';
+  for (let speed = 0; speed <= GAUGE_MAX; speed += 20) {
+    const share = speed / GAUGE_MAX;
+    const major = speed % 80 === 0;
+    ticks += `<path class="gauge-tick${major ? ' is-major' : ''}" d="M${gaugePoint(share, major ? 70 : 74)} L${gaugePoint(share, 79)}"/>`;
+    if (major) {
+      const [x, y] = gaugePoint(share, 58).split(' ');
+      ticks += `<text class="gauge-number" x="${x}" y="${y}">${speed}</text>`;
+    }
+  }
+  els.gauge.innerHTML = `
+    <defs>
+      <linearGradient id="gauge-paint" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" class="gauge-stop-1"/><stop offset="1" class="gauge-stop-2"/>
+      </linearGradient>
+    </defs>
+    <path class="gauge-track" d="${gaugeArc(0, 1, 88)}"/>
+    <path class="gauge-zone" d="${gaugeArc(nitroFrom, 1, 96)}"/>
+    <path class="gauge-fill" pathLength="100" d="${gaugeArc(0, 1, 88)}"/>
+    ${ticks}
+    <path class="gauge-needle" d="M100 100 L${gaugePoint(0, 84)}"/>`;
+  els.gaugeFill = els.gauge.querySelector('.gauge-fill');
+  els.needle = els.gauge.querySelector('.gauge-needle');
+}
+
+drawGauge();
+
+// What the HUD showed last, so the page only changes when a value does.
+const shown = {};
+
+function show(key, element, text) {
+  if (shown[key] !== text) {
+    shown[key] = text;
+    element.textContent = text;
+  }
+}
+
 function renderHud() {
-  els.points.textContent = `${state.collected}/${points.length}`;
-  els.time.textContent = formatTime(state.time);
+  show('points', els.points, `${state.collected}/${points.length}`);
+  els.pointsBar.style.setProperty('--done', (state.collected / Math.max(1, points.length)).toFixed(3));
+  show('time', els.time, formatTime(state.time));
   // The car starts just behind the line; lap 1 begins when it crosses.
-  els.lap.textContent = t('drive.lap', { lap: Math.max(1, state.lap) });
-  els.speed.textContent = String(Math.round(state.speed * SPEEDO_SCALE));
+  show('lap', els.lap, t('drive.lap', { lap: Math.max(1, state.lap) }));
+
+  const speed = state.speed * SPEEDO_SCALE;
+  const share = Math.min(1, speed / GAUGE_MAX);
+  show('speed', els.speed, String(Math.round(speed)));
+  els.gaugeFill.style.strokeDashoffset = (100 - share * 100).toFixed(1);
+  els.needle.setAttribute('transform', `rotate(${(share * GAUGE_SWEEP).toFixed(1)} 100 100)`);
+  let gear = Math.min(GEARS - 1, 1 + Math.floor((state.speed / TOP_SPEED) * (GEARS - 1)));
+  if (state.usingNitro) {
+    gear = GEARS;
+  }
+  show('gear', els.gear, String(gear));
   els.boostBar.style.transform = `scaleX(${(state.boost / BOOST_SECONDS).toFixed(3)})`;
   els.speedo.classList.toggle('is-boosting', state.usingNitro);
+
+  // Points picked up quickly one after another make a streak; the bar
+  // shows how long is left to keep it going.
+  const left = STREAK_SECONDS - (state.time - state.lastPickup);
+  const streaking = state.streak > 0 && left > 0 && mode === 'driving';
+  els.streak.classList.toggle('is-on', streaking);
+  if (streaking) {
+    show('streak', els.streakCount, `×${state.streak + 1}`);
+    els.streakBar.style.transform = `scaleX(${(left / STREAK_SECONDS).toFixed(2)})`;
+  }
+
   // The steering buttons hide only once tilt readings really arrive.
   document.body.classList.toggle('is-tilt', tiltOn());
   document.body.classList.toggle('is-nitro', state.usingNitro);
@@ -494,15 +581,19 @@ function drawMinimap() {
     <circle class="map-start" cx="${start.x}" cy="${start.z}" r="${(mapBox.width / 50).toFixed(1)}"/>
     ${pads}
     ${dots}
-    <circle class="map-car" r="${(mapBox.width / 34).toFixed(1)}"/>`;
+    <g class="map-car">
+      <circle class="map-ping" r="${(mapBox.width / 16).toFixed(1)}"/>
+      <path d="M0 -1.3 L0.95 1 L0 0.45 L-0.95 1 Z" transform="scale(${(mapBox.width / 24).toFixed(1)})"/>
+    </g>`;
   els.minimap.style.setProperty('--map-stroke', `${(mapBox.width / 26).toFixed(1)}px`);
 }
 
 function updateMinimap() {
-  const dot = els.minimap.querySelector('.map-car');
-  if (dot) {
-    dot.setAttribute('cx', state.x.toFixed(1));
-    dot.setAttribute('cy', state.z.toFixed(1));
+  // An arrow that points the way the car faces (north is up on the map).
+  const arrow = els.minimap.querySelector('.map-car');
+  if (arrow) {
+    const turn = (Math.atan2(Math.sin(state.heading), -Math.cos(state.heading)) * 180) / Math.PI;
+    arrow.setAttribute('transform', `translate(${state.x.toFixed(1)} ${state.z.toFixed(1)}) rotate(${turn.toFixed(0)})`);
   }
   points.forEach((point, i) => {
     if (point.collected) {
@@ -541,9 +632,14 @@ function resetRun() {
   placeCarAtStart();
   Object.assign(state, {
     lap: 0, time: 0, collected: 0, boost: 0, usingNitro: false, streak: 0, lastPickup: -10,
-    wallTouch: false, wrongWay: 0, shake: 0,
+    wallTouch: false, wrongWay: 0, shake: 0, rush: 0,
   });
+  view.setRush(0);
   drawMinimap();
+  updateMinimap();
+  els.pointsBar.style.setProperty('--count', String(points.length));
+  const best = save.best[bestKey(save.scenario, save.difficulty, save.track)];
+  els.best.textContent = best ? formatTime(best) : '–';
   delete els.finishPanel.dataset.ready;
   renderHud();
 }
@@ -715,6 +811,9 @@ function step(dt) {
       kickUp(dt);
       chaseCamera(dt);
       sounds.engine(Math.min(1.3, state.speed / TOP_SPEED), state.usingNitro);
+      // Nitro streaks the edges of the picture; it eases in and out.
+      state.rush += ((state.usingNitro ? 1 : 0) - state.rush) * Math.min(1, dt * 5);
+      view.setRush(state.rush);
       renderHud();
       if (frame % 4 === 0) {
         updateMinimap();

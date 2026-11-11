@@ -56,15 +56,6 @@ body[data-scenario="wasteland"] {
   height: 100%;
 }
 
-/* A soft darkening at the edges, like a camera lens. */
-.canvas-holder::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgb(0 0 0 / 0.38));
-  pointer-events: none;
-}
-
 .loading {
   position: absolute;
   inset: 0;
@@ -79,14 +70,12 @@ body[data-scenario="wasteland"] {
 }
 
 /* Slanted, glassy, bold: the racing-game look. */
-.hud-pill,
 .go-button,
 .panel-button {
   transform: skewX(-12deg);
 }
 
-.go-button > span,
-.hud-pill > * {
+.go-button > span {
   display: inline-block;
   transform: skewX(12deg);
 }
@@ -781,57 +770,137 @@ body.is-tilt .controls {
 
 /* ---------- HUD ---------- */
 
+/* A racing dashboard: slanted glass cards with a bright edge, small
+   labels over big numbers, a dial for the speed. */
 .hud {
   position: absolute;
   inset: 0;
   z-index: 3;
   pointer-events: none;
+  --hud-ink: rgb(8 6 20 / 0.84);
+  --hud-ink-soft: rgb(8 6 20 / 0.46);
 }
 
 .hud-top {
   position: absolute;
-  top: 10px;
-  left: 12px;
-  right: 120px;
+  top: 12px;
+  left: 18px;
+  right: 150px;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
+  align-items: stretch;
+  gap: 10px 14px;
 }
 
-.hud-pill {
-  display: inline-flex;
+.hud-card {
+  position: relative;
+  display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+  padding: 7px 20px 9px 14px;
+  border: 1px solid var(--glass-line);
+  border-left: 4px solid var(--accent);
+  border-radius: 4px 14px 4px 14px;
+  background: linear-gradient(115deg, var(--hud-ink), var(--hud-ink-soft));
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.14);
+  transform: skewX(-9deg);
+  backdrop-filter: blur(8px) saturate(1.3);
+  -webkit-backdrop-filter: blur(8px) saturate(1.3);
+}
+
+/* The slant is for the card; what's in it stands straight. */
+.hud-card > * {
+  transform: skewX(9deg);
+}
+
+/* A thin bright line under the top edge. */
+.hud-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 30%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0.8;
+}
+
+.hud-stack {
+  display: grid;
+  gap: 1px;
   margin: 0;
-  padding: 6px 16px;
-  border: 2px solid var(--glass-line);
-  border-radius: 10px;
-  background: var(--glass);
+  line-height: 1.05;
+}
+
+.hud-label {
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.hud-points strong,
+.time-value,
+.best-value {
   font-style: italic;
   font-weight: 900;
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  font-variant-numeric: tabular-nums;
 }
 
 .hud-points strong {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
 }
 
 .hud-points.is-bump {
-  animation: pill-bump 0.35s ease;
+  animation: card-bump 0.4s ease;
 }
 
-@keyframes pill-bump {
-  40% { transform: skewX(-12deg) scale(1.18); border-color: var(--accent); }
+@keyframes card-bump {
+  35% {
+    border-color: var(--accent);
+    box-shadow: 0 0 26px var(--accent), inset 0 1px 0 rgb(255 255 255 / 0.3);
+    transform: skewX(-9deg) scale(1.1);
+  }
+}
+
+/* One slot per point to collect; the bright part is what you have. */
+.points-bar {
+  position: relative;
+  width: clamp(70px, 16vw, 170px);
+  height: 10px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.14);
+  --count: 16;
+  --done: 0;
+}
+
+.points-bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 12px var(--accent);
+  transform: scaleX(var(--done));
+  transform-origin: left center;
+  transition: transform 0.3s ease;
+}
+
+.points-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(100% / var(--count) - 2px), rgb(8 6 20 / 0.9) calc(100% / var(--count) - 2px) calc(100% / var(--count)));
 }
 
 .hud-icon {
-  width: 22px;
-  height: 22px;
+  flex: none;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #fff6c0, #ffcf3a 45%, #b07a00);
-  box-shadow: 0 0 10px #ffcf3a;
+  box-shadow: 0 0 12px #ffcf3a, inset 0 -2px 3px rgb(0 0 0 / 0.3);
 }
 
 body[data-scenario="jungle"] .hud-icon {
@@ -848,41 +917,63 @@ body[data-scenario="wasteland"] .hud-icon {
 }
 
 .hud-time {
-  font-variant-numeric: tabular-nums;
+  gap: 18px;
 }
 
-.hud-time .time-value {
-  font-size: 1.15rem;
+.time-value {
+  font-size: 1.35rem;
 }
 
-.lap-value {
-  font-size: 0.8rem;
-  opacity: 0.8;
+.hud-best {
+  padding-left: 14px;
+  border-left: 1px solid var(--glass-line);
+  opacity: 0.85;
+}
+
+.best-value {
+  font-size: 0.95rem;
+}
+
+/* The map, in a frame with bright corners. */
+.map-card {
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  width: 132px;
+  height: 132px;
+  padding: 9px;
+  border: 1px solid var(--glass-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(var(--accent), var(--accent)) top left / 16px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) top left / 2px 16px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 16px 2px no-repeat,
+    linear-gradient(var(--accent), var(--accent)) bottom right / 2px 16px no-repeat,
+    radial-gradient(circle at 50% 40%, rgb(40 30 80 / 0.5), rgb(8 6 20 / 0.78));
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.35), inset 0 0 24px rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .minimap {
-  position: absolute;
-  top: 62px;
-  right: 10px;
-  width: 112px;
-  height: 112px;
-  padding: 6px;
-  border: 2px solid var(--glass-line);
-  border-radius: 14px;
-  background: rgb(12 8 28 / 0.55);
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
 }
 
 .map-road-edge {
   fill: none;
-  stroke: rgb(0 0 0 / 0.6);
-  stroke-width: calc(var(--map-stroke) * 1.6);
+  stroke: var(--accent);
+  stroke-width: calc(var(--map-stroke) * 1.7);
   stroke-linejoin: round;
+  opacity: 0.35;
 }
 
 .map-road {
   fill: none;
-  stroke: rgb(255 255 255 / 0.85);
-  stroke-width: var(--map-stroke);
+  stroke: rgb(255 255 255 / 0.9);
+  stroke-width: calc(var(--map-stroke) * 0.8);
   stroke-linejoin: round;
 }
 
@@ -900,27 +991,92 @@ body[data-scenario="wasteland"] .hud-icon {
   fill: var(--accent);
 }
 
-.map-car {
+.map-car path {
   fill: #ff3b3b;
   stroke: #fff;
-  stroke-width: calc(var(--map-stroke) * 0.45);
+  stroke-width: 0.3px;
+  stroke-linejoin: round;
+}
+
+.map-ping {
+  fill: none;
+  stroke: #ff3b3b;
+  stroke-width: calc(var(--map-stroke) * 0.35);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: map-ping 1.6s ease-out infinite;
+}
+
+@keyframes map-ping {
+  from { opacity: 0.9; transform: scale(0.3); }
+  to { opacity: 0; transform: scale(1.2); }
+}
+
+/* Points in a row: the count, and a bar that runs out. */
+.streak {
+  position: absolute;
+  top: 78px;
+  left: 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 4px 16px 8px 12px;
+  overflow: hidden;
+  border-radius: 4px 12px 4px 12px;
+  background: linear-gradient(115deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 40%, #0a0618));
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent-2) 60%, transparent);
+  font-style: italic;
+  font-weight: 900;
+  text-shadow: 0 2px 0 rgb(0 0 0 / 0.35);
+  opacity: 0;
+  transform: skewX(-9deg) translateX(-20px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.streak.is-on {
+  opacity: 1;
+  transform: skewX(-9deg);
+}
+
+.streak-count {
+  font-size: 1.5rem;
+}
+
+.streak span {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.streak-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: #fff;
+  transform-origin: left center;
 }
 
 .toast {
   position: absolute;
-  top: 28%;
+  top: 26%;
   left: 50%;
   margin: 0;
-  padding: 8px 20px;
-  border-radius: 12px;
-  background: var(--glass);
+  padding: 9px 26px;
+  border-top: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  background: linear-gradient(90deg, transparent, var(--hud-ink) 18% 82%, transparent);
   font-size: 1.3rem;
   font-style: italic;
   font-weight: 900;
+  letter-spacing: 0.03em;
   text-align: center;
+  text-shadow: 0 0 16px var(--accent);
   white-space: nowrap;
   opacity: 0;
-  transform: translate(-50%, 10px);
+  transform: translate(-50%, 10px) scaleX(0.8);
   transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
@@ -935,11 +1091,11 @@ body[data-scenario="wasteland"] .hud-icon {
   left: 50%;
   margin: 0;
   color: #fff;
-  font-size: clamp(4rem, 14vw, 8rem);
+  font-size: clamp(4.5rem, 16vw, 9rem);
   font-style: italic;
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 30px var(--accent), 0 6px 0 rgb(0 0 0 / 0.5);
+  text-shadow: 0 0 34px var(--accent), 0 0 90px var(--accent), 0 6px 0 rgb(0 0 0 / 0.5);
   opacity: 0;
   transform: translate(-50%, -50%) skewX(-10deg);
   transition: opacity 0.2s ease;
@@ -949,46 +1105,190 @@ body[data-scenario="wasteland"] .hud-icon {
   opacity: 1;
 }
 
+/* The dial. The number in the middle is the speed; the arc fills with it,
+   and the needle follows. The outer blue arc is nitro-only speed. */
 .speedo {
   position: absolute;
-  bottom: 14px;
+  bottom: 8px;
+  left: 50%;
+  width: 176px;
+  height: 176px;
+  transform: translateX(-50%);
+}
+
+.speedo::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, rgb(46 36 92 / 0.5), rgb(6 4 16 / 0.84) 68%);
+  box-shadow: 0 0 0 1px var(--glass-line), 0 10px 28px rgb(0 0 0 / 0.45), inset 0 0 28px rgb(0 0 0 / 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.gauge {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.gauge path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.gauge-track {
+  stroke: rgb(255 255 255 / 0.13);
+  stroke-width: 9;
+}
+
+.gauge-zone {
+  stroke: #35a0ff;
+  stroke-width: 3;
+  opacity: 0.75;
+}
+
+.gauge-stop-1 {
+  stop-color: var(--accent);
+}
+
+.gauge-stop-2 {
+  stop-color: var(--accent-2);
+}
+
+.gauge-fill {
+  stroke: url(#gauge-paint);
+  stroke-width: 9;
+  stroke-dasharray: 100 100;
+  stroke-dashoffset: 100;
+  filter: drop-shadow(0 0 5px var(--accent));
+}
+
+.gauge-tick {
+  stroke: rgb(255 255 255 / 0.4);
+  stroke-width: 1.4;
+}
+
+.gauge-tick.is-major {
+  stroke: #fff;
+  stroke-width: 2.2;
+}
+
+.gauge-number {
+  fill: rgb(255 255 255 / 0.75);
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 900;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.gauge-needle {
+  stroke: #ff4d5a;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 4px #ff4d5a);
+  opacity: 0.9;
+}
+
+.speed-read {
+  position: absolute;
+  top: 46%;
   left: 50%;
   display: grid;
   justify-items: center;
-  transform: translateX(-50%) skewX(-10deg);
+  margin: 0;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: rgb(6 4 16 / 0.72);
   text-shadow: 0 2px 0 rgb(0 0 0 / 0.6);
+  transform: translate(-50%, -50%) skewX(-8deg);
 }
 
 .speed-value {
-  font-size: 2.6rem;
+  font-size: 2.35rem;
   font-style: italic;
   font-weight: 900;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.speedo small {
-  font-size: 0.75rem;
+.speed-read small {
+  font-size: 0.62rem;
   font-weight: 900;
-  opacity: 0.85;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
-/* The boost left: shown only while a boost pad's nitro lasts. */
-.boost-bar {
-  position: relative;
-  width: 130px;
-  height: 9px;
-  margin-top: 5px;
-  overflow: hidden;
-  border: 1.5px solid rgb(255 255 255 / 0.5);
-  border-radius: 6px;
-  background: rgb(0 0 0 / 0.45);
-  opacity: 0;
+.gear {
+  position: absolute;
+  left: 50%;
+  bottom: 31px;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 0;
+  font-style: italic;
+  font-weight: 900;
+  transform: translateX(-50%);
+}
+
+.gear small,
+.nitro small {
+  color: var(--accent);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.gear-value {
+  min-width: 0.7em;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+/* The nitro left: it lights up while a boost pad's nitro lasts. */
+.nitro {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-weight: 900;
+  opacity: 0.45;
+  transform: translateX(-50%);
   transition: opacity 0.2s ease;
 }
 
-.speedo.is-boosting .boost-bar {
+.boost-bar {
+  position: relative;
+  width: 62px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: rgb(255 255 255 / 0.16);
+  transform: skewX(-20deg);
+}
+
+.boost-bar i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #35a0ff, #35f2ff, #c47bff);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.speedo.is-boosting .nitro {
   opacity: 1;
+}
+
+.speedo.is-boosting .boost-bar {
+  box-shadow: 0 0 12px #35c8ff;
 }
 
 .speedo.is-boosting .speed-value {
@@ -996,11 +1296,13 @@ body[data-scenario="wasteland"] .hud-icon {
   text-shadow: 0 0 14px #35c8ff, 0 2px 0 rgb(0 0 0 / 0.6);
 }
 
-.boost-bar i {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, #35a0ff, #35f2ff, #c47bff);
-  transform-origin: left center;
+.speedo.is-boosting .gauge-fill {
+  stroke: #7fdcff;
+  filter: drop-shadow(0 0 8px #35c8ff);
+}
+
+.speedo.is-boosting .gear-value {
+  color: #9fe8ff;
 }
 
 .controls {
@@ -1016,12 +1318,13 @@ body[data-scenario="wasteland"] .hud-icon {
 .pad {
   display: grid;
   place-items: center;
-  width: 76px;
-  height: 76px;
+  width: 78px;
+  height: 78px;
   padding: 0;
   border: 2px solid rgb(255 255 255 / 0.4);
   border-radius: 50%;
-  background: rgb(12 8 28 / 0.5);
+  background: radial-gradient(circle at 50% 35%, rgb(60 48 110 / 0.5), rgb(8 6 20 / 0.6));
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4), inset 0 0 0 5px rgb(255 255 255 / 0.05);
   color: #fff;
   font: inherit;
   font-size: 0.75rem;
@@ -1035,7 +1338,7 @@ body[data-scenario="wasteland"] .hud-icon {
   -webkit-touch-callout: none;
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
-  transition: transform 0.08s ease, background 0.08s ease;
+  transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
 }
 
 .pad svg {
@@ -1044,28 +1347,27 @@ body[data-scenario="wasteland"] .hud-icon {
 }
 
 .pad.is-held {
+  border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 45%, rgb(12 8 28 / 0.5));
+  box-shadow: 0 0 22px var(--accent);
   transform: scale(0.94);
 }
-
-
-
-
 
 .keys-hint {
   display: none;
   position: absolute;
-  left: 50%;
-  bottom: 96px;
+  left: 106px;
+  bottom: 22px;
+  max-width: min(300px, 26%);
   margin: 0;
-  padding: 4px 12px;
-  border-radius: 8px;
-  background: rgb(12 8 28 / 0.5);
-  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 4px 10px 4px 10px;
+  background: var(--hud-ink-soft);
+  font-size: 0.74rem;
   font-weight: 700;
-  white-space: nowrap;
-  opacity: 0.8;
-  transform: translateX(-50%);
+  line-height: 1.3;
+  opacity: 0.85;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1074,15 +1376,16 @@ body[data-scenario="wasteland"] .hud-icon {
   }
 }
 
-/* Nitro: streaks rush in from the edges of the screen. */
+/* Nitro: thin streaks rush in from the edges of the screen (the picture
+   itself blurs too, see setRush in scene.js). */
 .view::after {
   content: "";
   position: absolute;
   inset: -20%;
   z-index: 2;
-  background: repeating-conic-gradient(from 0deg, transparent 0deg 5deg, rgb(255 255 255 / 0.22) 5deg 5.6deg);
-  -webkit-mask: radial-gradient(circle, transparent 30%, #000 70%);
-  mask: radial-gradient(circle, transparent 30%, #000 70%);
+  background: repeating-conic-gradient(from 0deg, transparent 0deg 5deg, rgb(255 255 255 / 0.16) 5deg 5.4deg);
+  -webkit-mask: radial-gradient(circle, transparent 34%, #000 74%);
+  mask: radial-gradient(circle, transparent 34%, #000 74%);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.25s ease;
@@ -1209,18 +1512,45 @@ body.is-nitro .view::after {
   }
 
   .hud-top {
-    right: 104px;
-    gap: 6px;
+    top: 8px;
+    left: 12px;
+    right: 112px;
+    gap: 6px 8px;
   }
 
-  .hud-pill {
-    padding: 4px 12px;
+  .hud-card {
+    gap: 8px;
+    padding: 5px 14px 6px 10px;
   }
 
-  .minimap {
-    top: 60px;
-    width: 88px;
-    height: 88px;
+  .hud-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .hud-points strong,
+  .time-value {
+    font-size: 1.1rem;
+  }
+
+  .points-bar {
+    width: 56px;
+  }
+
+  .hud-best {
+    display: none;
+  }
+
+  .map-card {
+    top: 58px;
+    width: 96px;
+    height: 96px;
+    padding: 6px;
+  }
+
+  .streak {
+    top: 104px;
+    left: 14px;
   }
 
   .pad {
@@ -1228,16 +1558,31 @@ body.is-nitro .view::after {
     height: 64px;
   }
 
-
-
-
-  /* The speed sits above the pads on narrow screens. */
+  /* The dial sits between the steering buttons. */
   .speedo {
-    bottom: 92px;
+    bottom: 4px;
+    width: 128px;
+    height: 128px;
   }
 
   .speed-value {
-    font-size: 2rem;
+    font-size: 1.6rem;
+  }
+
+  .gear {
+    bottom: 22px;
+  }
+
+  .gear-value {
+    font-size: 0.85rem;
+  }
+
+  .nitro {
+    bottom: 8px;
+  }
+
+  .nitro small {
+    display: none;
   }
 
   .toast {
@@ -1252,9 +1597,41 @@ body.is-nitro .view::after {
     min-height: 260px;
   }
 
-  .minimap {
-    width: 84px;
-    height: 84px;
+  .map-card {
+    width: 92px;
+    height: 92px;
+    padding: 6px;
+  }
+
+  .speedo {
+    width: 128px;
+    height: 128px;
+  }
+
+  .speed-value {
+    font-size: 1.6rem;
+  }
+
+  .gear {
+    bottom: 22px;
+  }
+
+  .nitro {
+    bottom: 8px;
+  }
+
+  .nitro small {
+    display: none;
+  }
+}
+
+/* Short screens: in the middle the dial would cover the car, so it moves
+   beside the right steering button. */
+@media (max-height: 640px) {
+  .speedo {
+    left: auto;
+    right: 100px;
+    transform: none;
   }
 }
 

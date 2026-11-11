@@ -141,15 +141,26 @@
       <!-- While driving. -->
       <div class="hud" hidden>
         <div class="hud-top">
-          <p class="hud-pill hud-points"><span class="hud-icon" aria-hidden="true"></span><strong class="points-count">0/0</strong><span class="visually-hidden" data-i18n="drive.points">Points</span></p>
-          <p class="hud-pill hud-time"><span class="time-value">0:00.0</span><small class="lap-value"></small></p>
-          <svg class="minimap" aria-hidden="true"></svg>
+          <div class="hud-card hud-points">
+            <span class="hud-icon" aria-hidden="true"></span>
+            <p class="hud-stack"><small class="hud-label" data-i18n="drive.points">Points</small><strong class="points-count">0/0</strong></p>
+            <span class="points-bar" aria-hidden="true"><i></i></span>
+          </div>
+          <div class="hud-card hud-time">
+            <p class="hud-stack"><small class="hud-label lap-value"></small><span class="time-value">0:00.0</span></p>
+            <p class="hud-stack hud-best"><small class="hud-label" data-i18n="drive.bestShort">Best</small><span class="best-value">–</span></p>
+          </div>
         </div>
+        <div class="map-card" aria-hidden="true"><svg class="minimap"></svg></div>
+        <p class="streak" aria-hidden="true"><strong class="streak-count"></strong><span data-i18n="drive.streak">Streak</span><i class="streak-bar"></i></p>
         <p class="toast" aria-live="polite"></p>
         <p class="countdown" aria-live="assertive"></p>
+        <!-- The dashboard: a dial for the speed, the gear and the nitro left. -->
         <div class="speedo" aria-hidden="true">
-          <strong class="speed-value">0</strong><small>km/h</small>
-          <span class="boost-bar"><i></i></span>
+          <svg class="gauge" viewBox="0 0 200 200"></svg>
+          <p class="speed-read"><strong class="speed-value">0</strong><small>km/h</small></p>
+          <p class="gear"><small data-i18n="drive.gear">Gear</small><b class="gear-value">1</b></p>
+          <p class="nitro"><small data-i18n="drive.nitro">Nitro</small><span class="boost-bar"><i></i></span></p>
         </div>
         <!-- Steer left at the far left, steer right at the far right. -->
         <div class="controls">

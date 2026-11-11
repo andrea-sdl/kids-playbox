@@ -86,15 +86,29 @@
       <!-- While riding. -->
       <div class="hud" hidden>
         <div class="hud-top">
-          <p class="hud-pill hud-score"><strong class="score-value">0</strong><span class="visually-hidden" data-i18n="skate.score">Score</span></p>
-          <p class="hud-pill hud-time"><span class="time-value">2:00</span></p>
-          <p class="hud-pill hud-letters" role="img"></p>
+          <div class="hud-card hud-score">
+            <p class="hud-stack"><small class="hud-label" data-i18n="skate.score">Score</small><strong class="score-value">0</strong></p>
+            <div class="hud-goal" aria-hidden="true">
+              <p class="hud-stars"><span>★</span><span>★</span><span>★</span></p>
+              <span class="score-bar"><i></i></span>
+            </div>
+          </div>
+          <div class="hud-card hud-time">
+            <svg class="time-ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-track" cx="22" cy="22" r="18"/><circle class="ring-fill" cx="22" cy="22" r="18" pathLength="100"/></svg>
+            <p class="hud-stack"><small class="hud-label" data-i18n="skate.time">Time</small><span class="time-value">2:00</span></p>
+          </div>
+          <p class="hud-card hud-letters" role="img"></p>
         </div>
+        <p class="speed-meter" aria-hidden="true"><small class="hud-label" data-i18n="skate.speed">Speed</small><span class="speed-bar"><i></i></span><b class="speed-value">0</b><small>km/h</small></p>
         <p class="toast" aria-live="polite"></p>
         <p class="countdown" aria-live="assertive"></p>
+        <!-- The combo: how many tricks so far, their names, and the points. -->
         <div class="combo" aria-hidden="true">
-          <p class="combo-tricks"></p>
-          <p class="combo-points"></p>
+          <p class="combo-badge"><small data-i18n="skate.combo">Combo</small><b class="combo-count">×1</b></p>
+          <div class="combo-body">
+            <p class="combo-tricks"></p>
+            <p class="combo-points"></p>
+          </div>
         </div>
         <!-- Turning on the left; jump, flip and grab on the right. -->
         <div class="controls">

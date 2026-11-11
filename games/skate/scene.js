@@ -1,12 +1,16 @@
 // The 3D world for each park: sky, the park itself (floor, quarter pipes,
 // ramps, boxes, stairs, rails, fences) and everything around it, from city
 // blocks to an anime seaside town, snowy peaks and a desert oasis. All of
-// it is built in code, so it works offline.
+// it is built in code, so it works offline. Surfaces have bumps (normal
+// maps), the sky lights and reflects on everything, and the picture is
+// finished like a film: glow, sun shafts, lens flares and color grading
+// (see gfx/post.js).
 
 import * as THREE from '../../vendor/three/three.min.js';
 import { HALF_D, HALF_W, QP_HEIGHT, QP_RADIUS, QP_TOP, buildPark, kickerHeight } from './world.js';
 import {
   bumpTexture,
+  finishTexture,
   floorTexture,
   graffitiTexture,
   letterTexture,
@@ -16,37 +20,51 @@ import {
   windowsTexture,
 } from './textures.js';
 import { createEffects } from './effects.js';
+import { createPipeline } from '../../gfx/post.js';
+import { createSky, skyDirection } from '../../gfx/sky.js';
+import { matchTiling, normalMapFrom } from '../../gfx/surface.js';
 
 function pickQuality() {
   const small = Math.min(window.screen.width, window.screen.height) < 700;
   const touch = window.matchMedia('(pointer: coarse)').matches;
   if (small || touch) {
-    return { maxRatio: Math.min(window.devicePixelRatio, 2), minRatio: 0.75, shadowSize: 1024, antialias: false };
+    return { name: 'low', maxRatio: Math.min(window.devicePixelRatio, 2), minRatio: 0.75, shadowSize: 1024, msaa: 2 };
   }
-  return { maxRatio: Math.min(window.devicePixelRatio, 2), minRatio: 1, shadowSize: 2048, antialias: true };
+  return { name: 'high', maxRatio: Math.min(window.devicePixelRatio, 2), minRatio: 1, shadowSize: 2048, msaa: 4 };
 }
 
-// Sky, light and air for each park. Elevations are in degrees.
+// Sky, light and air for each park, then the lens and the film: glow
+// (bloom, threshold), sun shafts (rays, rayFloor), flares, and the color
+// grade (saturation, contrast, tint for bright parts, shadowTint for dark
+// ones). Elevations are in degrees.
 const LOOKS = {
   city: {
-    top: '#3b7fd6', horizon: '#cfe6f7', bottom: '#8f949c', fog: '#cddceb', fogDensity: 0.0032,
-    sunElevation: 38, sunAzimuth: 210, sunColor: '#fff0d8', sunSize: 0.03, sunPower: 2.8,
-    hemiSky: '#cfe2ff', hemiGround: '#6e6a66', hemiPower: 1.15, clouds: 0.35, exposure: 1,
+    top: '#2468cc', horizon: '#c6def4', bottom: '#8f949c', fog: '#c4d6ea', fogDensity: 0.0024,
+    sunElevation: 34, sunAzimuth: 210, sunColor: '#fff0d8', sunSize: 0.03, disc: 9, sunPower: 3,
+    hemiSky: '#cfe2ff', hemiGround: '#6e6a66', hemiPower: 0.9, clouds: 0.36, exposure: 0.92,
+    bloom: 0.32, threshold: 0.96, radius: 0.5, rays: 0.32, rayFloor: 2.3, flare: 0.8,
+    vignette: 0.3, grain: 0.025, aberration: 0.01, saturation: 1.16, contrast: 1.1, tint: '#fff8ea', shadowTint: '#00040c',
   },
   sea: {
     top: '#1559d8', horizon: '#a8dcff', bottom: '#1d6fd6', fog: '#a9d6fa', fogDensity: 0.0007,
-    sunElevation: 50, sunAzimuth: 200, sunColor: '#fff6e6', sunSize: 0.028, sunPower: 2.5,
-    hemiSky: '#bfe2ff', hemiGround: '#6f8f5a', hemiPower: 1.05, clouds: 0.6, exposure: 0.95,
+    sunElevation: 46, sunAzimuth: 200, sunColor: '#fff6e6', sunSize: 0.028, disc: 9, sunPower: 2.7,
+    hemiSky: '#bfe2ff', hemiGround: '#6f8f5a', hemiPower: 1, clouds: 0.62, exposure: 0.95,
+    bloom: 0.36, threshold: 0.95, radius: 0.55, rays: 0.32, rayFloor: 2.3, flare: 0.9,
+    vignette: 0.26, grain: 0.02, aberration: 0.008, saturation: 1.2, contrast: 1.05, tint: '#fffaf0', shadowTint: '#000612',
   },
   mountain: {
-    top: '#3f86dc', horizon: '#e2eef9', bottom: '#d5dfec', fog: '#e4edf6', fogDensity: 0.0016,
-    sunElevation: 30, sunAzimuth: 150, sunColor: '#fff6ea', sunSize: 0.03, sunPower: 2.4,
-    hemiSky: '#dfeaff', hemiGround: '#7d8ba3', hemiPower: 0.95, clouds: 0.3, exposure: 0.88,
+    top: '#3a82dc', horizon: '#e2eef9', bottom: '#d5dfec', fog: '#e4edf6', fogDensity: 0.0016,
+    sunElevation: 28, sunAzimuth: 150, sunColor: '#fff4e2', sunSize: 0.03, disc: 9, sunPower: 2.5,
+    hemiSky: '#dfeaff', hemiGround: '#7d8ba3', hemiPower: 0.9, clouds: 0.34, exposure: 0.86,
+    bloom: 0.3, threshold: 1.25, radius: 0.55, rays: 0.32, rayFloor: 2.3, flare: 0.9,
+    vignette: 0.3, grain: 0.022, aberration: 0.01, saturation: 1.1, contrast: 1.07, tint: '#fff8f0', shadowTint: '#000814',
   },
   desert: {
     top: '#2b78cf', horizon: '#ffe2b4', bottom: '#d6a565', fog: '#f1d6a8', fogDensity: 0.0019,
-    sunElevation: 48, sunAzimuth: 230, sunColor: '#ffe6bf', sunSize: 0.032, sunPower: 3.2,
-    hemiSky: '#ffe8c8', hemiGround: '#b57d43', hemiPower: 1.15, clouds: 0.18, exposure: 1,
+    sunElevation: 40, sunAzimuth: 230, sunColor: '#ffe2b4', sunSize: 0.032, disc: 10, sunPower: 3.3,
+    hemiSky: '#ffe8c8', hemiGround: '#b57d43', hemiPower: 1.1, clouds: 0.2, exposure: 1,
+    bloom: 0.38, threshold: 0.96, radius: 0.55, rays: 0.32, rayFloor: 2.3, flare: 1,
+    vignette: 0.32, grain: 0.025, aberration: 0.012, saturation: 1.12, contrast: 1.07, tint: '#fff2dc', shadowTint: '#0a0400',
   },
 };
 
@@ -61,77 +79,10 @@ const PALETTES = {
 
 const LETTER_COLORS = ['#ff3fa4', '#ffd23f', '#35f2ff', '#7cff6a', '#ff8a3a'];
 
-function direction(elevation, azimuth) {
-  const up = THREE.MathUtils.degToRad(elevation);
-  const around = THREE.MathUtils.degToRad(azimuth);
-  return new THREE.Vector3(Math.cos(up) * Math.sin(around), Math.sin(up), Math.cos(up) * Math.cos(around));
-}
-
 function smoothstep(edge0, edge1, x) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
-
-/* ---------- Sky ---------- */
-
-const SKY_VERTEX = `
-  varying vec3 vDir;
-  void main() {
-    vDir = normalize(position);
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    gl_Position = projectionMatrix * viewMatrix * world;
-    gl_Position.z = gl_Position.w;
-  }
-`;
-
-const SKY_FRAGMENT = `
-  uniform vec3 top;
-  uniform vec3 horizon;
-  uniform vec3 bottom;
-  uniform vec3 sunDir;
-  uniform vec3 sunColor;
-  uniform float sunSize;
-  uniform float clouds;
-  uniform float time;
-  varying vec3 vDir;
-
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-  }
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
-      value += noise(p) * amplitude;
-      p *= 2.1;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-
-  void main() {
-    vec3 dir = normalize(vDir);
-    float h = dir.y;
-    vec3 color = h > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 0.7, h), 0.6)) : mix(horizon, bottom, smoothstep(0.0, -0.15, h));
-    float facing = max(dot(dir, sunDir), 0.0);
-    color += sunColor * (pow(facing, 8.0) * 0.35 + pow(facing, 80.0) * 0.6);
-    float disc = smoothstep(cos(sunSize), cos(sunSize * 0.7), facing);
-    color += sunColor * disc * 6.0;
-    if (h > 0.0) {
-      vec2 uv = dir.xz / (h + 0.2) * 1.4 + vec2(time * 0.005, 0.0);
-      float shape = fbm(uv);
-      float cover = smoothstep(0.58 - clouds * 0.3, 0.8, shape) * clouds * smoothstep(0.0, 0.2, h);
-      // Bright tops, soft blue-gray bellies: cartoon clouds.
-      vec3 cloudColor = mix(vec3(0.82, 0.88, 0.96), vec3(1.0), smoothstep(0.55, 0.85, shape));
-      color = mix(color, cloudColor, cover);
-    }
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
 
 /* ---------- Building helpers ---------- */
 
@@ -248,7 +199,7 @@ function profileStrip(profile, start, end, uvScale = 4) {
 
 export function createScene(container) {
   const quality = pickQuality();
-  const renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, powerPreference: 'high-performance' });
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
   let pixelRatio = quality.maxRatio;
   renderer.setPixelRatio(pixelRatio);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -272,27 +223,9 @@ export function createScene(container) {
   scene.add(sun, sun.target);
   let lightDirection = new THREE.Vector3(0.3, 1, 0.2).normalize();
 
-  const skyMaterial = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    fog: false,
-    uniforms: {
-      top: { value: new THREE.Color() },
-      horizon: { value: new THREE.Color() },
-      bottom: { value: new THREE.Color() },
-      sunDir: { value: new THREE.Vector3(0, 1, 0) },
-      sunColor: { value: new THREE.Color() },
-      sunSize: { value: 0.03 },
-      clouds: { value: 0 },
-      time: { value: 0 },
-    },
-    vertexShader: SKY_VERTEX,
-    fragmentShader: SKY_FRAGMENT,
-  });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(1800, 48, 24), skyMaterial);
-  sky.frustumCulled = false;
-  sky.renderOrder = -1;
-  scene.add(sky);
+  const sky = createSky(1800, { detail: quality.name === 'high' });
+  const skyMaterial = sky.material;
+  scene.add(sky.mesh);
   scene.fog = new THREE.FogExp2(0xffffff, 0.003);
 
   // Reflections on water, metal and boards come from the sky itself.
@@ -308,6 +241,14 @@ export function createScene(container) {
     scene.environment = environment;
     envSky.geometry.dispose();
   }
+
+  // The scene is drawn with smooth edges (multisampling) into a bright
+  // picture, then finished: glow, sun shafts, flares and the color grade.
+  const pipeline = createPipeline(renderer, scene, camera, {
+    full: quality.name === 'high',
+    msaa: quality.msaa,
+    halfBloom: quality.name === 'low',
+  });
 
   const dot = softDotTexture();
   const effects = createEffects(scene, dot);
@@ -373,17 +314,12 @@ export function createScene(container) {
   }
 
   function applyLook(look) {
-    const uniforms = skyMaterial.uniforms;
-    uniforms.top.value.set(look.top);
-    uniforms.horizon.value.set(look.horizon);
-    uniforms.bottom.value.set(look.bottom);
-    uniforms.sunDir.value.copy(direction(look.sunElevation, look.sunAzimuth));
-    uniforms.sunColor.value.set(look.sunColor);
-    uniforms.sunSize.value = look.sunSize;
-    uniforms.clouds.value = look.clouds;
+    sky.apply(look);
+    pipeline.look(look);
+    pipeline.setSun(sky.sunDirection);
     scene.fog.color.set(look.fog);
     scene.fog.density = look.fogDensity;
-    lightDirection = direction(look.sunElevation, look.sunAzimuth);
+    lightDirection = skyDirection(look.sunElevation, look.sunAzimuth);
     sun.color.set(look.sunColor);
     sun.intensity = look.sunPower;
     hemisphere.color.set(look.hemiSky);
@@ -394,24 +330,40 @@ export function createScene(container) {
 
   /* ---------- The park ---------- */
 
+  // Bumps worked out from a surface's own picture, tiled the same way.
+  function bumpsOf(map, strength = 2.5) {
+    const bumps = matchTiling(normalMapFrom(map.image, { strength }), map);
+    bumps.anisotropy = anisotropy;
+    return own(bumps);
+  }
+
   function surfaceMaterial(map, options = {}) {
-    return new THREE.MeshStandardMaterial({ map, roughness: 0.85, ...options });
+    return new THREE.MeshStandardMaterial({ map, normalMap: bumpsOf(map), roughness: 0.85, ...options });
   }
 
   function buildPark3d(group) {
     const palette = PALETTES[scenarioName];
     const ramp = texture(rampTexture(scenarioName));
     const rampMat = surfaceMaterial(ramp, { roughness: scenarioName === 'mountain' ? 0.6 : 0.8 });
-    const sideMat = new THREE.MeshStandardMaterial({ color: palette.side, roughness: 0.9 });
-    const topMat = new THREE.MeshStandardMaterial({ color: palette.top, roughness: 0.7 });
+    // Plain painted parts still get a fine grain, so light breaks on them.
+    const grain = bumpsOf(texture(bumpTexture(13), 3), 1.4);
+    const sideMat = new THREE.MeshStandardMaterial({ color: palette.side, roughness: 0.9, normalMap: grain });
+    const topMat = new THREE.MeshStandardMaterial({ color: palette.top, roughness: 0.7, normalMap: grain });
     const metal = new THREE.MeshStandardMaterial({ color: palette.coping, roughness: 0.3, metalness: 0.85 });
     const railMat = new THREE.MeshStandardMaterial({ color: palette.rail, roughness: 0.35, metalness: scenarioName === 'desert' ? 0 : 0.5 });
 
     // The floor, including under the quarter pipes.
     const floorSize = { x: (HALF_W + QP_TOP + 3) * 2, z: (HALF_D + QP_TOP + 3) * 2 };
+    // Patches of the floor are smoother (polished concrete, damp stone,
+    // icy snow), so they catch the sky.
+    const [smoothest, roughest] = { city: [0.66, 0.96], sea: [0.62, 0.94], mountain: [0.62, 0.92], desert: [0.88, 1] }[scenarioName];
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(floorSize.x, floorSize.z),
-      surfaceMaterial(texture(floorTexture(scenarioName), floorSize.x / 8, floorSize.z / 8), { roughness: scenarioName === 'mountain' ? 0.55 : 0.9 }),
+      surfaceMaterial(texture(floorTexture(scenarioName), floorSize.x / 8, floorSize.z / 8), {
+        roughness: 1,
+        roughnessMap: texture(finishTexture(15, smoothest, roughest), floorSize.x / 34, floorSize.z / 34),
+        envMapIntensity: 0.85,
+      }),
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
@@ -744,14 +696,17 @@ export function createScene(container) {
   }
 
   function addWater(group, y, size, color, shape = null) {
-    const bump = texture(bumpTexture(77), size / 40);
-    const material = new THREE.MeshStandardMaterial({ color, roughness: 0.06, metalness: 0.1, bumpMap: bump, bumpScale: 0.25 });
+    const ripples = bumpsOf(texture(bumpTexture(77), size / 40), 3);
+    const material = new THREE.MeshPhysicalMaterial({
+      color, roughness: 0.05, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.08,
+      normalMap: ripples, normalScale: new THREE.Vector2(0.5, 0.5), envMapIntensity: 1.5,
+    });
     const mesh = new THREE.Mesh(shape || new THREE.PlaneGeometry(size, size), material);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = y;
     mesh.receiveShadow = true;
     group.add(mesh);
-    water.push(bump);
+    water.push(ripples);
     return mesh;
   }
 
@@ -781,6 +736,24 @@ export function createScene(container) {
     return spots;
   }
 
+  // Building fronts: windows sit back in the wall, and their glass is
+  // smooth and mirror-like while the wall stays rough.
+  function frontsMaterial(style) {
+    const fronts = windowsTexture(style);
+    const map = texture(fronts.map);
+    const finish = texture(fronts.finish);
+    return new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      map,
+      normalMap: bumpsOf(texture(fronts.height), 3),
+      roughnessMap: finish,
+      metalnessMap: finish,
+      roughness: 1,
+      metalness: 1,
+      envMapIntensity: 1.3,
+    });
+  }
+
   function buildCity(group, props, rand) {
     // Blocks of buildings on a street grid.
     const buildings = new Props();
@@ -806,8 +779,7 @@ export function createScene(container) {
         }
       }
     }
-    const facade = texture(windowsTexture('city'));
-    const mesh = buildings.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, map: facade, roughness: 0.6 }), { cast: false });
+    const mesh = buildings.mesh(frontsMaterial('city'), { cast: false });
     group.add(mesh);
     // Street lamps and trees in planters around the plaza.
     for (let i = 0; i < 16; i += 1) {
@@ -853,7 +825,7 @@ export function createScene(container) {
       houses.add(buildingGeometry(w, h, d), place(x, y + h / 2 - 0.5, z, yaw), rand() < 0.7 ? '#f6f3ea' : '#f1e3c8');
       props.add(ROOF, place(x, y + h + 1.1, z, yaw, w * 1.05, 2.4, d * 1.05), roofs[Math.floor(rand() * roofs.length)]);
     });
-    group.add(houses.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, map: texture(windowsTexture('house')), roughness: 0.75 })));
+    group.add(houses.mesh(frontsMaterial('house')));
     // Cherry trees around the park and on the hills.
     scatter(rand, 60, 2, 140, (x, z) => terrainHeight(x, z) > SEA_LEVEL + 6).forEach(([x, y, z]) => {
       props.add(CYLINDER, place(x, y + 1.5, z, 0, 0.35, 3, 0.35), '#6b4636');
@@ -1073,7 +1045,7 @@ export function createScene(container) {
   function buildLetters(group, word) {
     letters = park.letters.map((spot, i) => {
       const map = own(letterTexture(word[i], LETTER_COLORS[i % LETTER_COLORS.length]));
-      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthWrite: false }));
+      const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, color: new THREE.Color(1.3, 1.3, 1.3), transparent: true, depthWrite: false }));
       sprite.position.set(spot.x, spot.y, spot.z);
       sprite.scale.setScalar(1.5);
       group.add(sprite);
@@ -1084,12 +1056,16 @@ export function createScene(container) {
   function setRatio(ratio) {
     pixelRatio = ratio;
     renderer.setPixelRatio(ratio);
-    renderer.setSize(width, height, false);
+    pipeline.setPixelRatio(ratio);
     effects.resize(height * ratio);
+    // Changing the size empties the canvas: draw again at once, or the
+    // game flashes blank for a frame.
+    pipeline.render(filmTime);
   }
 
   let frameAverage = 16;
   let lastAdapt = 0;
+  let filmTime = 0;
 
   return {
     renderer,
@@ -1157,8 +1133,9 @@ export function createScene(container) {
     },
 
     animate(dt, time, cameraPosition) {
-      skyMaterial.uniforms.time.value = time;
-      sky.position.copy(cameraPosition);
+      sky.setTime(time);
+      filmTime = time;
+      sky.mesh.position.copy(cameraPosition);
       water.forEach((map, i) => {
         map.offset.x = (time * 0.006 * (i + 1)) % 1;
         map.offset.y = (time * 0.004) % 1;
@@ -1211,6 +1188,11 @@ export function createScene(container) {
         setRatio(Math.max(quality.minRatio, pixelRatio - 0.25));
         return;
       }
+      if (frameAverage > 28 && pipeline.bloomOn && now - lastAdapt > 3000) {
+        lastAdapt = now;
+        pipeline.dropBloom();
+        return;
+      }
       if (frameAverage < 14 && pixelRatio < quality.maxRatio) {
         lastAdapt = now;
         setRatio(Math.min(quality.maxRatio, pixelRatio + 0.25));
@@ -1221,13 +1203,14 @@ export function createScene(container) {
       width = nextWidth;
       height = nextHeight;
       renderer.setSize(width, height, false);
+      pipeline.setSize(width, height);
       effects.resize(height * pixelRatio);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     },
 
     render() {
-      renderer.render(scene, camera);
+      pipeline.render(filmTime);
     },
   };
 }

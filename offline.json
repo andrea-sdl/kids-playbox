@@ -41,7 +41,10 @@
       "./games/blocks/strings.js",
       "./games/blocks/world.js",
       "./vendor/three/LICENSE",
-      "./vendor/three/three.min.js"
+      "./vendor/three/three.min.js",
+      "./gfx/post.js",
+      "./gfx/sky.js",
+      "./gfx/surface.js"
     ],
     "dice": [
       "./games/dice/",
@@ -92,7 +95,10 @@
       "./games/drive/tracks.js",
       "./games/drive/world.js",
       "./vendor/three/LICENSE",
-      "./vendor/three/three.min.js"
+      "./vendor/three/three.min.js",
+      "./gfx/post.js",
+      "./gfx/sky.js",
+      "./gfx/surface.js"
     ],
     "memory": [
       "./games/memory/",
@@ -185,7 +191,10 @@
       "./games/skate/tricks.js",
       "./games/skate/world.js",
       "./vendor/three/LICENSE",
-      "./vendor/three/three.min.js"
+      "./vendor/three/three.min.js",
+      "./gfx/post.js",
+      "./gfx/sky.js",
+      "./gfx/surface.js"
     ]
   },
   "notes": [

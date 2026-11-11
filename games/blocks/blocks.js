@@ -37,6 +37,8 @@ const els = {
   clock: $('.clock-input'),
   timePanel: $('.time-panel'),
   timeToggle: $('.time-toggle'),
+  statBlocks: $('.stat-blocks'),
+  statHeight: $('.stat-height'),
   dock: $('.dock'),
   tabs: document.querySelectorAll('.dock-tab'),
   shapePreview: $('.shape-preview'),
@@ -98,7 +100,19 @@ let scene = null;
 let recordedThisVisit = false;
 let saveTimer = null;
 
+// How many blocks there are, and how many layers high the build stands.
+function renderStats() {
+  let tallest = 0;
+  world.blocks.forEach((block) => {
+    tallest = Math.max(tallest, block.y + shapeById(block.shape).size[1]);
+  });
+  els.statBlocks.textContent = String(world.blocks.size);
+  els.statHeight.textContent = String(tallest);
+}
+
+// Every change to the build or the settings ends here.
 function save() {
+  renderStats();
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     writeJSON(STORE_KEY, { settings, blocks: world.toJSON() });
@@ -614,6 +628,7 @@ try {
     save();
   }
   world.blocks.forEach((block, id) => scene.addBlock(id, block));
+  renderStats();
   renderTime();
   setupPointer(scene.canvas);
 } catch {

@@ -1,7 +1,9 @@
 // The 3D world: sky, road, scenery and the points to collect, for each of
 // the three scenarios. Everything is built in code (no image files), so it
-// works offline and loads fast, then finished with shadows, glow (bloom)
-// and sky reflections for a console-game look.
+// works offline and loads fast. Surfaces have bumps (normal maps) and wet
+// or shiny spots, the sky lights and reflects on everything, and the picture
+// is finished like a film: glow, sun shafts, lens flares, speed blur and
+// color grading (see gfx/post.js).
 
 import * as THREE from '../../vendor/three/three.min.js';
 import { CIRCUITS, ROAD_WIDTH, sampleTrack, sideMeters, snowiness } from './world.js';
@@ -15,11 +17,15 @@ import {
   groundDetail,
   random,
   roadTextures,
+  signTexture,
   softDotTexture,
   strataTexture,
   stripesTexture,
 } from './textures.js';
 import { createEffects } from './effects.js';
+import { createPipeline } from '../../gfx/post.js';
+import { createSky, skyDirection } from '../../gfx/sky.js';
+import { matchTiling, normalMapFrom } from '../../gfx/surface.js';
 
 const HALF = ROAD_WIDTH / 2;
 
@@ -34,32 +40,43 @@ function pickQuality() {
   return { name: 'high', maxRatio: Math.min(window.devicePixelRatio, 2), minRatio: 1, msaa: 4, shadowSize: 2048, sceneryShadows: true };
 }
 
-// Sky, light and air for each place. The wasteland blends from `snow` to
-// `desert` as the car drives on. Elevations are in degrees.
+// Sky, light and air for each place, then the lens and the film: glow
+// (bloom, threshold), sun shafts (rays, rayFloor), flares, and the color
+// grade (saturation, contrast, tint for bright parts, shadowTint for dark
+// ones). The wasteland blends from `snow` to `desert` as the car drives on.
+// Elevations are in degrees.
 const LOOKS = {
   city: {
-    top: '#0b0926', horizon: '#7a3672', bottom: '#1b1226', fog: '#2c1a3c', fogDensity: 0.0026,
-    sunElevation: 3, sunAzimuth: 200, sunColor: '#ff9a5a', sunSize: 0.03, lightElevation: 55,
-    sunPower: 1.1, hemiSky: '#7d6cff', hemiGround: '#2a1a36', hemiPower: 0.9,
-    stars: 1, clouds: 0.15, bloom: 0.7, threshold: 0.9, exposure: 1.05,
+    top: '#07061c', horizon: '#8a3a78', bottom: '#1b1226', fog: '#2a1a40', fogDensity: 0.0024,
+    sunElevation: 3, sunAzimuth: 200, sunColor: '#ff9a5a', sunSize: 0.03, disc: 10, lightElevation: 55,
+    sunPower: 1.0, hemiSky: '#7d6cff', hemiGround: '#2a1a36', hemiPower: 0.85,
+    stars: 1, moon: 1, clouds: 0.2, bloom: 0.85, threshold: 0.88, radius: 0.6, exposure: 1.08,
+    rays: 0.25, rayFloor: 1.4, flare: 0.5, vignette: 0.42, grain: 0.04, aberration: 0.02,
+    saturation: 1.16, contrast: 1.08, tint: '#fff2fb', shadowTint: '#04061a',
   },
   jungle: {
-    top: '#1559c4', horizon: '#9fd3ec', bottom: '#4d6e3c', fog: '#9ccbc0', fogDensity: 0.0026,
-    sunElevation: 42, sunAzimuth: 130, sunColor: '#fff2d6', sunSize: 0.025, lightElevation: 42,
-    sunPower: 3.2, hemiSky: '#c2e4ff', hemiGround: '#3a5a22', hemiPower: 1.25,
-    stars: 0, clouds: 0.42, bloom: 0.35, threshold: 0.95, exposure: 1,
+    top: '#1559c4', horizon: '#a9dcf0', bottom: '#4d6e3c', fog: '#a4d2c4', fogDensity: 0.0024,
+    sunElevation: 30, sunAzimuth: 130, sunColor: '#fff0cc', sunSize: 0.026, disc: 12, lightElevation: 40,
+    sunPower: 3.3, hemiSky: '#c2e4ff', hemiGround: '#3a5a22', hemiPower: 1.15,
+    stars: 0, moon: 0, clouds: 0.46, bloom: 0.4, threshold: 0.95, radius: 0.5, exposure: 1,
+    rays: 0.4, rayFloor: 1.9, flare: 0.8, vignette: 0.34, grain: 0.028, aberration: 0.012,
+    saturation: 1.14, contrast: 1.07, tint: '#fff8e6', shadowTint: '#000a06',
   },
   snow: {
-    top: '#7a889d', horizon: '#d5dae1', bottom: '#c6ccd6', fog: '#c9cfd8', fogDensity: 0.0068,
-    sunElevation: 22, sunAzimuth: 160, sunColor: '#eaf0ff', sunSize: 0.03, lightElevation: 40,
-    sunPower: 1.4, hemiSky: '#e2e8f3', hemiGround: '#9aa3b2', hemiPower: 1.7,
-    stars: 0, clouds: 1, bloom: 0.3, threshold: 1, exposure: 1,
+    top: '#74839a', horizon: '#d5dae1', bottom: '#c6ccd6', fog: '#c9cfd8', fogDensity: 0.0066,
+    sunElevation: 22, sunAzimuth: 160, sunColor: '#eaf0ff', sunSize: 0.03, disc: 6, lightElevation: 40,
+    sunPower: 1.5, hemiSky: '#e2e8f3', hemiGround: '#9aa3b2', hemiPower: 1.6,
+    stars: 0, moon: 0, clouds: 1, bloom: 0.34, threshold: 1, radius: 0.5, exposure: 1,
+    rays: 0.2, rayFloor: 1.6, flare: 0.3, vignette: 0.36, grain: 0.035, aberration: 0.012,
+    saturation: 0.96, contrast: 1.06, tint: '#f4f8ff', shadowTint: '#02050c',
   },
   desert: {
-    top: '#3a7bc4', horizon: '#f0c590', bottom: '#c08648', fog: '#e6bf8e', fogDensity: 0.0026,
-    sunElevation: 20, sunAzimuth: 230, sunColor: '#ffd8a2', sunSize: 0.03, lightElevation: 35,
-    sunPower: 3, hemiSky: '#ffe2bd', hemiGround: '#a8703a', hemiPower: 1.1,
-    stars: 0, clouds: 0.3, bloom: 0.4, threshold: 0.95, exposure: 1,
+    top: '#2f72c0', horizon: '#f4c890', bottom: '#c08648', fog: '#e8c08c', fogDensity: 0.0024,
+    sunElevation: 16, sunAzimuth: 230, sunColor: '#ffd29a', sunSize: 0.032, disc: 12, lightElevation: 32,
+    sunPower: 3.1, hemiSky: '#ffe2bd', hemiGround: '#a8703a', hemiPower: 1.05,
+    stars: 0, moon: 0, clouds: 0.3, bloom: 0.45, threshold: 0.95, radius: 0.55, exposure: 1,
+    rays: 0.45, rayFloor: 1.9, flare: 0.9, vignette: 0.36, grain: 0.03, aberration: 0.014,
+    saturation: 1.12, contrast: 1.08, tint: '#fff1dc', shadowTint: '#0a0402',
   },
 };
 
@@ -67,79 +84,6 @@ function smoothstep(edge0, edge1, x) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
-
-function direction(elevation, azimuth) {
-  const up = THREE.MathUtils.degToRad(elevation);
-  const around = THREE.MathUtils.degToRad(azimuth);
-  return new THREE.Vector3(Math.cos(up) * Math.sin(around), Math.sin(up), Math.cos(up) * Math.cos(around));
-}
-
-/* ---------- Sky ---------- */
-
-const SKY_VERTEX = `
-  varying vec3 vDir;
-  void main() {
-    vDir = normalize(position);
-    vec4 world = modelMatrix * vec4(position, 1.0);
-    gl_Position = projectionMatrix * viewMatrix * world;
-    gl_Position.z = gl_Position.w;
-  }
-`;
-
-// A gradient with a glowing sun, soft clouds and (at night) stars. The sun
-// is brighter than white, so it blooms.
-const SKY_FRAGMENT = `
-  uniform vec3 top;
-  uniform vec3 horizon;
-  uniform vec3 bottom;
-  uniform vec3 sunDir;
-  uniform vec3 sunColor;
-  uniform float sunSize;
-  uniform float stars;
-  uniform float clouds;
-  uniform float time;
-  varying vec3 vDir;
-
-  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-  float noise(vec2 p) {
-    vec2 i = floor(p);
-    vec2 f = fract(p);
-    vec2 u = f * f * (3.0 - 2.0 * f);
-    return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
-  }
-  float fbm(vec2 p) {
-    float value = 0.0;
-    float amplitude = 0.5;
-    for (int i = 0; i < 5; i++) {
-      value += noise(p) * amplitude;
-      p *= 2.1;
-      amplitude *= 0.5;
-    }
-    return value;
-  }
-
-  void main() {
-    vec3 dir = normalize(vDir);
-    float h = dir.y;
-    vec3 color = h > 0.0 ? mix(horizon, top, pow(smoothstep(0.0, 0.75, h), 0.65)) : mix(horizon, bottom, smoothstep(0.0, -0.2, h));
-    float facing = max(dot(dir, sunDir), 0.0);
-    // A warm haze around the sun, wide near the horizon.
-    color += sunColor * (pow(facing, 6.0) * 0.45 + pow(facing, 60.0) * 0.8) * (1.0 - smoothstep(0.0, 0.6, h) * 0.4);
-    float disc = smoothstep(cos(sunSize), cos(sunSize * 0.7), facing);
-    color += sunColor * disc * 12.0;
-    if (h > 0.0) {
-      vec2 uv = dir.xz / (h + 0.18) * 1.6 + vec2(time * 0.004, 0.0);
-      float shape = fbm(uv);
-      float cover = smoothstep(0.55 - clouds * 0.35, 0.85, shape) * clouds * smoothstep(0.0, 0.25, h);
-      vec3 cloudColor = mix(horizon * 1.05 + 0.05, vec3(1.0), 0.5) + sunColor * pow(facing, 4.0) * 0.4;
-      color = mix(color, cloudColor, cover * 0.85);
-      vec2 cell = floor(dir.xz / (h + 0.05) * 140.0);
-      float star = step(0.9975, hash(cell)) * stars * smoothstep(0.1, 0.5, h) * (1.0 - cover);
-      color += vec3(star * 2.0);
-    }
-    gl_FragColor = vec4(color, 1.0);
-  }
-`;
 
 /* ---------- Geometry helpers ---------- */
 
@@ -478,30 +422,61 @@ function glowColor(hex, strength) {
 
 /* ---------- Scenery for each scenario ---------- */
 
-function buildCity(group, samples, clearance, groundY, quality, dot) {
+function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
   const rand = random(101);
   const facade = facadeTextures('city');
   const buildings = new ChunkedBatch();
   const roofs = new ChunkedBatch();
   const neon = new ChunkedBatch();
+  const signs = new ChunkedBatch();
+  const signShape = new THREE.PlaneGeometry(1, 1);
   const tints = ['#c9c4e8', '#b8c4ea', '#d8c6d8', '#c2b8dc', '#aebde0', '#d4d0e6'];
   const neonColors = ['#ff3fa4', '#35f2ff', '#a45bff', '#ffd23f', '#39ff88'];
   const addBuilding = (spot, width, depth, height, withSign) => {
     const y = groundY(spot.x, spot.z) - 0.5;
     const shift = Math.floor(rand() * 8) / 8;
-    buildings.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, width, height, depth), tints[Math.floor(rand() * tints.length)], { uv: facadeUv(width, height, depth, 24, shift) });
+    const tint = tints[Math.floor(rand() * tints.length)];
+    buildings.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, width, height, depth), tint, { uv: facadeUv(width, height, depth, 24, shift) });
+    // Tall towers step in near the top.
+    let top = y + height;
+    let topWidth = width;
+    let topDepth = depth;
+    if (height > 40 && rand() < 0.6) {
+      const more = height * (0.18 + rand() * 0.2);
+      topWidth = width * 0.66;
+      topDepth = depth * 0.66;
+      buildings.add(UNIT_BOX, place(spot.x, top, spot.z, spot.yaw, topWidth, more, topDepth), tint, { uv: facadeUv(topWidth, more, topDepth, 24, shift) });
+      // A glowing band where the tower steps in.
+      neon.add(UNIT_BOX, place(spot.x, top - 0.1, spot.z, spot.yaw, topWidth + 0.5, 0.35, topDepth + 0.5), glowColor(neonColors[Math.floor(rand() * neonColors.length)], 2.2));
+      top += more;
+    }
     // Rooftop machinery and the odd antenna with a red light.
     for (let i = 0; i < 3; i += 1) {
-      roofs.add(UNIT_BOX, place(spot.x + (rand() - 0.5) * width * 0.6, y + height, spot.z + (rand() - 0.5) * depth * 0.6, spot.yaw, 2 + rand() * 3, 1 + rand() * 2, 2 + rand() * 3), '#4a4858', { shade: true });
+      roofs.add(UNIT_BOX, place(spot.x + (rand() - 0.5) * topWidth * 0.6, top, spot.z + (rand() - 0.5) * topDepth * 0.6, spot.yaw, 2 + rand() * 3, 1 + rand() * 2, 2 + rand() * 3), '#4a4858', { shade: true });
     }
-    if (rand() < 0.3) {
-      roofs.add(UNIT_BOX, place(spot.x, y + height, spot.z, spot.yaw, 0.3, 8 + rand() * 8, 0.3), '#3a3846');
+    if (rand() < 0.35) {
+      const mast = 8 + rand() * 8;
+      roofs.add(UNIT_BOX, place(spot.x, top, spot.z, spot.yaw, 0.3, mast, 0.3), '#3a3846');
+      neon.add(UNIT_BOX, place(spot.x, top + mast, spot.z, spot.yaw, 0.7, 0.7, 0.7), glowColor('#ff2a3a', 5));
     }
     if (!withSign || rand() < 0.4) {
       return;
     }
-    // A glowing sign on the side that faces the road.
     const front = width / 2 + 0.25;
+    // A billboard with a neon picture, facing the road.
+    if (rand() < 0.45) {
+      const wide = Math.min(depth - 2, 9 + rand() * 5);
+      const tall = wide / 2;
+      const cell = Math.floor(rand() * 8);
+      signs.add(signShape, place(
+        spot.x - spot.sample.nx * spot.side * (front + 0.1),
+        y + 7 + tall / 2 + rand() * Math.max(1, Math.min(22, height - tall - 12)),
+        spot.z - spot.sample.nz * spot.side * (front + 0.1),
+        Math.atan2(-spot.side * spot.sample.nx, -spot.side * spot.sample.nz), wide, tall, 1,
+      ), glowColor('#ffffff', 2.4), { uv: (i, u, v) => [((cell % 4) + u) / 4, (Math.floor(cell / 4) + v) / 2] });
+      return;
+    }
+    // Or a glowing strip.
     const signHeight = 2 + rand() * 4;
     neon.add(UNIT_BOX, place(
       spot.x - spot.sample.nx * spot.side * front,
@@ -520,18 +495,29 @@ function buildCity(group, samples, clearance, groundY, quality, dot) {
     map: facade.map,
     emissiveMap: facade.emissiveMap,
     emissive: 0xffffff,
-    emissiveIntensity: 1,
-    roughness: 0.55,
-    metalness: 0.1,
+    emissiveIntensity: 1.25,
+    normalMap: facade.normalMap,
+    roughnessMap: facade.finishMap,
+    metalnessMap: facade.finishMap,
+    roughness: 1,
+    metalness: 1,
+    envMapIntensity: 1.4,
     vertexColors: true,
   }), { cast: quality.sceneryShadows }));
   group.add(roofs.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), { cast: quality.sceneryShadows }));
-  group.add(neon.mesh(new THREE.MeshBasicMaterial({ vertexColors: true })));
+  group.add(signs.mesh(new THREE.MeshBasicMaterial({ map: signTexture(), vertexColors: true })));
 
-  // Street lights, each with a warm pool of light on the road.
+  // Street lights, each with a cone of light in the haze and a warm pool
+  // of light on the road.
   const poles = new ChunkedBatch();
   const bulbs = new ChunkedBatch();
   const pools = new ChunkedBatch();
+  const cones = new ChunkedBatch();
+  // Narrow at the lamp, wide at the road. Turned over so the bright end
+  // of the beam picture is at the lamp.
+  const cone = new THREE.CylinderGeometry(4.6, 0.35, 8.4, 14, 1, true);
+  cone.rotateX(Math.PI);
+  cone.translate(0, -4.2, 0);
   const poolShape = new THREE.PlaneGeometry(1, 1);
   poolShape.rotateX(-Math.PI / 2);
   roadsideSpots(samples, clearance, rand, { step: 34, from: 1.6, to: 1.6, radius: 0.3 }).forEach((spot) => {
@@ -544,7 +530,33 @@ function buildCity(group, samples, clearance, groundY, quality, dot) {
     const poolX = spot.sample.x + spot.sample.nx * spot.side * (HALF - 3.5);
     const poolZ = spot.sample.z + spot.sample.nz * spot.side * (HALF - 3.5);
     pools.add(poolShape, place(poolX, y + 0.12, poolZ, spot.yaw, 13, 1, 13), '#ffcf8a');
+    cones.add(cone, place(armX, y + 8.4, armZ, spot.yaw), '#ffd9a0');
   });
+
+  // Neon gateways over the road, every few hundred meters.
+  const total = samples[samples.length - 1].s;
+  const gates = Math.max(2, Math.round(total / 260));
+  for (let i = 0; i < gates; i += 1) {
+    const sample = samples[Math.floor(((i + 0.5) / gates) * samples.length)];
+    const yaw = Math.atan2(sample.dx, sample.dz);
+    const color = neonColors[i % neonColors.length];
+    [-1, 1].forEach((side) => {
+      const x = sample.x + sample.nx * side * (HALF + 2.4);
+      const z = sample.z + sample.nz * side * (HALF + 2.4);
+      poles.add(UNIT_BOX, place(x, sample.y - 0.5, z, yaw, 0.7, 11.5, 0.7), '#25242e');
+      neon.add(UNIT_BOX, place(x - sample.nx * side * 0.42, sample.y + 0.6, z - sample.nz * side * 0.42, yaw, 0.14, 9.6, 0.14), glowColor(color, 3));
+    });
+    poles.add(UNIT_BOX, place(sample.x, sample.y + 10.6, sample.z, yaw + Math.PI / 2, 0.8, 0.9, ROAD_WIDTH + 5.6), '#25242e');
+    neon.add(UNIT_BOX, place(sample.x, sample.y + 10.3, sample.z, yaw + Math.PI / 2, 0.2, 0.2, ROAD_WIDTH + 3.6), glowColor(color, 3.4));
+  }
+  group.add(neon.mesh(new THREE.MeshBasicMaterial({ vertexColors: true })));
+  if (quality.name === 'high') {
+    const coneMesh = cones.mesh(new THREE.MeshBasicMaterial({
+      map: beamMap, vertexColors: true, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+    }), { receive: false });
+    coneMesh.renderOrder = 3;
+    group.add(coneMesh);
+  }
   group.add(poles.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.5 })));
   group.add(bulbs.mesh(new THREE.MeshBasicMaterial({ vertexColors: true })));
   const poolMesh = pools.mesh(new THREE.MeshBasicMaterial({
@@ -571,6 +583,10 @@ function buildJungle(group, samples, clearance, groundY, quality) {
   const frond = frondGeometry();
   const card = crossedCards(2.6, 1.6);
   const greens = ['#2f8f2f', '#3fa53a', '#2a7a2c', '#4cb043', '#226b28', '#5aa83a'];
+  let sprays = 7;
+  if (quality.name === 'low') {
+    sprays = 0;
+  }
 
   const addTree = (x, y, z, scale) => {
     const height = (6 + rand() * 6) * scale;
@@ -578,12 +594,23 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     const blobs = 3 + Math.floor(rand() * 2);
     for (let i = 0; i < blobs; i += 1) {
       const size = (2.4 + rand() * 2.2) * scale;
-      trees.add(clumps[Math.floor(rand() * clumps.length)], place(
-        x + (rand() - 0.5) * 3 * scale,
-        y + height - 0.5 + rand() * 2.4 * scale,
-        z + (rand() - 0.5) * 3 * scale,
-        rand() * 6, size, size * 0.85, size,
-      ), greens[Math.floor(rand() * greens.length)], { shade: true });
+      const cx = x + (rand() - 0.5) * 3 * scale;
+      const cy = y + height - 0.5 + rand() * 2.4 * scale;
+      const cz = z + (rand() - 0.5) * 3 * scale;
+      trees.add(clumps[Math.floor(rand() * clumps.length)], place(cx, cy, cz, rand() * 6, size, size * 0.85, size), greens[Math.floor(rand() * greens.length)], { shade: true });
+      // Sprays of leaves poke out of each clump, so its edge isn't smooth.
+      for (let k = 0; k < sprays; k += 1) {
+        const around = rand() * Math.PI * 2;
+        const lift = (rand() - 0.25) * 0.8;
+        const reach = size * 0.82;
+        const spray = size * (0.4 + rand() * 0.3);
+        ferns.add(card, place(
+          cx + Math.cos(around) * reach * Math.cos(lift),
+          cy + Math.sin(lift) * reach * 0.8 - spray * 0.2,
+          cz + Math.sin(around) * reach * Math.cos(lift),
+          rand() * 6, spray, spray, spray, (rand() - 0.5) * 1.2, (rand() - 0.5) * 1.2,
+        ), rand() < 0.5 ? '#e4f5c4' : '#a9d58a');
+      }
     }
   };
   const addPalm = (x, y, z, scale) => {
@@ -721,9 +748,19 @@ function buildWasteland(group, samples, clearance, groundY, quality) {
     // A bent lamp post.
     plain.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, 0.3, 8, 0.3, (rand() - 0.5) * 0.6, (rand() - 0.5) * 0.6), '#4a4744', { shade: true });
   });
-  group.add(walls.mesh(new THREE.MeshStandardMaterial({ map: ruinFacade.map, vertexColors: true, roughness: 0.95 }), { cast: quality.sceneryShadows }));
+  group.add(walls.mesh(new THREE.MeshStandardMaterial({
+    map: ruinFacade.map,
+    normalMap: ruinFacade.normalMap,
+    normalScale: new THREE.Vector2(1.4, 1.4),
+    roughnessMap: ruinFacade.finishMap,
+    metalnessMap: ruinFacade.finishMap,
+    roughness: 1,
+    metalness: 1,
+    vertexColors: true,
+  }), { cast: quality.sceneryShadows }));
   group.add(plain.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), { cast: quality.sceneryShadows }));
-  group.add(rocks.mesh(new THREE.MeshStandardMaterial({ map: strataTexture(), vertexColors: true, roughness: 1 })));
+  const strata = strataTexture();
+  group.add(rocks.mesh(new THREE.MeshStandardMaterial({ map: strata, normalMap: normalMapFrom(strata.image, { strength: 4 }), vertexColors: true, roughness: 1 })));
 }
 
 /* ---------- Points ---------- */
@@ -817,28 +854,9 @@ export function createScene(container) {
   scene.add(sun.target);
   let lightDirection = new THREE.Vector3(0.3, 1, 0.2).normalize();
 
-  const skyMaterial = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    depthWrite: false,
-    fog: false,
-    uniforms: {
-      top: { value: new THREE.Color() },
-      horizon: { value: new THREE.Color() },
-      bottom: { value: new THREE.Color() },
-      sunDir: { value: new THREE.Vector3(0, 1, 0) },
-      sunColor: { value: new THREE.Color() },
-      sunSize: { value: 0.03 },
-      stars: { value: 0 },
-      clouds: { value: 0 },
-      time: { value: 0 },
-    },
-    vertexShader: SKY_VERTEX,
-    fragmentShader: SKY_FRAGMENT,
-  });
-  const sky = new THREE.Mesh(new THREE.SphereGeometry(1500, 48, 24), skyMaterial);
-  sky.frustumCulled = false;
-  sky.renderOrder = -1;
-  scene.add(sky);
+  const sky = createSky(1500, { detail: quality.name === 'high' });
+  const skyMaterial = sky.material;
+  scene.add(sky.mesh);
   scene.fog = new THREE.FogExp2(0xffffff, 0.003);
 
   // Reflections on cars and coins come from the sky itself.
@@ -867,15 +885,13 @@ export function createScene(container) {
     envSky.geometry.dispose();
   }
 
-  // Post-processing: smooth edges (multisampling), then glow (bloom) on
-  // anything brighter than white, then tone mapping.
-  const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: quality.msaa });
-  const composer = new THREE.EffectComposer(renderer, target);
-  composer.addPass(new THREE.RenderPass(scene, camera));
-  const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(256, 256), 0.6, 0.4, 0.9);
-  composer.addPass(bloom);
-  composer.addPass(new THREE.OutputPass());
-  composer.setPixelRatio(pixelRatio);
+  // The scene is drawn with smooth edges (multisampling) into a bright
+  // picture, then finished: glow, sun shafts, flares and the color grade.
+  const pipeline = createPipeline(renderer, scene, camera, {
+    full: quality.name === 'high',
+    msaa: quality.msaa,
+    halfBloom: quality.name === 'low',
+  });
 
   // Snow for the wasteland: soft flakes in a box that follows the camera.
   const dot = softDotTexture();
@@ -933,25 +949,17 @@ export function createScene(container) {
   }
 
   function applyLook(look) {
-    const uniforms = skyMaterial.uniforms;
-    uniforms.top.value.set(look.top);
-    uniforms.horizon.value.set(look.horizon);
-    uniforms.bottom.value.set(look.bottom);
-    uniforms.sunDir.value.copy(direction(look.sunElevation, look.sunAzimuth));
-    uniforms.sunColor.value.set(look.sunColor);
-    uniforms.sunSize.value = look.sunSize;
-    uniforms.stars.value = look.stars;
-    uniforms.clouds.value = look.clouds;
+    sky.apply(look);
+    pipeline.look(look);
+    pipeline.setSun(sky.sunDirection);
     scene.fog.color.set(look.fog);
     scene.fog.density = look.fogDensity;
-    lightDirection = direction(look.lightElevation, look.sunAzimuth);
+    lightDirection = skyDirection(look.lightElevation, look.sunAzimuth);
     sun.color.set(look.sunColor);
     sun.intensity = look.sunPower;
     hemisphere.color.set(look.hemiSky);
     hemisphere.groundColor.set(look.hemiGround);
     hemisphere.intensity = look.hemiPower;
-    bloom.strength = look.bloom;
-    bloom.threshold = look.threshold;
     renderer.toneMappingExposure = look.exposure;
   }
 
@@ -973,7 +981,7 @@ export function createScene(container) {
         return;
       }
       [child.material].flat().forEach((material) => {
-        ['map', 'roughnessMap', 'emissiveMap'].forEach((key) => {
+        ['map', 'roughnessMap', 'emissiveMap', 'normalMap'].forEach((key) => {
           if (material[key]) {
             material[key].anisotropy = anisotropy;
           }
@@ -1046,7 +1054,8 @@ export function createScene(container) {
     }
     const detail = groundDetail(kind);
     detail.repeat.set(size / 10, size / 10);
-    const ground = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: detail, vertexColors: true, roughness: 0.95 }));
+    const bumps = matchTiling(normalMapFrom(detail.image, { strength: kind === 'paving' ? 2.5 : 3.5 }), detail);
+    const ground = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: detail, normalMap: bumps, vertexColors: true, roughness: kind === 'paving' ? 0.8 : 0.95 }));
     ground.receiveShadow = true;
     group.add(ground);
   }
@@ -1056,9 +1065,11 @@ export function createScene(container) {
     const surface = new THREE.MeshStandardMaterial({
       map: textures.map,
       roughnessMap: textures.roughnessMap,
+      normalMap: textures.normalMap,
+      normalScale: new THREE.Vector2(1.1, 1.1),
       roughness: 1,
       metalness: 0,
-      envMapIntensity: 0.6,
+      envMapIntensity: scenarioName === 'city' ? 1.5 : 0.7,
     });
     const road = new THREE.Mesh(ribbon(samples, length, { side: HALF, up: 0.05 }, { side: -HALF, up: 0.05 }), surface);
     road.receiveShadow = true;
@@ -1173,20 +1184,14 @@ export function createScene(container) {
     });
   }
 
-  // Phones blur the glow at half the usual size: it's soft anyway.
-  function sizeBloom() {
-    if (quality.name === 'low') {
-      bloom.setSize(Math.round((width * pixelRatio) / 2), Math.round((height * pixelRatio) / 2));
-    }
-  }
-
   function setRatio(ratio) {
     pixelRatio = ratio;
     renderer.setPixelRatio(ratio);
-    composer.setPixelRatio(ratio);
-    composer.setSize(width, height);
-    sizeBloom();
+    pipeline.setPixelRatio(ratio);
     effects.resize(height * ratio);
+    // Changing the size empties the canvas: draw again at once, or the
+    // game flashes blank for a frame.
+    pipeline.render(filmTime);
   }
 
   // When a device is still slow at the lowest resolution, the glow goes
@@ -1195,7 +1200,7 @@ export function createScene(container) {
 
   function dropEffect() {
     if (effectsLevel === 2) {
-      bloom.enabled = false;
+      pipeline.dropBloom();
     }
     if (effectsLevel === 1) {
       sun.castShadow = false;
@@ -1205,6 +1210,7 @@ export function createScene(container) {
 
   let frameAverage = 16;
   let lastAdapt = 0;
+  let filmTime = 0;
 
   return {
     renderer,
@@ -1234,7 +1240,7 @@ export function createScene(container) {
       buildGround(world, track.samples, clearance);
       buildRoad(world, track.samples, track.length);
       if (name === 'city') {
-        buildCity(world, track.samples, clearance, groundY, quality, dot);
+        buildCity(world, track.samples, clearance, groundY, quality, dot, beamMap);
       }
       if (name === 'jungle') {
         buildJungle(world, track.samples, clearance, groundY, quality);
@@ -1297,6 +1303,11 @@ export function createScene(container) {
       return points[index]?.holder.position;
     },
 
+    // 0 to 1: how hard the edges of the picture streak (nitro).
+    setRush(amount) {
+      pipeline.setSpeed(amount * 0.16);
+    },
+
     // The shadow box and sun follow the car.
     follow(x, y, z) {
       sun.target.position.set(x, y, z);
@@ -1305,7 +1316,8 @@ export function createScene(container) {
 
     // Spin and bob the points, play the collect pop, follow the weather.
     animate(dt, time, carT, cameraPosition) {
-      skyMaterial.uniforms.time.value = time;
+      sky.setTime(time);
+      filmTime = time;
       if (boostMap) {
         boostMap.offset.y = (boostMap.offset.y + dt * 1.6) % 1;
       }
@@ -1353,7 +1365,7 @@ export function createScene(container) {
       } else {
         flakes.visible = false;
       }
-      sky.position.copy(cameraPosition);
+      sky.mesh.position.copy(cameraPosition);
       effects.update(dt);
     },
 
@@ -1385,8 +1397,7 @@ export function createScene(container) {
       width = nextWidth;
       height = nextHeight;
       renderer.setSize(width, height, false);
-      composer.setSize(width, height);
-      sizeBloom();
+      pipeline.setSize(width, height);
       effects.resize(height * pixelRatio);
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
@@ -1395,7 +1406,7 @@ export function createScene(container) {
     // Counted over the whole frame (scene, shadows and glow passes).
     render() {
       renderer.info.reset();
-      composer.render();
+      pipeline.render(filmTime);
     },
 
     // For the ?stats overlay.
@@ -1404,7 +1415,7 @@ export function createScene(container) {
         calls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
         ratio: pixelRatio,
-        bloom: bloom.enabled,
+        bloom: pipeline.bloomOn,
         shadows: sun.castShadow,
       };
     },

@@ -1,10 +1,15 @@
-// The 3D scene: baseplate, sky, sun and moon, blocks, the "ghost" preview,
-// camera controls and picking. Renders only when something changes, to save
-// battery.
+// The 3D scene: baseplate, lawn, hills and clouds, sky, sun and moon,
+// blocks, the "ghost" preview, camera controls and picking. The sky lights
+// and reflects on the blocks, textured blocks have bumps worked out from
+// their pictures, and the picture is finished like a photo: glow, sun
+// shafts, a lens flare and color grading (see gfx/post.js). Renders only
+// when something changes, to save battery.
 
 import * as THREE from '../../vendor/three/three.min.js';
 import { GRID, footprint, sunForHour } from './world.js';
 import { CELL_HEIGHT, geometryFor } from './shapes.js';
+import { createPipeline } from '../../gfx/post.js';
+import { normalMapFrom } from '../../gfx/surface.js';
 
 const HALF = GRID / 2;
 
@@ -12,12 +17,79 @@ const TEXTURE_ROUGHNESS = {
   brick: 0.9, stone: 0.95, wood: 0.7, marble: 0.25, metal: 0.35, fabric: 1, tiles: 0.3, leaves: 0.85,
 };
 
+// How deep each texture's bumps look.
+const TEXTURE_BUMPS = {
+  brick: 3.2, stone: 3.4, wood: 1.6, marble: 0.5, metal: 1.2, fabric: 2.6, tiles: 2.8, leaves: 3,
+};
+
+// Grass for the lawn, drawn in code: soft patches and many short blades.
+function grassPicture() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#69a94a';
+  ctx.fillRect(0, 0, size, size);
+  // A fixed sequence of numbers, so the lawn looks the same every visit.
+  let seed = 7;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+  for (let i = 0; i < 60; i += 1) {
+    const x = rand() * size;
+    const y = rand() * size;
+    const radius = 40 + rand() * 90;
+    // Drawn at every edge too, so the picture repeats without a seam.
+    [-size, 0, size].forEach((dx) => {
+      [-size, 0, size].forEach((dy) => {
+        const patch = ctx.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, radius);
+        patch.addColorStop(0, rand() < 0.5 ? 'rgba(40, 90, 30, 0.09)' : 'rgba(150, 200, 90, 0.08)');
+        patch.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = patch;
+        ctx.fillRect(x + dx - radius, y + dy - radius, radius * 2, radius * 2);
+      });
+    });
+  }
+  ctx.lineCap = 'round';
+  for (let i = 0; i < 9000; i += 1) {
+    const x = rand() * size;
+    const y = rand() * size;
+    const green = 110 + Math.floor(rand() * 110);
+    ctx.strokeStyle = `rgba(${Math.floor(green * 0.5)}, ${green}, ${Math.floor(green * 0.3)}, 0.7)`;
+    ctx.lineWidth = 1 + rand() * 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + (rand() - 0.5) * 6, y - 4 - rand() * 9);
+    ctx.stroke();
+  }
+  return canvas;
+}
+
+// A soft dark ring for under the baseplate: where it meets the lawn.
+function shadePicture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d');
+  const shade = ctx.createRadialGradient(128, 128, 60, 128, 128, 128);
+  shade.addColorStop(0, 'rgba(0, 20, 0, 0.55)');
+  shade.addColorStop(0.72, 'rgba(0, 20, 0, 0.42)');
+  shade.addColorStop(1, 'rgba(0, 20, 0, 0)');
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, 256, 256);
+  return canvas;
+}
+
 function mix(a, b, t) {
   return a + (b - a) * t;
 }
 
 export function createScene(container, { onReady } = {}) {
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  // Phones get the short version of the finishing pass, and smaller shadows.
+  const phone = Math.min(window.screen.width, window.screen.height) < 700 || window.matchMedia('(pointer: coarse)').matches;
+  const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -30,6 +102,8 @@ export function createScene(container, { onReady } = {}) {
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 5000);
   camera.position.set(15, 9, 21);
+
+  const pipeline = createPipeline(renderer, scene, camera, { full: !phone, msaa: phone ? 2 : 4, halfBloom: phone });
 
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.target.set(0, 1, 0);
@@ -55,7 +129,7 @@ export function createScene(container, { onReady } = {}) {
   sun.castShadow = true;
   // Smaller shadow maps on phones: cheaper, and the screen is small anyway.
   let shadowSize = 2048;
-  if (window.innerWidth < 700) {
+  if (phone) {
     shadowSize = 1024;
   }
   sun.shadow.mapSize.set(shadowSize, shadowSize);
@@ -83,6 +157,36 @@ export function createScene(container, { onReady } = {}) {
   camera.add(fill);
   scene.add(camera);
 
+  // The moon, opposite the sun: brighter than white, so it glows.
+  const moonDisc = new THREE.Mesh(
+    new THREE.SphereGeometry(26, 24, 16),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 1.8, 2.1), fog: false }),
+  );
+  scene.add(moonDisc);
+
+  // The sky also lights the blocks and shows in their shine. It is redrawn
+  // into a small all-around picture a moment after the time changes.
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const skyScene = new THREE.Scene();
+  const skyCopy = new THREE.Mesh(sky.geometry, sky.material);
+  skyCopy.scale.setScalar(100);
+  skyScene.add(skyCopy);
+  let environment = null;
+  let environmentTimer = null;
+
+  function updateEnvironment() {
+    const next = pmrem.fromScene(skyScene, 0.03, 0.1, 200).texture;
+    environment?.dispose();
+    environment = next;
+    scene.environment = environment;
+    requestRender();
+  }
+
+  function scheduleEnvironment() {
+    clearTimeout(environmentTimer);
+    environmentTimer = setTimeout(updateEnvironment, 140);
+  }
+
   const starPositions = new Float32Array(1500 * 3);
   for (let i = 0; i < 1500; i += 1) {
     const theta = Math.random() * Math.PI * 2;
@@ -99,15 +203,60 @@ export function createScene(container, { onReady } = {}) {
 
   /* ---------- Ground: a studded baseplate on a big lawn ---------- */
 
+  const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  const grass = new THREE.CanvasTexture(grassPicture());
+  grass.colorSpace = THREE.SRGBColorSpace;
+  const grassBumps = normalMapFrom(grass.image, { strength: 3 });
+  [grass, grassBumps].forEach((texture) => {
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(110, 110);
+    texture.anisotropy = anisotropy;
+  });
   const lawn = new THREE.Mesh(
     new THREE.CircleGeometry(400, 64),
-    new THREE.MeshStandardMaterial({ color: 0x6fae4f, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ map: grass, normalMap: grassBumps, roughness: 1, envMapIntensity: 0.4 }),
   );
   lawn.rotation.x = -Math.PI / 2;
   lawn.position.y = -0.21;
+  lawn.receiveShadow = true;
   scene.add(lawn);
 
-  const plateMaterial = new THREE.MeshStandardMaterial({ color: 0x3fa34d, roughness: 0.45 });
+  // The grass is darker right around the plate.
+  const shade = new THREE.Mesh(
+    new THREE.PlaneGeometry(GRID * 1.55, GRID * 1.55),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(shadePicture()), transparent: true, depthWrite: false }),
+  );
+  shade.rotation.x = -Math.PI / 2;
+  shade.position.y = -0.2;
+  scene.add(shade);
+
+  // Far away: rolling hills in the haze, and a few clouds that take the
+  // color of the sun.
+  const hillMaterial = new THREE.MeshStandardMaterial({ color: 0x5c9a48, roughness: 1, envMapIntensity: 0.3 });
+  const cloudMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, fog: false, envMapIntensity: 0.6 });
+  const blob = new THREE.SphereGeometry(1, 20, 12);
+  for (let i = 0; i < 16; i += 1) {
+    const angle = (i / 16) * Math.PI * 2 + Math.sin(i * 7.3) * 0.2;
+    const far = 96 + ((i * 37) % 50);
+    const hill = new THREE.Mesh(blob, hillMaterial);
+    hill.position.set(Math.cos(angle) * far, -3, Math.sin(angle) * far);
+    hill.scale.set(26 + ((i * 13) % 22), 9 + ((i * 5) % 9), 22 + ((i * 11) % 18));
+    scene.add(hill);
+  }
+  for (let i = 0; i < 9; i += 1) {
+    const angle = (i / 9) * Math.PI * 2 + 0.4;
+    const far = 230 + ((i * 53) % 120);
+    for (let k = 0; k < 5; k += 1) {
+      const puff = new THREE.Mesh(blob, cloudMaterial);
+      const size = 16 + ((i * 7 + k * 5) % 14);
+      puff.position.set(Math.cos(angle) * far + (k - 2) * 15, 80 + ((i * 17) % 40) + (k % 2) * 5, Math.sin(angle) * far + ((k * 9) % 12));
+      puff.scale.set(size, size * 0.55, size * 0.8);
+      scene.add(puff);
+    }
+  }
+
+  const plateMaterial = new THREE.MeshPhysicalMaterial({ color: 0x3fa34d, roughness: 0.4, clearcoat: 0.5, clearcoatRoughness: 0.25 });
   const plate = new THREE.Mesh(new THREE.BoxGeometry(GRID, 0.2, GRID), plateMaterial);
   plate.position.y = -0.1;
   plate.receiveShadow = true;
@@ -146,9 +295,26 @@ export function createScene(container, { onReady } = {}) {
     requestRender();
   }
 
+  const bumps = new Map();
+
+  // Once a texture's picture is here, its bumps are worked out from it and
+  // given to every material that uses it.
+  function addBumps(name, texture) {
+    const normalMap = normalMapFrom(texture.image, { strength: TEXTURE_BUMPS[name], size: { width: 512, height: 512 } });
+    normalMap.anisotropy = texture.anisotropy;
+    bumps.set(name, normalMap);
+    materials.forEach((material, key) => {
+      if (key.endsWith(`-${name}`)) {
+        material.normalMap = normalMap;
+        material.needsUpdate = true;
+      }
+    });
+    requestRender();
+  }
+
   function loadTexture(name) {
     if (!textures.has(name)) {
-      const texture = textureLoader.load(`art/tex-${name}.webp`, () => requestRender(), undefined, () => dropTexture(name));
+      const texture = textureLoader.load(`art/tex-${name}.webp`, (loaded) => addBumps(name, loaded), undefined, () => dropTexture(name));
       texture.colorSpace = THREE.SRGBColorSpace;
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
@@ -170,12 +336,13 @@ export function createScene(container, { onReady } = {}) {
         material = new THREE.MeshStandardMaterial({
           color,
           map: loadTexture(texture),
+          normalMap: bumps.get(texture) || null,
           roughness: TEXTURE_ROUGHNESS[texture],
           metalness,
         });
       } else {
-        // Shiny toy plastic.
-        material = new THREE.MeshStandardMaterial({ color, roughness: 0.32, metalness: 0 });
+        // Shiny toy plastic, with a clear glossy coat that shows the sky.
+        material = new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.14 });
       }
       materials.set(key, material);
     }
@@ -357,10 +524,16 @@ export function createScene(container, { onReady } = {}) {
 
     moon.position.copy(sunDirection).multiplyScalar(-60);
     moon.intensity = 1.4 * (1 - daylight);
+    moonDisc.position.copy(sunDirection).multiplyScalar(-1400);
+    moonDisc.visible = daylight < 0.6;
 
-    // Nights are moonlit, not black, so building still works.
-    hemisphere.intensity = mix(1.1, 1.5, daylight);
-    fill.intensity = mix(0.35, 0.9, daylight);
+    // Nights are moonlit, not black, so building still works. (The sky's
+    // own light comes on top of these, see updateEnvironment.)
+    hemisphere.intensity = mix(1.35, 1.05, daylight);
+    fill.intensity = mix(0.45, 0.65, daylight);
+    // The day sky is very bright, so a little of it goes a long way.
+    scene.environmentIntensity = mix(0.35, 0.07, Math.min(1, daylight / 0.3));
+    scheduleEnvironment();
     hemisphere.color.copy(nightSky).lerp(daySky, daylight);
     hemisphere.groundColor.copy(nightGround).lerp(dayGround, daylight);
     // Around sunrise and sunset, everything gets a warm glow.
@@ -370,6 +543,27 @@ export function createScene(container, { onReady } = {}) {
     scene.fog.color.copy(nightSky).lerp(daySky, daylight);
     starMaterial.opacity = Math.max(0, 1 - daylight / 0.35);
     renderer.toneMappingExposure = mix(0.7, 0.85, daylight);
+    // The lens: more glow at night and at sunset, shafts while the sun is up.
+    pipeline.setSun(sunDirection);
+    pipeline.look({
+      // By day this sky is many times brighter than white, so only the
+      // sun itself may glow. At night the moon, the stars and the shine
+      // on the blocks do.
+      bloom: mix(0.45, 0.25, daylight) + glow * 0.2,
+      threshold: mix(1.2, 40, Math.min(1, daylight / 0.3)),
+      radius: 0.55,
+      rays: 0.3 * Math.min(1, Math.max(0, (elevation + 2) / 10)),
+      rayFloor: 30,
+      flare: 0.7,
+      sunColor: `#${sun.color.getHexString()}`,
+      vignette: mix(0.32, 0.26, daylight),
+      grain: 0.018,
+      aberration: 0.006,
+      saturation: 1.1,
+      contrast: 1.05,
+      tint: glow > 0.3 ? '#fff0dc' : '#fffaf2',
+      shadowTint: daylight > 0.5 ? '#00030a' : '#02041a',
+    });
     requestRender();
   }
 
@@ -395,6 +589,7 @@ export function createScene(container, { onReady } = {}) {
     const width = container.clientWidth;
     const height = container.clientHeight;
     renderer.setSize(width, height, false);
+    pipeline.setSize(width, height);
     camera.aspect = width / Math.max(1, height);
     camera.updateProjectionMatrix();
     requestRender();
@@ -414,7 +609,9 @@ export function createScene(container, { onReady } = {}) {
       return;
     }
     needsRender = false;
-    renderer.render(scene, camera);
+    // The same film grain every time: the picture only changes when the
+    // scene does.
+    pipeline.render(0);
   }
 
   resize();

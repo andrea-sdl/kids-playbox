@@ -1,8 +1,8 @@
 // Builds offline.json: which files the service worker saves for offline use.
 //   shell  – home page, shared code and icons, saved on the first visit
 //   games  – everything inside games/<id>/, plus any extra files a game
-//            needs from elsewhere (like a vendored library), saved when the
-//            game is opened
+//            needs from elsewhere (a vendored library, the gfx/ code the
+//            3D games share), saved when the game is opened
 //   notes  – the release notes for What's new, saved when first read
 //
 // Run `npm run offline` after adding, renaming or removing files.
@@ -15,9 +15,9 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 
 // Files outside games/<id>/ that a game needs.
 const GAME_EXTRAS = {
-  blocks: ['vendor/three'],
-  drive: ['vendor/three'],
-  skate: ['vendor/three'],
+  blocks: ['vendor/three', 'gfx'],
+  drive: ['vendor/three', 'gfx'],
+  skate: ['vendor/three', 'gfx'],
 };
 
 function listFiles(path) {
