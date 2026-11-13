@@ -10,7 +10,7 @@
 // The file lists live in offline.json. Bump VERSION on every release so
 // players get the update on their next visit.
 
-const VERSION = 'playbox-v27';
+const VERSION = 'playbox-v28';
 const MANIFEST_URL = './offline.json';
 
 async function fetchManifest() {

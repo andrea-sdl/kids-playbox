@@ -6,9 +6,9 @@
 // one smooth surface. The body is shaped ring by ring from tables of real
 // proportions (about seven and a half heads tall): shoulders wider than
 // hips, a chest, shoulder blades, thighs, calves and tapering forearms.
-// Clothes are a second layer with thickness, hems and folds. The head is
-// sculpted (brow, eye sockets, nose, lips, jaw), with hair that has volume
-// and locks. Hands have fingers that close around the bars or the board.
+// Clothes are a second layer with thickness, hems and folds. The rider
+// has one build and no face, so anyone can see themselves in them; the
+// head has a jaw, ears and hair with volume and locks. Hands have fingers that close around the bars or the board.
 //
 // Each frame the pose is worked out the same way as before: two-bone IK
 // keeps the feet on the board or pedals and sends the hands where the pose
@@ -47,6 +47,7 @@ const BIKE = {
 // pose), then the bones move it. Heights here are in that pose.
 const REST_HIPS = 1;
 // Half the distance between the hip joints, and between the shoulders.
+// One build for every rider: athletic, and neither a girl's nor a boy's.
 const HIP = 0.095;
 const SHOULDER = 0.185;
 // Above the hips: where the spine bends, the chest, and the head's middle.
@@ -129,6 +130,53 @@ function boneOf(side, part) {
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+
+/* ---------- Pictures ---------- */
+
+// Detail a shape can't give comes from pictures in art/: the weave of
+// cloth and the strands of hair (gray, so the chosen colors tint
+// them). They load once, in the background. A rider built before they
+// arrive starts with its drawn-in-code look and is dressed again when
+// they do; if one never arrives, the rider simply stays as it was.
+const PICTURES = ['rider-twill', 'rider-knit', 'rider-fleece', 'rider-shell', 'rider-hair'];
+const pictures = {};
+const fitting = new Set();
+let asked = false;
+
+function askPictures() {
+  if (asked || typeof Image === 'undefined') {
+    return;
+  }
+  asked = true;
+  PICTURES.forEach((name) => {
+    const image = new Image();
+    image.onload = () => {
+      pictures[name] = image;
+      fitting.forEach((dress) => dress());
+    };
+    image.src = new URL(`./art/${name}.webp`, import.meta.url).href;
+  });
+}
+
+// The color skin really has under the sun: the shop's swatch is the lit
+// color, so the surface itself is a little darker and richer.
+function skinTone(color) {
+  const tone = new THREE.Color(color);
+  // Pale swatches need the most taking down; dark ones are nearly right.
+  const pale = smooth(0.08, 0.6, tone.g);
+  return tone.setRGB(tone.r * (0.92 - 0.18 * pale), tone.g * (0.82 - 0.32 * pale), tone.b * (0.74 - 0.38 * pale));
+}
+
+// A gray detail picture as a repeating surface, and the bumps in it.
+function detailTextures(image, strength) {
+  const map = new THREE.Texture(image);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = THREE.RepeatWrapping;
+  map.wrapT = THREE.RepeatWrapping;
+  map.anisotropy = 8;
+  map.needsUpdate = true;
+  return { map, bumps: normalMapFrom(image, { strength }) };
+}
 
 function smooth(from, to, value) {
   const t = Math.min(1, Math.max(0, (value - from) / (to - from)));
@@ -241,17 +289,21 @@ class Sculpt {
     this.position = [];
     this.color = [];
     this.uv = [];
+    // Where the cloth's weave falls: kept apart from `uv`, so a printed
+    // top can carry its picture and still have a weave.
+    this.weave = [];
     this.bones = [];
     this.weights = [];
     this.index = [];
     this.seams = [];
   }
 
-  vertex(x, y, z, color, u, v, weights) {
+  vertex(x, y, z, color, u, v, weights, weaveU = u, weaveV = v) {
     const i = this.position.length / 3;
     this.position.push(x, y, z);
     this.color.push(color.r, color.g, color.b);
     this.uv.push(u, v);
+    this.weave.push(weaveU, weaveV);
     const list = asWeights(weights, x, y, z);
     for (let k = 0; k < 4; k += 1) {
       this.bones.push(list[k] ? list[k][0] : 0);
@@ -301,10 +353,11 @@ class Sculpt {
         const cv = Math.sin(angle);
         const pu = cu * (cu >= 0 ? r[0] : r[1]);
         const pv = cv * (cv >= 0 ? r[2] : r[3]);
-        const [tu, tv] = map ? spot(j / around, ring) : [(j / around) * girth * WEAVE, run * WEAVE];
+        const woven = [(j / around) * girth * WEAVE, run * WEAVE];
+        const [tu, tv] = map ? spot(j / around, ring) : woven;
         this.vertex(
           ring.at[0] + u[0] * pu + v[0] * pv, ring.at[1] + u[1] * pu + v[1] * pv, ring.at[2] + u[2] * pu + v[2] * pv,
-          ring.color || color, tu, tv, ring.weights || weights,
+          ring.color || color, tu, tv, ring.weights || weights, woven[0], woven[1],
         );
       }
       this.seams.push([first + i * row, first + i * row + around]);
@@ -446,6 +499,7 @@ class Sculpt {
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.position, 3));
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(this.color, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
+    geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(this.weave, 2));
     geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(this.bones, 4));
     geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(this.weights, 4));
     geometry.setIndex(this.index);
@@ -1000,8 +1054,10 @@ function printTexture(color, full) {
 
 function buildBody(kit, look, board) {
   const { skin, cloth, print, gear } = kit;
+  // A hoodie or a jacket is made of its own cloth.
+  const upper = kit.top;
   const bike = board === 'bike';
-  const skinColor = new THREE.Color(look.skin);
+  const skinColor = skinTone(look.skin);
   const top = new THREE.Color(look.topColor);
   const topTrim = shade(look.topColor, 0.72);
   const bottom = new THREE.Color(look.bottomColor);
@@ -1034,8 +1090,8 @@ function buildBody(kit, look, board) {
   const frontAt = (y) => Math.max(measure(TORSO, y)[2] + fit.pad, y < 0.4 ? fit.least[1] : 0);
   const neckline = tee ? 0.538 : 0.55;
   // A T-shirt carries a print, so it is drawn from its picture; the other
-  // tops are plain cloth.
-  trunk(tee ? print : cloth, {
+  // tops are plain upper.
+  trunk(tee ? print : upper, {
     from: fit.hem, to: neckline, pad: fit.pad, least: fit.least, color: tee ? PLAIN : top, lipStart: true, lipEnd: true,
     shape: folds(0.17, 0.14, fit.crease, 90),
     tint: (y) => {
@@ -1056,7 +1112,7 @@ function buildBody(kit, look, board) {
       });
       return;
     }
-    limb(cloth, ARM, origin, side, armWeights, {
+    limb(upper, ARM, origin, side, armWeights, {
       from: -0.05, to: 0.56, pad: fit.sleeve, least: 0.04, color: top, lipEnd: true, capStart: true,
       shape: folds(0.29, 0.1, 0.035, 130),
       tint: (t) => (t > 0.515 ? topTrim : top),
@@ -1064,16 +1120,16 @@ function buildBody(kit, look, board) {
   });
   if (look.top === 'hoodie') {
     // The hood lying on the back, a pouch pocket and two drawstrings.
-    cloth.ball([-0.1, REST_HIPS + 0.535, 0], [0.062, 0.09, 0.118], top, CHEST, { segments: 14, turn: [0, 0, 0.35] });
-    cloth.ball([-0.05, REST_HIPS + 0.56, 0], [0.085, 0.03, 0.1], topTrim, CHEST, { segments: 12 });
-    cloth.block([frontAt(0.15) - 0.002, REST_HIPS + 0.15, 0], [0.016, 0.1, 0.2], topTrim, onTrunk);
+    upper.ball([-0.1, REST_HIPS + 0.535, 0], [0.062, 0.09, 0.118], top, CHEST, { segments: 14, turn: [0, 0, 0.35] });
+    upper.ball([-0.05, REST_HIPS + 0.56, 0], [0.085, 0.03, 0.1], topTrim, CHEST, { segments: 12 });
+    upper.block([frontAt(0.15) - 0.002, REST_HIPS + 0.15, 0], [0.016, 0.1, 0.2], topTrim, onTrunk);
     [-1, 1].forEach((side) => {
-      cloth.path([[frontAt(0.52) - 0.004, REST_HIPS + 0.53, side * 0.03], [frontAt(0.47) + 0.004, REST_HIPS + 0.47, side * 0.034], [frontAt(0.4) + 0.004, REST_HIPS + 0.4, side * 0.03]], 0.0042, { around: 6, color: WHITE, weights: CHEST });
+      upper.path([[frontAt(0.52) - 0.004, REST_HIPS + 0.53, side * 0.03], [frontAt(0.47) + 0.004, REST_HIPS + 0.47, side * 0.034], [frontAt(0.4) + 0.004, REST_HIPS + 0.4, side * 0.03]], 0.0042, { around: 6, color: WHITE, weights: CHEST });
     });
   }
   if (look.top === 'jacket') {
     // A stand-up collar, a zip down the front and two chest pockets.
-    cloth.tube([
+    upper.tube([
       { at: [0.004, REST_HIPS + 0.535, 0], r: [0.075, 0.078, 0.078, 0.078] },
       { at: [0.008, REST_HIPS + 0.6, 0], r: [0.068, 0.07, 0.068, 0.068] },
       { at: [0.008, REST_HIPS + 0.6, 0], r: [0.058, 0.06, 0.058, 0.058] },
@@ -1082,9 +1138,9 @@ function buildBody(kit, look, board) {
     for (let y = fit.hem + 0.01; y <= 0.56; y += 0.05) {
       zip.push([frontAt(y) + 0.001, REST_HIPS + y, 0]);
     }
-    cloth.path(zip, [0.007, 0.004], { around: 6, up: [1, 0, 0], color: new THREE.Color('#d9dce2'), weights: onTrunk });
+    upper.path(zip, [0.007, 0.004], { around: 6, up: [1, 0, 0], color: new THREE.Color('#d9dce2'), weights: onTrunk });
     [-1, 1].forEach((side) => {
-      cloth.block([frontAt(0.38) - 0.012, REST_HIPS + 0.38, side * 0.088], [0.014, 0.02, 0.075], topTrim, CHEST);
+      upper.block([frontAt(0.38) - 0.012, REST_HIPS + 0.38, side * 0.088], [0.014, 0.02, 0.075], topTrim, CHEST);
     });
   }
 
@@ -1147,10 +1203,10 @@ function bump(y, z, atY, atZ, tall, wide) {
 }
 
 // A point on the head, from how far down from the crown it is (`polar`)
-// and how far around from the nose (`around`), `lift` above the skin. The
-// head starts as an egg; then the jaw narrows, the back of the neck tucks
-// in, and the face is pressed out and in: brow, sockets, nose, cheeks,
-// lips and chin. Returns [x, y, z, how much lip] from the head's middle.
+// and how far around from the front (`around`), `lift` above the skin. The
+// head starts as an egg; then the jaw narrows and the back of the neck
+// tucks in. The front is left plain on purpose: the rider has no face, so
+// they can be anyone. Only a soft ridge and a chin say which way they look.
 function headPoint(polar, around, lift = 0) {
   const ring = Math.sin(polar);
   const dx = ring * Math.cos(around);
@@ -1164,20 +1220,13 @@ function headPoint(polar, around, lift = 0) {
   if (x < 0) {
     x *= 1 - 0.42 * low;
   }
-  const face = smooth(0.1, 0.5, dx);
-  const lips = bump(y, z, -0.0615, 0, 0.0062, 0.023) + bump(y, z, -0.0765, 0, 0.0066, 0.019);
-  x += face * (
+  const front = smooth(0.1, 0.5, dx);
+  x += front * (
     0.024 * smooth(0.03, 0.11, -y)
-    + 0.006 * bump(y, z, 0.03, 0, 0.012, 0.06)
-    - 0.0115 * (bump(y, z, 0.008, 0.031, 0.012, 0.017) + bump(y, z, 0.008, -0.031, 0.012, 0.017))
-    + 0.021 * bump(y, z, -0.03, 0, 0.019, 0.0105)
-    + 0.01 * bump(y, z, 0, 0, 0.03, 0.008)
-    + 0.004 * (bump(y, z, -0.022, 0.047, 0.02, 0.02) + bump(y, z, -0.022, -0.047, 0.02, 0.02))
-    + 0.006 * lips
-    - 0.0045 * bump(y, z, -0.069, 0, 0.0028, 0.027)
+    + 0.007 * bump(y, z, -0.02, 0, 0.03, 0.014)
     + 0.007 * bump(y, z, -0.104, 0, 0.016, 0.022)
   );
-  return [x + dx * lift, y + dy * lift, z + dz * lift, face * lips];
+  return [x + dx * lift, y + dy * lift, z + dz * lift];
 }
 
 // The same point in the rest pose.
@@ -1193,7 +1242,7 @@ function faceAround(share) {
 
 // How far down from the crown the hair grows, by how far around from the
 // nose: the forehead, the temples, over the ears and down to the nape.
-const HAIRLINE = [[0, 55], [40, 59], [68, 73], [90, 88], [112, 110], [150, 126], [180, 130]];
+const HAIRLINE = [[0, 57], [40, 58], [68, 72], [90, 88], [112, 110], [150, 126], [180, 130]];
 
 function hairline(around) {
   const degrees = Math.abs(around) * (180 / Math.PI);
@@ -1218,40 +1267,16 @@ function scalp(sculpt, color, { reach, lift, from = 0, rows = 14, cols = 40 }) {
 }
 
 function buildHead(kit, look) {
-  const { skin, gloss, gear } = kit;
-  const skinColor = new THREE.Color(look.skin);
-  const lipColor = new THREE.Color(look.skin).lerp(new THREE.Color('#b8474a'), 0.36);
-  const tone = new THREE.Color();
-  skin.grid(44, 52, (i, j) => {
-    const point = headPoint((i / 44) * Math.PI, faceAround(j / 52));
-    tone.copy(skinColor).lerp(lipColor, Math.min(1, point[3] * 1.6));
-    return { at: onHead(point), color: tone.clone() };
-  }, { weights: HEAD, center: [0, REST_HEAD, 0] });
-
-  const browColor = shade(look.hairColor, 0.6);
+  const { skin, face } = kit;
+  const skinColor = skinTone(look.skin);
+  face.grid(44, 52, (i, j) => ({
+    at: onHead(headPoint((i / 44) * Math.PI, faceAround(j / 52))),
+    color: skinColor.clone(),
+  }), { weights: HEAD, center: [0, REST_HEAD, 0] });
+  // Ears, each with its darker hollow.
   [-1, 1].forEach((side) => {
-    const z = side * 0.031;
-    const eye = [0.0775, REST_HEAD + 0.008, z];
-    // The eye sits in its socket: white, iris, pupil and a glint, under a
-    // lid, with a lash line and a brow above.
-    gloss.ball(eye, [0.012, 0.012, 0.0135], new THREE.Color('#f4f3ee'), HEAD, { segments: 14 });
-    gloss.ball([eye[0] + 0.0072, eye[1] - 0.0005, z], [0.0055, 0.0068, 0.0068], new THREE.Color('#4a2f1c'), HEAD, { segments: 12 });
-    gloss.ball([eye[0] + 0.0108, eye[1] - 0.0005, z], [0.0026, 0.0033, 0.0033], new THREE.Color('#0d0a0c'), HEAD, { segments: 8 });
-    gloss.ball([eye[0] + 0.0124, eye[1] + 0.0026, z + 0.0026], [0.0011, 0.0013, 0.0013], new THREE.Color('#ffffff'), HEAD, { segments: 6 });
-    skin.ball([eye[0] - 0.0005, eye[1] + 0.0085, z], [0.0128, 0.0075, 0.0155], skinColor, HEAD, { segments: 12 });
-    skin.ball([eye[0] - 0.001, eye[1] - 0.0112, z], [0.0118, 0.005, 0.0145], skinColor, HEAD, { segments: 10 });
-    gear.path([[eye[0] + 0.0068, eye[1] + 0.0058, z - 0.013], [eye[0] + 0.0122, eye[1] + 0.0086, z], [eye[0] + 0.0068, eye[1] + 0.0058, z + 0.013]], 0.001, { around: 5, color: new THREE.Color('#2a1c18'), weights: HEAD });
-    const brow = [0.05, 0.03, 0.012].map((out, k) => {
-      const at = [0.02, 0.034, 0.032][k];
-      const surface = headPoint(Math.acos(at / 0.1175), Math.atan2(side * out, 0.085), 0.0015);
-      return onHead([surface[0], at, side * out]);
-    });
-    gear.path(brow, (t) => [0.0016, 0.0027 - t * 0.0009], { around: 6, color: browColor, weights: HEAD });
-    // The ear, with its darker hollow.
-    skin.ball([-0.012, REST_HEAD - 0.004, side * 0.079], [0.017, 0.03, 0.009], skinColor, HEAD, { segments: 12, turn: [side * 0.25, side * -0.35, 0.15] });
-    skin.ball([-0.008, REST_HEAD - 0.004, side * 0.0845], [0.009, 0.019, 0.005], shade(look.skin, 0.72), HEAD, { segments: 8, turn: [side * 0.25, side * -0.35, 0.15] });
-    // The wings of the nose.
-    skin.ball([0.0925, REST_HEAD - 0.04, side * 0.0105], [0.0062, 0.0052, 0.0066], skinColor, HEAD, { segments: 8 });
+    skin.ball([-0.012, REST_HEAD - 0.004, side * 0.0745], [0.017, 0.03, 0.008], skinColor, HEAD, { segments: 12, turn: [side * 0.18, side * -0.28, 0.15] });
+    skin.ball([-0.009, REST_HEAD - 0.004, side * 0.0795], [0.009, 0.019, 0.005], skinTone(look.skin).multiplyScalar(0.72), HEAD, { segments: 8, turn: [side * 0.25, side * -0.35, 0.15] });
   });
 }
 
@@ -1291,7 +1316,7 @@ function buildHair(kit, look) {
   const style = look.hair;
   const cropped = style === 'buzz' || style === 'mohawk';
   // The hair on the scalp: thick and wavy, or a short stubble.
-  const body = { short: 0.014, long: 0.017, ponytail: 0.011, curly: 0.012, mohawk: 0.0035, buzz: 0.0045 }[style];
+  const body = { short: 0.016, long: 0.017, ponytail: 0.011, curly: 0.012, mohawk: 0.0035, buzz: 0.0045 }[style];
   scalp(hair, cropped ? dark : color, {
     reach: (around) => hairline(around) + (style === 'long' ? 0.12 * smooth(1.2, 2.2, Math.abs(around)) : 0),
     lift: (polar, around, share) => {
@@ -1304,21 +1329,28 @@ function buildHair(kit, look) {
   });
 
   if (style === 'short' && !covered) {
-    // Layered locks combed forward and to one side, lying on the head.
-    for (let k = 0; k < 60; k += 1) {
+    // Tousled: layers of locks that lift off the head and fall every
+    // which way, mostly swept to one side, with a loose fringe that
+    // stops short of the brows.
+    let seed = 11;
+    const chance = () => {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    };
+    for (let k = 0; k < 96; k += 1) {
       const around = ((k * 2.399) % (Math.PI * 2)) - Math.PI;
-      const polar = 0.1 + ((k * 0.618) % 1) * 1.05;
-      if (polar > hairline(around) - 0.1) {
-        continue;
-      }
-      const root = headPoint(polar, around, 0.011);
-      // Each lock runs forward over the head and ends a little further on.
-      const ahead = (step) => {
-        const next = Math.abs(around) * (1 - 0.3 * step);
-        const at = headPoint(polar + 0.02 * step + (Math.abs(around) < 0.9 ? 0.2 * step : 0), Math.sign(around || 1) * next + 0.12 * step, 0.02 - 0.004 * step * step);
-        return [at[0], at[1], at[2]];
+      const edge = hairline(around);
+      const polar = 0.06 + ((k * 0.618) % 1) * (edge - 0.1);
+      const front = Math.abs(around) < 1.1 && polar > edge - 0.34;
+      // Which way the lock runs: around the head and a little down.
+      const sweep = (0.3 + chance() * 0.35) * (chance() < 0.82 ? 1 : -1) / Math.max(0.45, Math.sin(polar));
+      const down = front ? 0.1 + chance() * 0.08 : (chance() - 0.35) * 0.3;
+      const lift = 0.02 + chance() * 0.018;
+      const at = (step, raise) => {
+        const point = headPoint(Math.min(polar + down * step, edge + (front ? 0.07 : 0.02)), around + sweep * step, raise);
+        return [point[0], point[1], point[2]];
       };
-      lock(hair, pick(k), [[root[0], root[1], root[2]], ahead(1), ahead(2)], 0.015, 0.3);
+      lock(hair, pick(k), [at(0, 0.008), at(0.5, lift), at(1, lift * 0.75)], 0.012 + chance() * 0.006, 0.22);
     }
   }
   if (style === 'long') {
@@ -1683,12 +1715,15 @@ export function buildRider(look, board) {
   const strands = normalMapFrom(lines.image, { strength: 2.4 });
   owned.push(grain, weave, lines, strands);
   // Skin has a soft sheen at its edges, like light through a cheek.
+  const skinLook = () => new THREE.MeshPhysicalMaterial({
+    vertexColors: true, roughness: 0.62, sheen: 0.1, sheenRoughness: 0.5, envMapIntensity: 0.35,
+    sheenColor: skinTone(look.skin).lerp(new THREE.Color('#ff7a5a'), 0.5),
+  });
   const materials = {
-    skin: new THREE.MeshPhysicalMaterial({
-      vertexColors: true, roughness: 0.55, sheen: 0.3, sheenRoughness: 0.5,
-      sheenColor: new THREE.Color(look.skin).lerp(new THREE.Color('#ff9a7a'), 0.5),
-    }),
+    skin: skinLook(),
+    face: skinLook(),
     cloth: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84, normalMap: weave, side: THREE.DoubleSide }),
+    top: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: look.top === 'jacket' ? 0.6 : 0.92, normalMap: weave, side: THREE.DoubleSide }),
     gear: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, side: THREE.DoubleSide }),
     gloss: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.14, metalness: 0.12, clearcoat: 1, clearcoatRoughness: 0.1, side: THREE.DoubleSide }),
     hair: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.48, normalMap: strands, side: THREE.DoubleSide }),
@@ -1699,7 +1734,7 @@ export function buildRider(look, board) {
     materials.print.map = printTexture(look.topColor, bike);
     owned.push(materials.print.map);
   }
-  const kit = { skin: new Sculpt(), cloth: new Sculpt(), gear: new Sculpt(), gloss: new Sculpt(), hair: new Sculpt(), print: new Sculpt() };
+  const kit = { skin: new Sculpt(), face: new Sculpt(), cloth: new Sculpt(), top: new Sculpt(), gear: new Sculpt(), gloss: new Sculpt(), hair: new Sculpt(), print: new Sculpt() };
   buildBody(kit, look, board);
   buildHead(kit, look);
   buildHair(kit, look);
@@ -1711,7 +1746,7 @@ export function buildRider(look, board) {
     if (snow || bike) {
       buildHand(kit.gear, side, DARK, snow ? 1.32 : 1.12);
     } else {
-      buildHand(kit.skin, side, new THREE.Color(look.skin));
+      buildHand(kit.skin, side, skinTone(look.skin));
     }
     buildShoe(kit, side, snow, look, bike);
   });
@@ -1744,6 +1779,7 @@ export function buildRider(look, board) {
   });
   group.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(bones);
+  const meshes = {};
   Object.entries(kit).forEach(([name, sculpt]) => {
     if (sculpt.empty) {
       materials[name].dispose();
@@ -1752,7 +1788,41 @@ export function buildRider(look, board) {
     const mesh = sculpt.mesh(materials[name]);
     body.add(mesh);
     mesh.bind(skeleton);
+    meshes[name] = mesh;
   });
+
+  // Puts on whichever pictures have arrived and aren't on yet.
+  const worn = new Set();
+  function dress() {
+    const fresh = (name) => pictures[name] && !worn.has(name) && worn.add(name);
+    // A printed top keeps its picture and only takes the knit's bumps,
+    // laid by the weave's own coordinates.
+    if (meshes.print && fresh('rider-knit')) {
+      const { map, bumps } = detailTextures(pictures['rider-knit'], 1.8);
+      map.dispose();
+      bumps.channel = 1;
+      owned.push(bumps);
+      materials.print.normalMap = bumps;
+      materials.print.needsUpdate = true;
+    }
+    const upperCloth = look.top === 'jacket' ? 'rider-shell' : 'rider-fleece';
+    [['rider-twill', 'cloth', 2.2, 1.3], [upperCloth, 'top', 2.4, 1.3], ['rider-hair', 'hair', 2.6, 1.45]].forEach(([name, part, strength, lift]) => {
+      const material = materials[part];
+      if (!meshes[part] || !fresh(name)) {
+        return;
+      }
+      const { map, bumps } = detailTextures(pictures[name], strength);
+      owned.push(map, bumps);
+      material.map = map;
+      material.normalMap = bumps;
+      // The picture is gray: brighten, so colors stay as chosen.
+      material.color.setScalar(lift);
+      material.needsUpdate = true;
+    });
+  }
+  askPictures();
+  dress();
+  fitting.add(dress);
 
   // The pose is worked out on these, then copied to the bones.
   const hips = new THREE.Object3D();
@@ -1797,14 +1867,15 @@ export function buildRider(look, board) {
     if (now.bail > 0.001) {
       // Tip over sideways, then lie there.
       axis.set(0, 0, -1);
-      fall.setFromAxisAngle(axis, now.bail * Math.PI * 0.45);
+      fall.setFromAxisAngle(axis, now.bail * Math.PI * 0.5);
       flipQ.premultiply(fall);
     }
     spinner.quaternion.copy(spinQ).multiply(flipQ);
     rotatedPivot.copy(pivot).applyQuaternion(flipQ).applyQuaternion(spinQ);
     if (flipQ.w < 0.99999) {
       spinner.position.copy(pivot).applyQuaternion(spinQ).sub(rotatedPivot);
-      spinner.position.y -= now.bail * 0.72;
+      // Lying on its side, the body rests a shoulder's width off the ground.
+      spinner.position.y -= now.bail * 0.68;
     } else {
       spinner.position.set(0, 0, 0);
     }
@@ -2174,6 +2245,7 @@ export function buildRider(look, board) {
     boardWorld,
     length: { skate: 0.82, snow: 1.45, bike: 1.2 }[board],
     dispose() {
+      fitting.delete(dress);
       group.traverse((object) => {
         object.geometry?.dispose();
         [object.material].flat().forEach((material) => material?.dispose());

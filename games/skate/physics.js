@@ -10,12 +10,12 @@
 
 export const GRAVITY = 16;
 // The speed the rider sets off at, and never drops far below.
-export const START_SPEED = 7;
-const PUSH = 6;
-export const MAX_SPEED = 26;
+export const START_SPEED = 11;
+const PUSH = 9;
+export const MAX_SPEED = 36;
 // Wind: grows with the square of the speed. On the average slope this
-// settles near 17 m/s.
-const DRAG = 0.016;
+// settles near 24 m/s (about 85 km/h), and faster on the steep parts.
+const DRAG = 0.008;
 // How much a hard turn slows the ride.
 const CARVE = 0.22;
 export const OLLIE = 6.8;

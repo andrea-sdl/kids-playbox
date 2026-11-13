@@ -184,11 +184,11 @@ function ledge(u, z, w, l, h, style) {
 export const FEATURES = {
   jump: (z, u, roll) => {
     const h = 1.5 + roll() * 0.6;
-    return { pieces: [kicker(u, z + 3, 5, 6, h)], length: 6, after: 16, letter: [u, 3, z + 14], reach: 2.5 };
+    return { pieces: [kicker(u, z + 3, 5, 6, h)], length: 6, after: 26, letter: [u, 3, z + 18], reach: 2.5 };
   },
   twin: (z, u) => ({
     pieces: [kicker(u - 3.5, z + 2.5, 4, 5, 1.2), kicker(u + 3.5, z + 3, 4, 6, 2.1)],
-    length: 6, after: 18, letter: [u + 3.5, 3.4, z + 16], reach: 5.5,
+    length: 6, after: 28, letter: [u + 3.5, 3.4, z + 20], reach: 5.5,
   }),
   rail: (z, u) => ({ pieces: [rail(u, z, 24, 0.6, 0.5)], length: 24, after: 0, letter: [u, 1.9, z + 12], reach: 0.5 }),
   jumpRail: (z, u) => ({
@@ -234,7 +234,8 @@ function layout(seed) {
     const frame = { z, u, length: made.length };
     pieces.push(...made.pieces.map((piece) => ({ ...piece, frame })));
     spots.push({ at: made.letter, frame });
-    z += made.length + made.after + 24 + roll() * 12;
+    // Room to land and line up for the next one, at speed.
+    z += made.length + made.after + 32 + roll() * 14;
   }
   return { pieces, spots };
 }

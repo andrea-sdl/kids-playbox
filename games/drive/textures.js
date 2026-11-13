@@ -130,6 +130,58 @@ function toTexture(canvas, { color = true, repeat = true } = {}) {
   return texture;
 }
 
+/* ---------- Pictures as surfaces ---------- */
+
+// A picture made to repeat: four mirrored copies side by side, so its
+// edges always match.
+function mirroredTile(image, size) {
+  const canvas = makeCanvas(size * 2, size * 2);
+  const ctx = canvas.getContext('2d');
+  [[0, 0, 1, 1], [1, 0, -1, 1], [0, 1, 1, -1], [1, 1, -1, -1]].forEach(([column, row, flipX, flipY]) => {
+    ctx.save();
+    ctx.translate((column + (flipX < 0 ? 1 : 0)) * size, (row + (flipY < 0 ? 1 : 0)) * size);
+    ctx.scale(flipX, flipY);
+    ctx.drawImage(image, 0, 0, size, size);
+    ctx.restore();
+  });
+  return canvas;
+}
+
+// Covers part of a canvas with a repeating picture.
+function fillWith(ctx, image, x, y, width, height, tile = 256) {
+  ctx.fillStyle = ctx.createPattern(mirroredTile(image, tile), 'repeat');
+  ctx.fillRect(x, y, width, height);
+}
+
+// A building front from a picture of lit windows at night: the picture
+// itself, and a second one that keeps only its bright parts, so the
+// windows glow. The corner is left dark for roofs and floors.
+export function facadeFromPicture(image) {
+  const size = 1024;
+  const color = makeCanvas(size, size);
+  const ctx = color.getContext('2d');
+  fillWith(ctx, image, 0, 0, size, size, 512);
+  const glow = makeCanvas(size, size);
+  const glowCtx = glow.getContext('2d', { willReadFrequently: true });
+  glowCtx.drawImage(color, 0, 0);
+  const pixels = glowCtx.getImageData(0, 0, size, size);
+  const data = pixels.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const bright = Math.max(data[i], data[i + 1], data[i + 2]) / 255;
+    const t = Math.min(1, Math.max(0, (bright - 0.42) / 0.36));
+    const keep = t * t * (3 - 2 * t);
+    data[i] *= keep;
+    data[i + 1] *= keep;
+    data[i + 2] *= keep;
+  }
+  glowCtx.putImageData(pixels, 0, 0);
+  [ctx, glowCtx].forEach((target, k) => {
+    target.fillStyle = k === 0 ? '#16151c' : '#000000';
+    target.fillRect(0, size - 12, 12, 12);
+  });
+  return { map: toTexture(color), emissiveMap: toTexture(glow) };
+}
+
 /* ---------- Roads ---------- */
 
 // Painted lines, a little worn: drawn solid, then rubbed with noise.
@@ -145,8 +197,11 @@ function paintLine(ctx, x, y, width, height, wear) {
 
 // A road texture 18 m across and 16 m along, a roughness map (bright =
 // rough) and a bump map. The city road is wet: puddles lie in its dips,
-// flat and mirror-smooth, so they reflect the neon and the sky.
-export function roadTextures(scenario) {
+// flat and mirror-smooth, so they reflect the neon and the sky. With a
+// `picture` of the bare surface, that is what the road is made of, and the
+// lines, wear and puddles are painted over it; `scenario` can then also be
+// 'snowroad', the snowed-over road of the wasteland's first half.
+export function roadTextures(scenario, picture = null) {
   const size = 1024;
   const color = makeCanvas(size, size);
   const ctx = color.getContext('2d');
@@ -157,7 +212,7 @@ export function roadTextures(scenario) {
   const fine = noiseCanvas(256, 16, 3, 4);
   const wear = noiseCanvas(128, 8, 3, 5);
 
-  if (scenario === 'jungle') {
+  if (scenario === 'jungle' && !picture) {
     ctx.fillStyle = '#7d5232';
     ctx.fillRect(0, 0, size, size);
     overlayNoise(ctx, size, size, patches, 0.7);
@@ -207,9 +262,14 @@ export function roadTextures(scenario) {
   }
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
-  overlayNoise(ctx, size, size, patches, 0.45);
-  overlayNoise(ctx, size, size, fine, 0.35);
-  for (let i = 0; i < 9000; i += 1) {
+  if (picture) {
+    fillWith(ctx, picture, 0, 0, size, size);
+    overlayNoise(ctx, size, size, patches, 0.2);
+  } else {
+    overlayNoise(ctx, size, size, patches, 0.45);
+    overlayNoise(ctx, size, size, fine, 0.35);
+  }
+  for (let i = 0; i < (picture ? 0 : 9000); i += 1) {
     const shade = 70 + Math.floor(rand() * 70);
     ctx.fillStyle = `rgba(${shade}, ${shade}, ${shade + 6}, ${0.25 + rand() * 0.4})`;
     ctx.beginPath();
@@ -261,10 +321,21 @@ export function roadTextures(scenario) {
     });
     overlayNoise(ctx, size, size, patches, 0.25, 'soft-light');
   } else {
-    // City: crisp edge lines and a dashed middle line.
+    // Crisp edge lines and dashed lines between the three lanes.
     paintLine(ctx, 36, 0, 16, size, wear);
     paintLine(ctx, size - 52, 0, 16, size, wear);
-    paintLine(ctx, size / 2 - 8, 0, 16, size * 0.45, wear);
+    [1 / 3, 2 / 3].forEach((lane) => paintLine(ctx, size * lane - 7, 0, 14, size * 0.42, wear));
+  }
+  if (scenario === 'jungle' || scenario === 'snowroad') {
+    // Leaves and moss, or blown snow, creeping in from the edges.
+    const creep = scenario === 'jungle' ? '70, 120, 50' : '240, 245, 252';
+    [0, 1].forEach((edge) => {
+      const gradient = ctx.createLinearGradient(edge * size, 0, edge ? size * 0.9 : size * 0.1, 0);
+      gradient.addColorStop(0, `rgba(${creep}, 0.9)`);
+      gradient.addColorStop(1, `rgba(${creep}, 0)`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+    });
   }
   addGrain(ctx, size, size, 18, 8);
 

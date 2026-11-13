@@ -1,6 +1,11 @@
 // The 3D world: sky, road, scenery and the points to collect, for each of
-// the three scenarios. Everything is built in code (no image files), so it
-// works offline and loads fast. Surfaces have bumps (normal maps) and wet
+// the three scenarios. The shapes are built in code. What covers them comes
+// from pictures made for the game (art/): photo-like roads and ground,
+// building fronts, cut-outs of trees, plants, wrecks and ruins stood
+// upright, and a painting of the far skyline or hills all around. A world
+// drawn in code shows first, so the game starts at once and still works
+// if a picture is missing; the pictures are laid over it as they arrive.
+// Surfaces have bumps (normal maps) and wet
 // or shiny spots, the sky lights and reflects on everything, and the picture
 // is finished like a film: glow, sun shafts, lens flares, speed blur and
 // color grading (see gfx/post.js).
@@ -11,6 +16,7 @@ import {
   beamTexture,
   boostTexture,
   checkerTexture,
+  facadeFromPicture,
   facadeTextures,
   fernTexture,
   frondTexture,
@@ -50,17 +56,18 @@ const LOOKS = {
     top: '#07061c', horizon: '#8a3a78', bottom: '#1b1226', fog: '#2a1a40', fogDensity: 0.0024,
     sunElevation: 3, sunAzimuth: 200, sunColor: '#ff9a5a', sunSize: 0.03, disc: 10, lightElevation: 55,
     sunPower: 1.0, hemiSky: '#7d6cff', hemiGround: '#2a1a36', hemiPower: 0.85,
-    stars: 1, moon: 1, clouds: 0.2, bloom: 0.85, threshold: 0.88, radius: 0.6, exposure: 1.08,
+    stars: 1, moon: 1, clouds: 0.2, bloom: 0.62, threshold: 0.92, radius: 0.6, exposure: 1.08,
     rays: 0.25, rayFloor: 1.4, flare: 0.5, vignette: 0.42, grain: 0.04, aberration: 0.02,
     saturation: 1.16, contrast: 1.08, tint: '#fff2fb', shadowTint: '#04061a',
   },
+  // Late afternoon: low golden light through the mist.
   jungle: {
-    top: '#1559c4', horizon: '#a9dcf0', bottom: '#4d6e3c', fog: '#a4d2c4', fogDensity: 0.0024,
-    sunElevation: 30, sunAzimuth: 130, sunColor: '#fff0cc', sunSize: 0.026, disc: 12, lightElevation: 40,
-    sunPower: 3.3, hemiSky: '#c2e4ff', hemiGround: '#3a5a22', hemiPower: 1.15,
-    stars: 0, moon: 0, clouds: 0.46, bloom: 0.4, threshold: 0.95, radius: 0.5, exposure: 1,
-    rays: 0.4, rayFloor: 1.9, flare: 0.8, vignette: 0.34, grain: 0.028, aberration: 0.012,
-    saturation: 1.14, contrast: 1.07, tint: '#fff8e6', shadowTint: '#000a06',
+    top: '#3d6fc0', horizon: '#ffc78a', bottom: '#4d6e3c', fog: '#d9c9a0', fogDensity: 0.0026,
+    sunElevation: 13, sunAzimuth: 130, sunColor: '#ffd9a0', sunSize: 0.03, disc: 10, lightElevation: 34,
+    sunPower: 3.2, hemiSky: '#ffe6c4', hemiGround: '#3a5a22', hemiPower: 1.1,
+    stars: 0, moon: 0, clouds: 0.46, bloom: 0.42, threshold: 0.95, radius: 0.5, exposure: 1,
+    rays: 0.5, rayFloor: 1.8, flare: 0.9, vignette: 0.34, grain: 0.028, aberration: 0.012,
+    saturation: 1.16, contrast: 1.07, tint: '#fff2dc', shadowTint: '#060a02',
   },
   snow: {
     top: '#74839a', horizon: '#d5dae1', bottom: '#c6ccd6', fog: '#c9cfd8', fogDensity: 0.0066,
@@ -71,14 +78,45 @@ const LOOKS = {
     saturation: 0.96, contrast: 1.06, tint: '#f4f8ff', shadowTint: '#02050c',
   },
   desert: {
-    top: '#2f72c0', horizon: '#f4c890', bottom: '#c08648', fog: '#e8c08c', fogDensity: 0.0024,
+    top: '#2f72c0', horizon: '#f4c890', bottom: '#c08648', fog: '#e0a878', fogDensity: 0.0019,
     sunElevation: 16, sunAzimuth: 230, sunColor: '#ffd29a', sunSize: 0.032, disc: 12, lightElevation: 32,
     sunPower: 3.1, hemiSky: '#ffe2bd', hemiGround: '#a8703a', hemiPower: 1.05,
-    stars: 0, moon: 0, clouds: 0.3, bloom: 0.45, threshold: 0.95, radius: 0.55, exposure: 1,
-    rays: 0.45, rayFloor: 1.9, flare: 0.9, vignette: 0.36, grain: 0.03, aberration: 0.014,
+    stars: 0, moon: 0, clouds: 0.3, bloom: 0.32, threshold: 1.05, radius: 0.55, exposure: 0.9,
+    rays: 0.35, rayFloor: 2.2, flare: 0.9, vignette: 0.36, grain: 0.03, aberration: 0.014,
     saturation: 1.12, contrast: 1.08, tint: '#fff1dc', shadowTint: '#0a0402',
   },
 };
+
+// The pictures each scenario uses (files in art/, without the ending).
+const ART = {
+  city: {
+    pano: 'pano-city', road: 'road-wet', ground: 'ground-city', facades: ['facade-a', 'facade-b'],
+    palms: ['cut-palm'], bushes: ['cut-flowerbush'],
+  },
+  jungle: {
+    pano: 'pano-jungle', road: 'road-jungle', ground: 'ground-jungle',
+    trees: ['cut-jungletree', 'cut-palm', 'cut-jungletree'], giants: ['cut-jungletree'], plants: ['cut-fern', 'cut-flowerbush', 'cut-fern'],
+    falls: 'cut-waterfall', ruins: ['cut-ruinhead'],
+  },
+  wasteland: {
+    pano: 'pano-snow', panoDesert: 'pano-desert', road: 'road-desert', roadSnow: 'road-snow', ground: 'ground-snow',
+    wall: 'tile-ruin', rock: 'tile-redrock',
+    deadTrees: ['cut-deadtree'], wrecks: ['cut-wreck'], towers: ['cut-ruin'], overpasses: ['cut-overpass'],
+    cacti: ['cut-cactus', 'cut-drybush', 'cut-cactus'], spires: ['cut-spire'], pylons: ['cut-pylon'], desertRuins: ['cut-desertruin'],
+  },
+};
+
+// How high up each painting its horizon is, and how much of its height is
+// used: the top is left to the real sky where that has a sun to show.
+const PAINTINGS = {
+  'pano-city': { horizonAt: 0.12, keep: 1 },
+  'pano-jungle': { horizonAt: 0.36, keep: 1 },
+  'pano-snow': { horizonAt: 0.2, keep: 0.85 },
+  'pano-desert': { horizonAt: 0.14, keep: 0.62 },
+};
+
+// Boost pads glow cyan in the neon city, amber elsewhere.
+const BOOST_GLOW = { city: '#35e8ff', jungle: '#ffb020', wasteland: '#ffa01e' };
 
 function smoothstep(edge0, edge1, x) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
@@ -426,17 +464,20 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
   const rand = random(101);
   const facade = facadeTextures('city');
   const buildings = new ChunkedBatch();
+  // The tall towers further back are their own batch, so they can wear a
+  // different front.
+  const towers = new ChunkedBatch();
   const roofs = new ChunkedBatch();
   const neon = new ChunkedBatch();
   const signs = new ChunkedBatch();
   const signShape = new THREE.PlaneGeometry(1, 1);
   const tints = ['#c9c4e8', '#b8c4ea', '#d8c6d8', '#c2b8dc', '#aebde0', '#d4d0e6'];
   const neonColors = ['#ff3fa4', '#35f2ff', '#a45bff', '#ffd23f', '#39ff88'];
-  const addBuilding = (spot, width, depth, height, withSign) => {
+  const addBuilding = (batch, spot, width, depth, height, withSign) => {
     const y = groundY(spot.x, spot.z) - 0.5;
     const shift = Math.floor(rand() * 8) / 8;
     const tint = tints[Math.floor(rand() * tints.length)];
-    buildings.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, width, height, depth), tint, { uv: facadeUv(width, height, depth, 24, shift) });
+    batch.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, width, height, depth), tint, { uv: facadeUv(width, height, depth, 24, shift) });
     // Tall towers step in near the top.
     let top = y + height;
     let topWidth = width;
@@ -445,7 +486,7 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
       const more = height * (0.18 + rand() * 0.2);
       topWidth = width * 0.66;
       topDepth = depth * 0.66;
-      buildings.add(UNIT_BOX, place(spot.x, top, spot.z, spot.yaw, topWidth, more, topDepth), tint, { uv: facadeUv(topWidth, more, topDepth, 24, shift) });
+      batch.add(UNIT_BOX, place(spot.x, top, spot.z, spot.yaw, topWidth, more, topDepth), tint, { uv: facadeUv(topWidth, more, topDepth, 24, shift) });
       // A glowing band where the tower steps in.
       neon.add(UNIT_BOX, place(spot.x, top - 0.1, spot.z, spot.yaw, topWidth + 0.5, 0.35, topDepth + 0.5), glowColor(neonColors[Math.floor(rand() * neonColors.length)], 2.2));
       top += more;
@@ -486,24 +527,28 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
     ), glowColor(neonColors[Math.floor(rand() * neonColors.length)], 3));
   };
   roadsideSpots(samples, clearance, rand, { step: 26, from: 6, to: 14, radius: 12 }).forEach((spot) => {
-    addBuilding(spot, 14 + rand() * 12, 14 + rand() * 14, 18 + rand() * 50, true);
+    addBuilding(buildings, spot, 14 + rand() * 12, 14 + rand() * 14, 18 + rand() * 50, true);
   });
   roadsideSpots(samples, clearance, rand, { step: 34, from: 40, to: 80, radius: 16 }).forEach((spot) => {
-    addBuilding(spot, 18 + rand() * 14, 18 + rand() * 14, 50 + rand() * 80, false);
+    addBuilding(towers, spot, 18 + rand() * 14, 18 + rand() * 14, 50 + rand() * 80, false);
   });
-  group.add(buildings.mesh(new THREE.MeshStandardMaterial({
-    map: facade.map,
-    emissiveMap: facade.emissiveMap,
-    emissive: 0xffffff,
-    emissiveIntensity: 1.25,
-    normalMap: facade.normalMap,
-    roughnessMap: facade.finishMap,
-    metalnessMap: facade.finishMap,
-    roughness: 1,
-    metalness: 1,
-    envMapIntensity: 1.4,
-    vertexColors: true,
-  }), { cast: quality.sceneryShadows }));
+  const fronts = [buildings, towers].map((batch) => {
+    const material = new THREE.MeshStandardMaterial({
+      map: facade.map,
+      emissiveMap: facade.emissiveMap,
+      emissive: 0xffffff,
+      emissiveIntensity: 1.25,
+      normalMap: facade.normalMap,
+      roughnessMap: facade.finishMap,
+      metalnessMap: facade.finishMap,
+      roughness: 1,
+      metalness: 1,
+      envMapIntensity: 1.4,
+      vertexColors: true,
+    });
+    group.add(batch.mesh(material, { cast: quality.sceneryShadows }));
+    return material;
+  });
   group.add(roofs.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), { cast: quality.sceneryShadows }));
   group.add(signs.mesh(new THREE.MeshBasicMaterial({ map: signTexture(), vertexColors: true })));
 
@@ -533,6 +578,48 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
     cones.add(cone, place(armX, y + 8.4, armZ, spot.yaw), '#ffd9a0');
   });
 
+  // Planters along the road, for palms and flowering bushes.
+  const planters = [];
+  const extra = random(151);
+  roadsideSpots(samples, clearance, extra, { step: 46, from: 3.4, to: 3.4, radius: 0.6 }).forEach((spot) => {
+    const y = spot.sample.y;
+    poles.add(UNIT_BOX, place(spot.x, y - 0.3, spot.z, spot.yaw, 2.2, 1, 2.2), '#3b3948', { shade: true });
+    neon.add(UNIT_BOX, place(spot.x, y + 0.62, spot.z, spot.yaw, 2.3, 0.08, 2.3), glowColor(neonColors[Math.floor(extra() * 2)], 1.6));
+    planters.push({ x: spot.x, y: y + 0.6, z: spot.z });
+  });
+
+  // An elevated rail along the first half of the lap: pillars, a beam
+  // with a glowing strip under it, and a train of lit cars.
+  const railTops = [];
+  for (let i = Math.floor(samples.length * 0.04); i < samples.length * 0.5; i += 14) {
+    const sample = samples[i];
+    const x = sample.x - sample.nx * (HALF + 5.2);
+    const z = sample.z - sample.nz * (HALF + 5.2);
+    if (clearance.isClear(x, z, 1)) {
+      poles.add(UNIT_BOX, place(x, sample.y - 0.5, z, Math.atan2(sample.dx, sample.dz), 1.3, 14.5, 1.3), '#2b2a36', { shade: true });
+      railTops.push(new THREE.Vector3(x, sample.y + 14, z));
+    } else {
+      railTops.push(null);
+    }
+  }
+  const span = (from, to, wide, thick, lift) => {
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    return place((from.x + to.x) / 2, (from.y + to.y) / 2 + lift, (from.z + to.z) / 2, Math.atan2(to.x - from.x, to.z - from.z), wide, thick, flat + 0.4, -Math.atan2(to.y - from.y, flat));
+  };
+  railTops.forEach((top, i) => {
+    const next = railTops[i + 1];
+    if (!top || !next) {
+      return;
+    }
+    poles.add(UNIT_BOX, span(top, next, 2.6, 1.1, 0), '#33323f', { shade: true });
+    neon.add(UNIT_BOX, span(top, next, 0.3, 0.16, -0.2), glowColor(i % 2 ? '#35f2ff' : '#ff3fa4', 2.6));
+    // Train cars on a stretch of it.
+    if (i % 9 > 1 && i % 9 < 6) {
+      poles.add(UNIT_BOX, span(top, next, 2.4, 2.6, 1.15), '#c9d2e6', { shade: true });
+      neon.add(UNIT_BOX, span(top, next, 2.46, 0.7, 2.3), glowColor('#ffe9b0', 2.2));
+    }
+  });
+
   // Neon gateways over the road, every few hundred meters.
   const total = samples[samples.length - 1].s;
   const gates = Math.max(2, Math.round(total / 260));
@@ -548,6 +635,14 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
     });
     poles.add(UNIT_BOX, place(sample.x, sample.y + 10.6, sample.z, yaw + Math.PI / 2, 0.8, 0.9, ROAD_WIDTH + 5.6), '#25242e');
     neon.add(UNIT_BOX, place(sample.x, sample.y + 10.3, sample.z, yaw + Math.PI / 2, 0.2, 0.2, ROAD_WIDTH + 3.6), glowColor(color, 3.4));
+    // A hologram of rings floating over every other gateway.
+    if (i % 2 === 0) {
+      [[7, 0.22, 0.2], [4.6, 0.16, -0.5]].forEach(([radius, thick, lean], k) => {
+        const ring = new THREE.TorusGeometry(radius, thick, 8, 44);
+        neon.add(ring, place(sample.x, sample.y + 21, sample.z, yaw + lean, 1, 1, 1, 0.5 * (k ? -1 : 1)), glowColor(k ? '#ff3fa4' : '#35f2ff', 1.5));
+        ring.dispose();
+      });
+    }
   }
   group.add(neon.mesh(new THREE.MeshBasicMaterial({ vertexColors: true })));
   if (quality.name === 'high') {
@@ -564,6 +659,7 @@ function buildCity(group, samples, clearance, groundY, quality, dot, beamMap) {
   }));
   poolMesh.renderOrder = 1;
   group.add(poolMesh);
+  return { fronts, planters };
 }
 
 function buildJungle(group, samples, clearance, groundY, quality) {
@@ -573,6 +669,12 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     detail = 1;
   }
   const clumps = leafClumps(detail);
+  // The trees, palms and ferns drawn in code stand in until the pictures
+  // of real ones arrive; where each one stands is kept for those.
+  const standIn = new THREE.Group();
+  const near = [];
+  const far = [];
+  const edge = [];
   const trees = new ChunkedBatch();
   const fronds = new ChunkedBatch();
   const ferns = new ChunkedBatch();
@@ -628,6 +730,7 @@ function buildJungle(group, samples, clearance, groundY, quality) {
 
   roadsideSpots(samples, clearance, rand, { step: 9, from: 2, to: 30, radius: 3 }).forEach((spot) => {
     const y = groundY(spot.x, spot.z) - 0.2;
+    near.push({ x: spot.x, y, z: spot.z });
     if (rand() < 0.4) {
       addPalm(spot.x, y, spot.z, 0.8 + rand() * 0.5);
     } else {
@@ -635,23 +738,28 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     }
   });
   roadsideSpots(samples, clearance, rand, { step: 18, from: 32, to: 110, radius: 4 }).forEach((spot) => {
+    far.push({ x: spot.x, y: groundY(spot.x, spot.z) - 0.2, z: spot.z });
     addTree(spot.x, groundY(spot.x, spot.z) - 0.2, spot.z, 1.2 + rand() * 0.8);
   });
   // Ferns and grass right along the roadside, and mossy rocks.
   const rock = new THREE.DodecahedronGeometry(1, 1);
+  const rocks = new ChunkedBatch();
   roadsideSpots(samples, clearance, rand, { step: 4, from: 0.4, to: 6, radius: 0.8 }).forEach((spot) => {
     const y = groundY(spot.x, spot.z) - 0.05;
     const size = 0.7 + rand() * 0.9;
     if (rand() < 0.12) {
-      trees.add(rock, place(spot.x, y - 0.3, spot.z, rand() * 6, size * 1.4, size, size * 1.2), '#7d8572', { shade: true });
+      rocks.add(rock, place(spot.x, y - 0.3, spot.z, rand() * 6, size * 1.4, size, size * 1.2), '#7d8572', { shade: true });
       return;
     }
+    edge.push({ x: spot.x, y, z: spot.z });
     ferns.add(card, place(spot.x, y, spot.z, rand() * 6, size, size, size), rand() < 0.5 ? '#ffffff' : '#cfe8b0');
   });
   const leafy = { roughness: 0.85, vertexColors: true };
-  group.add(trees.mesh(new THREE.MeshStandardMaterial(leafy), { cast: quality.sceneryShadows }));
-  group.add(fronds.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: frondTexture(), alphaTest: 0.45, side: THREE.DoubleSide }), { cast: quality.sceneryShadows }));
-  group.add(ferns.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: fernTexture(), alphaTest: 0.4, side: THREE.DoubleSide })));
+  standIn.add(trees.mesh(new THREE.MeshStandardMaterial(leafy), { cast: quality.sceneryShadows }));
+  standIn.add(fronds.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: frondTexture(), alphaTest: 0.45, side: THREE.DoubleSide }), { cast: quality.sceneryShadows }));
+  standIn.add(ferns.mesh(new THREE.MeshStandardMaterial({ ...leafy, map: fernTexture(), alphaTest: 0.4, side: THREE.DoubleSide })));
+  group.add(standIn);
+  group.add(rocks.mesh(new THREE.MeshStandardMaterial(leafy), { cast: quality.sceneryShadows }));
 
   // Ancient stone: gateways over the road and stepped temples in the trees.
   const stone = new ChunkedBatch();
@@ -677,8 +785,47 @@ function buildJungle(group, samples, clearance, groundY, quality) {
     }
     stone.add(UNIT_BOX, place(spot.x, y + 24, spot.z, spot.yaw, 6, 6, 6), '#857e68', { shade: true });
   });
+  // A rope bridge high over the road: posts, sagging planks and ropes.
+  const bridgeAt = samples[Math.floor(samples.length * 0.44)];
+  const across = { x: bridgeAt.nx, z: bridgeAt.nz };
+  const bridgeYaw = Math.atan2(bridgeAt.dx, bridgeAt.dz);
+  const reach = HALF + 4;
+  const deck = (f) => bridgeAt.y + 10.5 - Math.sin(f * Math.PI) * 1.6;
+  [-1, 1].forEach((side) => {
+    [-1.1, 1.1].forEach((along) => {
+      stone.add(UNIT_BOX, place(bridgeAt.x + across.x * side * reach + bridgeAt.dx * along, bridgeAt.y - 1, bridgeAt.z + across.z * side * reach + bridgeAt.dz * along, bridgeYaw, 0.6, 13.6, 0.6), '#6b4a2c', { shade: true });
+    });
+  });
+  const planks = 26;
+  for (let i = 0; i < planks; i += 1) {
+    const f = (i + 0.5) / planks;
+    const out = (f * 2 - 1) * reach;
+    const x = bridgeAt.x + across.x * out;
+    const z = bridgeAt.z + across.z * out;
+    stone.add(UNIT_BOX, place(x, deck(f), z, bridgeYaw, 2 * reach / planks - 0.12, 0.12, 2), i % 2 ? '#8a6238' : '#7a5530', { shade: true });
+    [-1, 1].forEach((along) => {
+      stone.add(UNIT_BOX, place(x + bridgeAt.dx * along, deck(f) + 1.15, z + bridgeAt.dz * along, bridgeYaw, 2 * reach / planks + 0.05, 0.07, 0.07), '#d6c59a');
+      if (i % 3 === 0) {
+        stone.add(UNIT_BOX, place(x + bridgeAt.dx * along, deck(f), z + bridgeAt.dz * along, bridgeYaw, 0.05, 1.2, 0.05), '#d6c59a');
+      }
+    });
+  }
   group.add(stone.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }), { cast: quality.sceneryShadows }));
   group.add(moss.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 })));
+
+  // Where the waterfall and the overgrown gateways (pictures) will stand.
+  const extra = random(252);
+  const fallsAt = samples[Math.floor(samples.length * 0.3)];
+  const fallsOut = HALF + 46;
+  const falls = {
+    x: fallsAt.x + fallsAt.nx * fallsOut, z: fallsAt.z + fallsAt.nz * fallsOut,
+    y: groundY(fallsAt.x + fallsAt.nx * fallsOut, fallsAt.z + fallsAt.nz * fallsOut) - 3,
+    turn: Math.atan2(fallsAt.dz, fallsAt.dx),
+  };
+  const ruins = roadsideSpots(samples, clearance, extra, { step: 150, from: 7, to: 16, radius: 5 }).map((spot) => ({
+    x: spot.x, y: groundY(spot.x, spot.z) - 0.6, z: spot.z, turn: Math.atan2(spot.sample.dz, spot.sample.dx) + (extra() - 0.5) * 0.5,
+  }));
+  return { standIn, near, far, edge, falls, ruins };
 }
 
 function buildWasteland(group, samples, clearance, groundY, quality) {
@@ -687,6 +834,10 @@ function buildWasteland(group, samples, clearance, groundY, quality) {
   const walls = new ChunkedBatch();
   const plain = new ChunkedBatch();
   const rocks = new ChunkedBatch();
+  // Box wrecks stand in until the pictures of real ones arrive.
+  const standIn = new THREE.Group();
+  const boxWrecks = new ChunkedBatch();
+  const wrecks = [];
   const dune = new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2);
 
   const addRuin = (x, y, z, yaw, snowy) => {
@@ -711,8 +862,8 @@ function buildWasteland(group, samples, clearance, groundY, quality) {
   const addWreck = (x, y, z, yaw) => {
     const rust = ['#7a3f22', '#5e4a3a', '#8c5a2e', '#4a5560'][Math.floor(rand() * 4)];
     const tilt = (rand() - 0.5) * 0.5;
-    plain.add(UNIT_BOX, place(x, y, z, yaw, 2, 1, 4.4, 0, tilt), rust, { shade: true });
-    plain.add(UNIT_BOX, place(x, y + 0.9, z - 0.3, yaw, 1.7, 0.7, 2.2, 0, tilt), '#2b2b30', { shade: true });
+    boxWrecks.add(UNIT_BOX, place(x, y, z, yaw, 2, 1, 4.4, 0, tilt), rust, { shade: true });
+    boxWrecks.add(UNIT_BOX, place(x, y + 0.9, z - 0.3, yaw, 1.7, 0.7, 2.2, 0, tilt), '#2b2b30', { shade: true });
   };
 
   roadsideSpots(samples, clearance, rand, { step: 22, from: 5, to: 40, radius: 12 }).forEach((spot) => {
@@ -742,13 +893,14 @@ function buildWasteland(group, samples, clearance, groundY, quality) {
   roadsideSpots(samples, clearance, rand, { step: 30, from: 0.8, to: 4, radius: 2.5 }).forEach((spot) => {
     const y = groundY(spot.x, spot.z);
     if (rand() < 0.6) {
+      wrecks.push({ x: spot.x, y: y - 0.25, z: spot.z, turn: Math.atan2(spot.sample.dz, spot.sample.dx) + (rand() - 0.5) * 0.5, snowy: snowiness(spot.sample.t) > 0.5 });
       addWreck(spot.x, y, spot.z, spot.yaw + (rand() - 0.5) * 1.5);
       return;
     }
     // A bent lamp post.
     plain.add(UNIT_BOX, place(spot.x, y, spot.z, spot.yaw, 0.3, 8, 0.3, (rand() - 0.5) * 0.6, (rand() - 0.5) * 0.6), '#4a4744', { shade: true });
   });
-  group.add(walls.mesh(new THREE.MeshStandardMaterial({
+  const wallMaterial = new THREE.MeshStandardMaterial({
     map: ruinFacade.map,
     normalMap: ruinFacade.normalMap,
     normalScale: new THREE.Vector2(1.4, 1.4),
@@ -757,61 +909,65 @@ function buildWasteland(group, samples, clearance, groundY, quality) {
     roughness: 1,
     metalness: 1,
     vertexColors: true,
-  }), { cast: quality.sceneryShadows }));
+  });
+  group.add(walls.mesh(wallMaterial, { cast: quality.sceneryShadows }));
   group.add(plain.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), { cast: quality.sceneryShadows }));
+  standIn.add(boxWrecks.mesh(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), { cast: quality.sceneryShadows }));
+  group.add(standIn);
   const strata = strataTexture();
-  group.add(rocks.mesh(new THREE.MeshStandardMaterial({ map: strata, normalMap: normalMapFrom(strata.image, { strength: 4 }), vertexColors: true, roughness: 1 })));
+  const rockMaterial = new THREE.MeshStandardMaterial({ map: strata, normalMap: normalMapFrom(strata.image, { strength: 4 }), vertexColors: true, roughness: 1 });
+  group.add(rocks.mesh(rockMaterial));
+
+  // Where the pictures will stand: dead trees, broken towers and fallen
+  // overpasses in the snow; cacti, rock spires, pylons and buried ruins
+  // in the desert.
+  const extra = random(353);
+  const turnOf = (spot) => Math.atan2(spot.sample.dz, spot.sample.dx);
+  const split = (spots) => ({
+    snow: spots.filter((spot) => snowiness(spot.sample.t) > 0.5),
+    sand: spots.filter((spot) => snowiness(spot.sample.t) <= 0.5),
+  });
+  const at = (spot, sink = 0.3) => ({ x: spot.x, y: groundY(spot.x, spot.z) - sink, z: spot.z, turn: turnOf(spot) + (extra() - 0.5) * 0.4 });
+  const small = split(roadsideSpots(samples, clearance, extra, { step: 12, from: 3, to: 34, radius: 2 }));
+  const big = split(roadsideSpots(samples, clearance, extra, { step: 70, from: 42, to: 105, radius: 14 }));
+  const beside = split(roadsideSpots(samples, clearance, extra, { step: 130, from: 13, to: 20, radius: 7 }));
+  const midway = split(roadsideSpots(samples, clearance, extra, { step: 95, from: 16, to: 42, radius: 8 }));
+  return {
+    standIn,
+    wrecks,
+    wallMaterial,
+    rockMaterial,
+    deadTrees: small.snow.map((spot) => at(spot)),
+    cacti: small.sand.map((spot) => at(spot)),
+    towers: big.snow.map((spot) => at(spot, 2)),
+    spires: big.sand.map((spot) => at(spot, 2)),
+    overpasses: beside.snow.map((spot) => at(spot, 1)),
+    pylons: beside.sand.map((spot) => at(spot, 0.5)),
+    desertRuins: midway.sand.map((spot) => at(spot, 1.2)),
+  };
 }
 
 /* ---------- Points ---------- */
 
-function gearGeometry() {
-  const shape = new THREE.Shape();
-  const teeth = 10;
-  for (let i = 0; i < teeth * 2; i += 1) {
-    const angle = (i / (teeth * 2)) * Math.PI * 2;
-    const next = ((i + 1) / (teeth * 2)) * Math.PI * 2;
-    const radius = i % 2 === 0 ? 1.25 : 0.95;
-    if (i === 0) {
-      shape.moveTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-    } else {
-      shape.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
-    }
-    shape.lineTo(Math.cos(next) * radius, Math.sin(next) * radius);
-  }
-  const hole = new THREE.Path();
-  hole.absarc(0, 0, 0.4, 0, Math.PI * 2, true);
-  shape.holes.push(hole);
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.35, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.06, bevelSegments: 3, curveSegments: 16 });
-  geometry.translate(0, 0, -0.175);
-  return geometry;
-}
-
-// Gold coins in the city, emeralds in the jungle, glowing gears in the
-// wasteland. They reflect the sky and glow a little, so they bloom.
+// Glowing orbs of energy with a ring around them: gold in the city, amber
+// in the jungle and the wasteland. They are brighter than white, so they
+// bloom.
 function pointLook(scenario) {
-  if (scenario === 'jungle') {
-    const geometry = new THREE.OctahedronGeometry(1.1, 0);
-    geometry.scale(0.9, 1.5, 0.9);
-    return {
-      geometry,
-      material: new THREE.MeshPhysicalMaterial({ color: 0x19e07a, emissive: 0x0bbf62, emissiveIntensity: 1.4, metalness: 0.1, roughness: 0.05, clearcoat: 1, flatShading: true }),
-      glow: '#5dff9e',
-    };
-  }
-  if (scenario === 'wasteland') {
-    return {
-      geometry: gearGeometry(),
-      material: new THREE.MeshStandardMaterial({ color: 0xff8a2a, emissive: 0xff5a00, emissiveIntensity: 1.3, metalness: 0.85, roughness: 0.28 }),
-      glow: '#ffa040',
-    };
-  }
-  const coin = new THREE.CylinderGeometry(1.15, 1.15, 0.24, 48);
-  coin.rotateX(Math.PI / 2);
+  const orb = new THREE.SphereGeometry(0.95, 28, 18);
+  const ring = new THREE.TorusGeometry(1.35, 0.07, 8, 40);
+  ring.rotateX(1.15);
+  const geometry = THREE.mergeGeometries([orb, ring]);
+  orb.dispose();
+  ring.dispose();
+  const tones = {
+    city: { color: 0xffd04a, emissive: 0xffa200, glow: '#ffd866' },
+    jungle: { color: 0xffbe3a, emissive: 0xff8c00, glow: '#ffc04a' },
+    wasteland: { color: 0xffae32, emissive: 0xff7a00, glow: '#ffa63a' },
+  }[scenario];
   return {
-    geometry: coin,
-    material: new THREE.MeshStandardMaterial({ color: 0xffcf3a, emissive: 0xffa800, emissiveIntensity: 0.9, metalness: 1, roughness: 0.18 }),
-    glow: '#ffe066',
+    geometry,
+    material: new THREE.MeshStandardMaterial({ color: tones.color, emissive: tones.emissive, emissiveIntensity: scenario === 'city' ? 1.2 : 1.9, metalness: 0.2, roughness: 0.22 }),
+    glow: tones.glow,
   };
 }
 
@@ -913,8 +1069,61 @@ export function createScene(container) {
   const effects = createEffects(scene, dot);
   const beamMap = beamTexture();
 
+  // Pictures are fetched once and kept. One that fails to load comes back
+  // as null, and the part drawn in code stays.
+  const images = new Map();
+  function loadImage(name) {
+    if (!images.has(name)) {
+      images.set(name, new Promise((resolve) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(null);
+        image.src = new URL(`./art/${name}.webp`, import.meta.url).href;
+      }));
+    }
+    return images.get(name);
+  }
+
+  // All the pictures of a scenario, by what they are for.
+  async function loadArt(name) {
+    const entries = await Promise.all(Object.entries(ART[name]).map(async ([key, value]) => {
+      if (Array.isArray(value)) {
+        return [key, (await Promise.all(value.map(loadImage))).filter(Boolean)];
+      }
+      return [key, await loadImage(value)];
+    }));
+    return Object.fromEntries(entries);
+  }
+
+  // A picture as a surface. Repeats are mirrored, so no seam shows even
+  // if the picture's edges don't match.
+  function picture(image, wrap = THREE.MirroredRepeatWrapping) {
+    const made = new THREE.Texture(image);
+    made.colorSpace = THREE.SRGBColorSpace;
+    made.wrapS = wrap;
+    made.wrapT = wrap;
+    made.anisotropy = anisotropy;
+    made.needsUpdate = true;
+    return made;
+  }
+
+  function bumpsOf(map, strength) {
+    const size = { width: Math.min(512, map.image.width), height: Math.min(512, map.image.height) };
+    const bumps = matchTiling(normalMapFrom(map.image, { strength, size }), map);
+    bumps.anisotropy = anisotropy;
+    return bumps;
+  }
+
   let world = null;
   let track = null;
+  // This scenario's own copy of the looks: a painting changes the sky's
+  // colors to match itself.
+  let looks = LOOKS;
+  let building = 0;
+  let built = null;
+  let roadSurface = null;
+  let groundMesh = null;
+  let farViews = [];
   let scenarioName = 'city';
   let points = [];
   let pointGlow = '#ffffff';
@@ -932,6 +1141,7 @@ export function createScene(container) {
       if (object.geometry && object.geometry !== UNIT_BOX) {
         object.geometry.dispose();
       }
+      object.customDepthMaterial?.dispose();
       if (object.material) {
         [object.material].flat().forEach((material) => {
           Object.values(material).forEach((value) => {
@@ -944,6 +1154,10 @@ export function createScene(container) {
       }
     });
     world = null;
+    built = null;
+    roadSurface = null;
+    groundMesh = null;
+    farViews = [];
     points = [];
     boosts = [];
   }
@@ -994,7 +1208,8 @@ export function createScene(container) {
   function groundHeight(x, z, sample, distance) {
     let hills = 0;
     if (scenarioName === 'jungle') {
-      hills = 7 + Math.sin(x * 0.012) * 6 + Math.cos(z * 0.015) * 5 + Math.sin((x + z) * 0.03) * 2;
+      // The hills rise with the road, so a climb is up a real hillside.
+      hills = sample.y * 0.8 + 7 + Math.sin(x * 0.012) * 6 + Math.cos(z * 0.015) * 5 + Math.sin((x + z) * 0.03) * 2;
     }
     if (scenarioName === 'wasteland') {
       hills = 2 + Math.sin(x * 0.02) * 3 + Math.cos(z * 0.017) * 3;
@@ -1057,6 +1272,8 @@ export function createScene(container) {
     const bumps = matchTiling(normalMapFrom(detail.image, { strength: kind === 'paving' ? 2.5 : 3.5 }), detail);
     const ground = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({ map: detail, normalMap: bumps, vertexColors: true, roughness: kind === 'paving' ? 0.8 : 0.95 }));
     ground.receiveShadow = true;
+    ground.userData.tiles = size / 10;
+    groundMesh = ground;
     group.add(ground);
   }
 
@@ -1071,6 +1288,7 @@ export function createScene(container) {
       metalness: 0,
       envMapIntensity: scenarioName === 'city' ? 1.5 : 0.7,
     });
+    roadSurface = surface;
     const road = new THREE.Mesh(ribbon(samples, length, { side: HALF, up: 0.05 }, { side: -HALF, up: 0.05 }), surface);
     road.receiveShadow = true;
     group.add(road);
@@ -1135,7 +1353,7 @@ export function createScene(container) {
   function buildPoints(group, placed) {
     const { geometry, material, glow } = pointLook(scenarioName);
     pointGlow = glow;
-    const beamMaterial = new THREE.MeshBasicMaterial({ map: beamMap, color: glowColor(glow, 1), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const beamMaterial = new THREE.MeshBasicMaterial({ map: beamMap, color: glowColor(glow, 1), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
     const beamGeometry = new THREE.CylinderGeometry(0.6, 0.6, 26, 16, 1, true);
     beamGeometry.translate(0, 13, 0);
     points = placed.map((point) => {
@@ -1147,8 +1365,8 @@ export function createScene(container) {
       shape.castShadow = true;
       holder.add(shape);
       // Each point fades on its own, so each needs its own glow material.
-      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: glowColor(glow, 0.7), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6 }));
-      halo.scale.setScalar(4);
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: dot, color: glowColor(glow, 0.5), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6 }));
+      halo.scale.setScalar(5.5);
       holder.add(halo);
       const beam = new THREE.Mesh(beamGeometry, beamMaterial);
       beam.position.y = -1.5;
@@ -1170,7 +1388,7 @@ export function createScene(container) {
       const side = sideMeters(boost.side);
       const material = new THREE.MeshBasicMaterial({
         map: boostMap,
-        color: glowColor('#3ab8ff', 2.2),
+        color: glowColor(BOOST_GLOW[scenarioName], 2.2),
         transparent: true,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
@@ -1181,6 +1399,286 @@ export function createScene(container) {
       pad.renderOrder = 2;
       group.add(pad);
       return { pad, flash: 0 };
+    });
+  }
+
+  /* ---------- Pictures over the world ---------- */
+
+  function swapMaps(material, maps) {
+    Object.entries(maps).forEach(([key, map]) => {
+      material[key]?.dispose();
+      material[key] = map;
+    });
+    material.needsUpdate = true;
+  }
+
+  // Cut-outs stood upright: each is one sheet, or two or three crossed so
+  // it looks full from every side. `spots` are [{ x, y, z, tall, turn }];
+  // all of one picture's cut-outs are one mesh.
+  function standing(image, spots, sheets, shadows) {
+    const wide = image.width / image.height;
+    const positions = [];
+    const uvs = [];
+    const normals = [];
+    const indices = [];
+    spots.forEach(({ x, y, z, tall, turn }) => {
+      const half = (tall * wide) / 2;
+      for (let k = 0; k < sheets; k += 1) {
+        const angle = turn + (k * Math.PI) / sheets;
+        const dx = Math.cos(angle) * half;
+        const dz = Math.sin(angle) * half;
+        const base = positions.length / 3;
+        positions.push(x - dx, y, z - dz, x + dx, y, z + dz, x - dx, y + tall, z - dz, x + dx, y + tall, z + dz);
+        uvs.push(0, 0, 1, 0, 0, 1, 1, 1);
+        // Lit as if facing up: the shading is already in the picture.
+        normals.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+        indices.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+      }
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geometry.setIndex(indices);
+    const map = picture(image, THREE.ClampToEdgeWrapping);
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+      map, alphaTest: 0.4, side: THREE.DoubleSide, roughness: 1, envMapIntensity: 0.3, color: scenarioName === 'city' ? '#ffffff' : '#d9d9d9',
+    }));
+    mesh.receiveShadow = false;
+    mesh.castShadow = shadows && quality.sceneryShadows;
+    if (mesh.castShadow) {
+      // Shadows in the shape of the leaves, not of the sheets.
+      mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map, alphaTest: 0.4 });
+    }
+    return mesh;
+  }
+
+  // Stands `spots` up as cut-outs, shared out between a few pictures.
+  // `size` gives each one's height from a number between 0 and 1.
+  function plant(pictures, spots, size, { sheets = 2, shadows = true, spin = true } = {}) {
+    if (!pictures || pictures.length === 0 || spots.length === 0) {
+      return;
+    }
+    const rand = random(77 + spots.length);
+    // Phones get every other one.
+    const kept = quality.name === 'low' ? spots.filter((unused, i) => i % 2 === 0) : spots;
+    pictures.forEach((image, i) => {
+      const mine = kept.filter((unused, k) => k % pictures.length === i).map((spot) => ({
+        ...spot, tall: size(rand()), turn: spin ? rand() * Math.PI : spot.turn,
+      }));
+      if (mine.length > 0) {
+        world.add(standing(image, mine, sheets, shadows));
+      }
+    });
+  }
+
+  // The colors of a painting: its sky just above the horizon, and the top
+  // of the part of it that is used.
+  function paintingTones(image, { horizonAt, keep }) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 8;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0, 8, 32);
+    const row = (share) => {
+      const data = ctx.getImageData(0, Math.min(31, Math.max(0, Math.round((1 - share) * 31))), 8, 1).data;
+      const sum = [0, 0, 0];
+      for (let i = 0; i < data.length; i += 4) {
+        sum[0] += data[i];
+        sum[1] += data[i + 1];
+        sum[2] += data[i + 2];
+      }
+      return `#${new THREE.Color().setRGB(sum[0] / 2040, sum[1] / 2040, sum[2] / 2040, THREE.SRGBColorSpace).getHexString()}`;
+    };
+    return { horizon: row(horizonAt + 0.06), top: row(keep - 0.12) };
+  }
+
+  // A painting of the far skyline or hills, on a round wall beyond
+  // everything, that moves along with the camera. Mirrored copies of the
+  // picture carry it all the way around, and its top fades into the sky.
+  function farView(image, name) {
+    const { horizonAt, keep } = PAINTINGS[name];
+    const radius = 900;
+    const around = Math.PI * 2 * radius;
+    const wide = image.width / image.height;
+    // An even number of copies, so the mirrored ends meet.
+    const copies = Math.max(2, 2 * Math.round(around / (wide * 470) / 2));
+    const tall = around / copies / wide;
+    const columns = 72;
+    const heights = [0, horizonAt, horizonAt + (keep - horizonAt) * 0.72, keep];
+    const positions = [];
+    const uvs = [];
+    const colors = [];
+    const indices = [];
+    for (let c = 0; c <= columns; c += 1) {
+      const angle = (c / columns) * Math.PI * 2;
+      heights.forEach((v, r) => {
+        positions.push(Math.sin(angle) * radius, (v - horizonAt) * tall, Math.cos(angle) * radius);
+        uvs.push((c / columns) * copies, v);
+        colors.push(1, 1, 1, r === heights.length - 1 ? 0 : 1);
+      });
+    }
+    for (let c = 0; c < columns; c += 1) {
+      for (let r = 0; r < heights.length - 1; r += 1) {
+        const a = c * heights.length + r;
+        const b = a + heights.length;
+        indices.push(a, a + 1, b, b, a + 1, b + 1);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
+    geometry.setIndex(indices);
+    const map = picture(image);
+    map.wrapT = THREE.ClampToEdgeWrapping;
+    const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
+      map, vertexColors: true, transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide,
+    }));
+    mesh.frustumCulled = false;
+    mesh.renderOrder = -2;
+    return mesh;
+  }
+
+  // The far view, and the sky and haze recolored to match it.
+  function paintFarView(image, name, lookName) {
+    if (!image) {
+      return null;
+    }
+    const mesh = farView(image, name);
+    world.add(mesh);
+    const tones = paintingTones(image, PAINTINGS[name]);
+    const look = looks[lookName];
+    // The sky above the painting carries on in the color of its top edge.
+    look.horizon = `#${new THREE.Color(tones.top).lerp(new THREE.Color(tones.horizon), 0.25).getHexString()}`;
+    look.top = tones.top;
+    look.bottom = tones.horizon;
+    look.fog = `#${new THREE.Color(look.fog).lerp(new THREE.Color(tones.horizon), 0.4).getHexString()}`;
+    // The painting has its own clouds.
+    look.clouds *= 0.35;
+    return mesh;
+  }
+
+  // Lays the pictures over the world that was drawn in code.
+  function dress(art) {
+    const samples = track.samples;
+    if (scenarioName === 'wasteland') {
+      farViews = [
+        { mesh: paintFarView(art.pano, 'pano-snow', 'snow'), snowy: true },
+        { mesh: paintFarView(art.panoDesert, 'pano-desert', 'desert'), snowy: false },
+      ].filter((view) => view.mesh);
+    } else {
+      farViews = [{ mesh: paintFarView(art.pano, ART[scenarioName].pano, scenarioName), snowy: null }].filter((view) => view.mesh);
+      applyLook(looks[scenarioName]);
+    }
+    updateEnvironment();
+
+    if (art.road) {
+      const textures = roadTextures(scenarioName, art.road);
+      swapMaps(roadSurface, textures);
+      // A photo's grain is finer than drawn stone chips: gentler bumps.
+      roadSurface.normalScale.set(0.45, 0.45);
+    }
+    if (art.roadSnow) {
+      // Snow lies over the first half of the wasteland's road: a second
+      // road surface on top, see-through where the desert begins.
+      const geometry = ribbon(samples, track.length, { side: HALF, up: 0.065 }, { side: -HALF, up: 0.065 });
+      const fade = [];
+      for (let i = 0; i <= samples.length; i += 1) {
+        // Thin, patchy snow: the asphalt still shows through.
+        const amount = snowiness(samples[i % samples.length].t) * 0.5;
+        fade.push(1.25, 1.25, 1.3, amount, 1.25, 1.25, 1.3, amount);
+      }
+      geometry.setAttribute('color', new THREE.Float32BufferAttribute(fade, 4));
+      const textures = roadTextures('snowroad', art.roadSnow);
+      const cover = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial({
+        ...textures, roughness: 1, vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+      }));
+      cover.receiveShadow = true;
+      world.add(cover);
+    }
+    if (art.ground && groundMesh) {
+      const map = picture(art.ground);
+      map.repeat.set(groundMesh.userData.tiles, groundMesh.userData.tiles);
+      swapMaps(groundMesh.material, { map, normalMap: bumpsOf(map, 3) });
+      if (scenarioName !== 'wasteland') {
+        // A photo of the ground has its own colors: only tint it lightly.
+        const colors = groundMesh.geometry.attributes.color;
+        for (let i = 0; i < colors.count; i += 1) {
+          colors.setXYZ(i, colors.getX(i) * 0.3 + 0.66, colors.getY(i) * 0.3 + 0.66, colors.getZ(i) * 0.3 + 0.66);
+        }
+        colors.needsUpdate = true;
+      }
+    }
+
+    if (scenarioName === 'city') {
+      built.fronts.forEach((material, i) => {
+        const image = art.facades[i % Math.max(1, art.facades.length)];
+        if (!image) {
+          return;
+        }
+        swapMaps(material, { ...facadeFromPicture(image), normalMap: null, roughnessMap: null, metalnessMap: null });
+        material.roughness = 0.45;
+        material.metalness = 0.25;
+        material.emissiveIntensity = 1.05;
+      });
+      plant(art.palms, built.planters.filter((unused, i) => i % 2 === 0), (r) => 9 + r * 4, { sheets: 2 });
+      plant(art.bushes, built.planters.filter((unused, i) => i % 2 === 1), (r) => 1.8 + r * 0.8, { sheets: 2, shadows: false });
+    }
+    if (scenarioName === 'jungle') {
+      if (art.trees.length > 0 && art.plants.length > 0) {
+        world.remove(built.standIn);
+        dispose(built.standIn);
+      }
+      plant(art.trees, built.near, (r) => 11 + r * 9, { sheets: quality.name === 'high' ? 3 : 2 });
+      plant(art.giants, built.far, (r) => 20 + r * 14, { sheets: 2 });
+      plant(art.plants, built.edge, (r) => 1.3 + r * 1.6, { sheets: 2, shadows: false });
+      plant(art.ruins, built.ruins, (r) => 8 + r * 3, { sheets: 1, spin: false });
+      if (art.falls) {
+        world.add(standing(art.falls, [{ ...built.falls, tall: 52 }], 1, false));
+      }
+    }
+    if (scenarioName === 'wasteland') {
+      if (art.wall) {
+        const map = picture(art.wall);
+        swapMaps(built.wallMaterial, { map, normalMap: bumpsOf(map, 3), roughnessMap: null, metalnessMap: null });
+        built.wallMaterial.metalness = 0;
+        built.wallMaterial.roughness = 0.95;
+      }
+      if (art.rock) {
+        const map = picture(art.rock);
+        swapMaps(built.rockMaterial, { map, normalMap: bumpsOf(map, 4) });
+      }
+      if (art.wrecks.length > 0) {
+        world.remove(built.standIn);
+        dispose(built.standIn);
+      }
+      plant(art.wrecks, built.wrecks, (r) => 1.7 + r * 0.5, { sheets: 1, spin: false });
+      plant(art.deadTrees, built.deadTrees, (r) => 6 + r * 6, { sheets: 2 });
+      plant(art.towers, built.towers, (r) => 34 + r * 26, { sheets: 1, spin: false, shadows: false });
+      plant(art.overpasses, built.overpasses, (r) => 13 + r * 4, { sheets: 1, spin: false });
+      plant(art.cacti, built.cacti, (r) => 2 + r * 5, { sheets: 2 });
+      plant(art.spires, built.spires, (r) => 24 + r * 24, { sheets: 2, shadows: false });
+      plant(art.pylons, built.pylons, (r) => 24 + r * 6, { sheets: 1, spin: false });
+      plant(art.desertRuins, built.desertRuins, (r) => 8 + r * 6, { sheets: 1, spin: false });
+    }
+    sharpen(world);
+  }
+
+  function dispose(object) {
+    object.traverse((child) => {
+      child.geometry?.dispose();
+      [child.material].flat().forEach((material) => {
+        if (!material) {
+          return;
+        }
+        Object.values(material).forEach((value) => {
+          if (value && value.isTexture) {
+            value.dispose();
+          }
+        });
+        material.dispose();
+      });
     });
   }
 
@@ -1223,12 +1721,15 @@ export function createScene(container) {
     // Returns the track samples and length.
     setScenario(name, points = CIRCUITS[name]) {
       disposeWorld();
+      building += 1;
+      const mine = building;
       scenarioName = name;
+      looks = JSON.parse(JSON.stringify(LOOKS));
       track = sampleTrack(points);
       if (name === 'wasteland') {
-        applyLook(LOOKS.snow);
+        applyLook(looks.snow);
       } else {
-        applyLook(LOOKS[name]);
+        applyLook(looks[name]);
       }
       updateEnvironment();
       world = new THREE.Group();
@@ -1240,16 +1741,23 @@ export function createScene(container) {
       buildGround(world, track.samples, clearance);
       buildRoad(world, track.samples, track.length);
       if (name === 'city') {
-        buildCity(world, track.samples, clearance, groundY, quality, dot, beamMap);
+        built = buildCity(world, track.samples, clearance, groundY, quality, dot, beamMap);
       }
       if (name === 'jungle') {
-        buildJungle(world, track.samples, clearance, groundY, quality);
+        built = buildJungle(world, track.samples, clearance, groundY, quality);
       }
       if (name === 'wasteland') {
-        buildWasteland(world, track.samples, clearance, groundY, quality);
+        built = buildWasteland(world, track.samples, clearance, groundY, quality);
       }
       sharpen(world);
       scene.add(world);
+      // The pictures go on as soon as they are here (at once, the second
+      // time), unless another scenario was built meanwhile.
+      loadArt(name).then((art) => {
+        if (mine === building && world) {
+          dress(art);
+        }
+      });
       return track;
     },
 
@@ -1326,7 +1834,7 @@ export function createScene(container) {
           return;
         }
         boost.flash = Math.max(0, boost.flash - dt * 2);
-        boost.pad.material.color.copy(glowColor('#3ab8ff', 2.2 + boost.flash * 2.2));
+        boost.pad.material.color.copy(glowColor(BOOST_GLOW[scenarioName], 2.2 + boost.flash * 2.2));
       });
       points.forEach((point, i) => {
         if (point.collected && point.pop === 0) {
@@ -1348,7 +1856,11 @@ export function createScene(container) {
       });
       if (scenarioName === 'wasteland') {
         const amount = snowiness(carT);
-        applyLook(blendLooks(LOOKS.desert, LOOKS.snow, amount));
+        applyLook(blendLooks(looks.desert, looks.snow, amount));
+        farViews.forEach((view) => {
+          view.mesh.material.opacity = view.snowy ? amount : 1 - amount;
+          view.mesh.visible = view.mesh.material.opacity > 0.01;
+        });
         flakeMaterial.opacity = amount;
         flakes.visible = amount > 0.01;
         const positions = flakeGeometry.attributes.position;
@@ -1366,6 +1878,7 @@ export function createScene(container) {
         flakes.visible = false;
       }
       sky.mesh.position.copy(cameraPosition);
+      farViews.forEach((view) => view.mesh.position.copy(cameraPosition));
       effects.update(dt);
     },
 
