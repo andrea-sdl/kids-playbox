@@ -29,7 +29,7 @@ import { createSounds } from './sound.js';
 import { createMusic } from './music.js';
 import { normalizeTracks, trackPoints } from './tracks.js';
 import { createBuilder } from './editor.js';
-import { createTilt, tiltAvailable } from './tilt.js';
+import { createTilt, tiltAvailable } from '../../shared/tilt.js';
 
 const GAME_ID = 'drive';
 const STORE_KEY = 'game:drive';

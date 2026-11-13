@@ -1,7 +1,9 @@
-// Surfaces drawn in code: park floors, ramps, board graphics, windows,
-// graffiti and the floating letters. Nothing to download, so it all works
-// offline. Smooth noise keeps surfaces from looking flat up close, and the
-// scene works out bumps (normal maps) from these same pictures.
+// Surfaces drawn in code: the track's markings, board graphics, windows and
+// the floating letters, plus plain stand-ins for the ground, the track and
+// the ramps. The real ground, track, rock and wood come from pictures in
+// art/ (see scene.js); the stand-ins show if one is missing. Smooth noise
+// keeps drawn surfaces from looking flat up close, and the scene works out
+// bumps (normal maps) from all of these pictures.
 
 import * as THREE from '../../vendor/three/three.min.js';
 
@@ -105,126 +107,311 @@ function toTexture(canvas, { color = true, repeat = true } = {}) {
   return texture;
 }
 
-/* ---------- Park surfaces ---------- */
+/* ---------- Hill surfaces ---------- */
 
-// The floor, 8 m square per repeat.
-export function floorTexture(scenario) {
-  const size = scenario === 'city' ? 1024 : 512;
-  const canvas = makeCanvas(size, size);
+// A picture made to repeat: four mirrored copies side by side, so its
+// edges always match.
+function mirroredTile(image, size) {
+  const canvas = makeCanvas(size * 2, size * 2);
   const ctx = canvas.getContext('2d');
-  const noise = noiseCanvas(128, 4, 4, 11);
-  if (scenario === 'city') {
-    // Concrete slabs, 2 m each. Every slab has its own tone, the seams are
-    // dark with a worn light edge, and the stone in the mix shows as specks.
-    const rand = random(4);
-    const slab = size / 4;
-    for (let row = 0; row < 4; row += 1) {
-      for (let col = 0; col < 4; col += 1) {
-        const tone = 172 + Math.round(rand() * 22);
-        ctx.fillStyle = `rgb(${tone + 4}, ${tone + 2}, ${tone - 3})`;
-        ctx.fillRect(col * slab, row * slab, slab, slab);
+  [[0, 0, 1, 1], [1, 0, -1, 1], [0, 1, 1, -1], [1, 1, -1, -1]].forEach(([column, row, flipX, flipY]) => {
+    ctx.save();
+    ctx.translate((column + (flipX < 0 ? 1 : 0)) * size, (row + (flipY < 0 ? 1 : 0)) * size);
+    ctx.scale(flipX, flipY);
+    ctx.drawImage(image, 0, 0, size, size);
+    ctx.restore();
+  });
+  return canvas;
+}
+
+// Covers part of a canvas with a repeating picture.
+function fillWith(ctx, image, x, y, width, height, tile = 256) {
+  ctx.fillStyle = ctx.createPattern(mirroredTile(image, tile), 'repeat');
+  ctx.fillRect(x, y, width, height);
+}
+
+// The strip the rider goes down, seen from above: 21 m across the picture
+// and 16 m along it, repeating along the way. Its edges fade out so it
+// blends into the hillside (the road keeps hard edges). `pictures` may
+// hold photos of the ground and of the track's own surface; without them
+// everything is drawn here.
+export function trackTexture(scenario, pictures = {}) {
+  const width = 1024;
+  const height = 1024;
+  const canvas = makeCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+  const rand = random(71);
+  const noise = noiseCanvas(256, 4, 4, 33);
+  const fine = noiseCanvas(256, 16, 3, 34);
+  // A line down the picture that sways and still joins up top to bottom.
+  const sway = (y, size, turns = 1, start = 0) => Math.sin((y / height) * Math.PI * 2 * turns + start) * size;
+  const band = (center, half, style, swaySize = 0, turns = 1) => {
+    ctx.fillStyle = style;
+    ctx.beginPath();
+    for (let y = 0; y <= height; y += 16) {
+      ctx.lineTo(center - half + sway(y, swaySize, turns), y);
+    }
+    for (let y = height; y >= 0; y -= 16) {
+      ctx.lineTo(center + half + sway(y, swaySize, turns), y);
+    }
+    ctx.fill();
+  };
+  let fade = 0.16;
+  if (scenario === 'meadow') {
+    // Mown grass with a worn dirt trail down the middle.
+    if (pictures.ground && pictures.track) {
+      fillWith(ctx, pictures.ground, 0, 0, width, height);
+      ctx.fillStyle = 'rgba(255, 255, 210, 0.1)';
+      ctx.fillRect(0, 0, width, height);
+      // The trail: a band of dirt whose edges fade into the grass.
+      const trail = makeCanvas(width, height);
+      const trailCtx = trail.getContext('2d');
+      fillWith(trailCtx, pictures.track, 0, 0, width, height, 128);
+      // Sun-dried: paler than the damp dirt of the photo.
+      trailCtx.fillStyle = 'rgba(236, 214, 170, 0.34)';
+      trailCtx.fillRect(0, 0, width, height);
+      const edge = trailCtx.createLinearGradient(width / 2 - 120, 0, width / 2 + 120, 0);
+      edge.addColorStop(0, 'rgba(0,0,0,0)');
+      edge.addColorStop(0.22, 'rgba(0,0,0,1)');
+      edge.addColorStop(0.78, 'rgba(0,0,0,1)');
+      edge.addColorStop(1, 'rgba(0,0,0,0)');
+      trailCtx.globalCompositeOperation = 'destination-in';
+      trailCtx.fillStyle = edge;
+      trailCtx.fillRect(0, 0, width, height);
+      ctx.drawImage(trail, 0, 0);
+      // Two faint wheel ruts.
+      band(width / 2 - 34, 11, 'rgba(70, 50, 30, 0.16)', 8);
+      band(width / 2 + 34, 11, 'rgba(70, 50, 30, 0.16)', 8);
+    } else {
+      ctx.fillStyle = '#86cf55';
+      ctx.fillRect(0, 0, width, height);
+      overlayNoise(ctx, width, height, noise, 0.5, 'soft-light');
+      for (let i = 0; i < 5000; i += 1) {
+        const x = rand() * width;
+        const y = rand() * height;
+        ctx.strokeStyle = `rgba(${40 + rand() * 60}, ${130 + rand() * 90}, ${30 + rand() * 40}, 0.5)`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + (rand() - 0.5) * 5, y - 5 - rand() * 7);
+        ctx.stroke();
+      }
+      band(width / 2, 150, 'rgba(150, 170, 80, 0.55)', 26);
+      band(width / 2, 118, '#b99866', 26);
+      band(width / 2 - 52, 16, 'rgba(120, 92, 56, 0.3)', 26);
+      band(width / 2 + 52, 16, 'rgba(120, 92, 56, 0.3)', 26);
+      band(width / 2, 14, 'rgba(140, 165, 80, 0.5)', 26);
+      for (let i = 0; i < 260; i += 1) {
+        const y = rand() * height;
+        const x = width / 2 + (rand() - 0.5) * 220 + sway(y, 26);
+        const tone = 130 + rand() * 70;
+        ctx.fillStyle = `rgba(${tone}, ${tone - 14}, ${tone - 40}, 0.7)`;
+        ctx.beginPath();
+        ctx.ellipse(x, y, 1 + rand() * 2.2, 0.8 + rand() * 1.6, rand() * 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      overlayNoise(ctx, width, height, fine, 0.3);
+    }
+  } else if (scenario === 'sea') {
+    fade = 0.05;
+    // A coast road: a grass verge and a gravel shoulder on each side, then
+    // asphalt with tar seams, worn wheel paths, edge lines and a dashed
+    // middle.
+    if (pictures.ground) {
+      fillWith(ctx, pictures.ground, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#6fae4c';
+      ctx.fillRect(0, 0, width, height);
+      overlayNoise(ctx, width, height, noise, 0.4, 'soft-light');
+    }
+    const road = { left: 190, right: width - 190 };
+    ctx.fillStyle = '#a79c88';
+    ctx.fillRect(road.left - 56, 0, road.right - road.left + 112, height);
+    for (let i = 0; i < 2600; i += 1) {
+      const x = rand() < 0.5 ? road.left - 56 + rand() * 56 : road.right + rand() * 56;
+      const tone = 120 + rand() * 90;
+      ctx.fillStyle = `rgb(${tone}, ${tone - 6}, ${tone - 18})`;
+      ctx.fillRect(x, rand() * height, 1.5 + rand() * 2.5, 1.5 + rand() * 2.5);
+    }
+    if (pictures.track) {
+      fillWith(ctx, pictures.track, road.left, 0, road.right - road.left, height);
+    } else {
+      ctx.fillStyle = '#4c4d52';
+      ctx.fillRect(road.left, 0, road.right - road.left, height);
+      // Fine stone in the asphalt.
+      for (let i = 0; i < 26000; i += 1) {
+        const tone = 50 + rand() * 80;
+        ctx.fillStyle = `rgba(${tone}, ${tone}, ${tone + 4}, 0.5)`;
+        ctx.fillRect(road.left + rand() * (road.right - road.left), rand() * height, 1.6, 1.6);
       }
     }
-    overlayNoise(ctx, size, size, noise, 0.4);
-    overlayNoise(ctx, size, size, noiseCanvas(256, 24, 3, 12), 0.22);
-    for (let i = 0; i < 5000; i += 1) {
-      const shade = rand() < 0.5 ? 235 : 90;
-      ctx.fillStyle = `rgba(${shade}, ${shade}, ${shade}, ${0.12 + rand() * 0.2})`;
-      ctx.fillRect(rand() * size, rand() * size, 1 + rand() * 2, 1 + rand() * 2);
-    }
-    for (let i = 0; i <= 4; i += 1) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
-      ctx.fillRect(i * slab - 6, 0, 12, size);
-      ctx.fillRect(0, i * slab - 6, size, 12);
-      ctx.fillStyle = 'rgba(38, 36, 34, 0.9)';
-      ctx.fillRect(i * slab - 2.5, 0, 5, size);
-      ctx.fillRect(0, i * slab - 2.5, size, 5);
-    }
-    // Oil spots, and a few hairline cracks.
-    for (let i = 0; i < 9; i += 1) {
-      const x = rand() * size;
-      const y = rand() * size;
-      const spot = ctx.createRadialGradient(x, y, 0, x, y, 20 + rand() * 40);
-      spot.addColorStop(0, 'rgba(40, 38, 36, 0.22)');
-      spot.addColorStop(1, 'rgba(40, 38, 36, 0)');
-      ctx.fillStyle = spot;
-      ctx.fillRect(x - 70, y - 70, 140, 140);
-    }
-    ctx.strokeStyle = 'rgba(30, 28, 26, 0.6)';
-    ctx.lineWidth = 1.6;
+    // Where the wheels run it is worn smoother and a little lighter.
+    [0.27, 0.43, 0.57, 0.73].forEach((share) => {
+      const x = road.left + (road.right - road.left) * share;
+      const worn = ctx.createLinearGradient(x - 34, 0, x + 34, 0);
+      worn.addColorStop(0, 'rgba(120, 120, 124, 0)');
+      worn.addColorStop(0.5, 'rgba(120, 120, 124, 0.22)');
+      worn.addColorStop(1, 'rgba(120, 120, 124, 0)');
+      ctx.fillStyle = worn;
+      ctx.fillRect(x - 34, 0, 68, height);
+    });
+    // Tar poured into cracks.
+    ctx.strokeStyle = 'rgba(22, 22, 26, 0.8)';
+    ctx.lineWidth = 2.2;
     for (let i = 0; i < 7; i += 1) {
-      let x = rand() * size;
-      let y = rand() * size;
+      let x = road.left + 30 + rand() * (road.right - road.left - 60);
+      let y = rand() * height;
       ctx.beginPath();
       ctx.moveTo(x, y);
-      for (let step = 0; step < 7; step += 1) {
-        x += (rand() - 0.5) * 60;
-        y += (rand() - 0.2) * 44;
+      for (let k = 0; k < 8; k += 1) {
+        x += (rand() - 0.5) * 44;
+        y += 12 + rand() * 28;
         ctx.lineTo(x, y);
       }
       ctx.stroke();
     }
-    addGrain(ctx, size, size, 14, 3);
-  }
-  if (scenario === 'sea') {
-    // Pale stone pavers in a running bond.
-    ctx.fillStyle = '#9c8f7c';
-    ctx.fillRect(0, 0, size, size);
-    const rand = random(8);
-    for (let row = 0; row < 8; row += 1) {
-      const shift = (row % 2) * 64;
-      for (let col = -1; col < 5; col += 1) {
-        const tone = 178 + Math.round(rand() * 26);
-        const warm = rand() < 0.2 ? 18 : 0;
-        ctx.fillStyle = `rgb(${tone + warm}, ${tone - 10}, ${tone - 26 - warm})`;
-        ctx.fillRect(col * 128 + shift + 3, row * 64 + 3, 122, 58);
+    ctx.fillStyle = '#eeeee6';
+    ctx.fillRect(road.left + 14, 0, 9, height);
+    ctx.fillRect(road.right - 23, 0, 9, height);
+    ctx.fillStyle = '#f0cf5e';
+    [0, 512].forEach((y) => ctx.fillRect(width / 2 - 5, y + 60, 10, 200));
+    // Paint wears off in specks.
+    for (let i = 0; i < 900; i += 1) {
+      ctx.fillStyle = 'rgba(76, 77, 82, 0.8)';
+      const x = [road.left + 14, road.right - 23, width / 2 - 5][i % 3] + rand() * 10;
+      ctx.fillRect(x, rand() * height, 2, 2);
+    }
+  } else if (scenario === 'mountain') {
+    // A groomed ski run: fine lines from the snow machine, and old tracks.
+    if (pictures.track) {
+      fillWith(ctx, pictures.track, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#f2f6fc';
+      ctx.fillRect(0, 0, width, height);
+      for (let x = 0; x < width; x += 6) {
+        ctx.fillStyle = 'rgba(150, 175, 215, 0.2)';
+        ctx.fillRect(x, 0, 2, height);
       }
     }
-    overlayNoise(ctx, size, size, noise, 0.25);
-    addGrain(ctx, size, size, 12, 5);
-  }
-  if (scenario === 'mountain') {
-    // Groomed snow: soft lines from the snow machine.
-    ctx.fillStyle = '#eef3fa';
-    ctx.fillRect(0, 0, size, size);
-    for (let y = 0; y < size; y += 8) {
-      ctx.fillStyle = y % 16 === 0 ? 'rgba(150, 172, 210, 0.22)' : 'rgba(255, 255, 255, 0.4)';
-      ctx.fillRect(0, y, size, 4);
-    }
-    overlayNoise(ctx, size, size, noise, 0.2);
-    addGrain(ctx, size, size, 8, 6);
-  }
-  if (scenario === 'desert') {
-    // Packed sand with wind ripples.
-    ctx.fillStyle = '#e4bf86';
-    ctx.fillRect(0, 0, size, size);
-    ctx.strokeStyle = 'rgba(160, 110, 60, 0.18)';
-    ctx.lineWidth = 3;
-    for (let y = 0; y < size; y += 14) {
+    ctx.lineWidth = 5;
+    for (let i = 0; i < 6; i += 1) {
+      const center = 200 + rand() * 620;
+      const size = 40 + rand() * 90;
+      const start = rand() * 6;
+      ctx.strokeStyle = 'rgba(140, 165, 210, 0.3)';
       ctx.beginPath();
-      for (let x = 0; x <= size; x += 16) {
-        const wave = Math.sin((x / size) * Math.PI * 4 + y * 0.3) * 4;
-        if (x === 0) {
-          ctx.moveTo(x, y + wave);
-        } else {
-          ctx.lineTo(x, y + wave);
-        }
+      for (let y = 0; y <= height; y += 16) {
+        ctx.lineTo(center + sway(y, size, 1 + (i % 2), start), y);
       }
       ctx.stroke();
     }
-    overlayNoise(ctx, size, size, noise, 0.35);
-    addGrain(ctx, size, size, 16, 7);
+    overlayNoise(ctx, width, height, noise, 0.22);
+    overlayNoise(ctx, width, height, fine, 0.2);
+  } else {
+    // A packed dirt track through red rock, with tire marks and stones.
+    if (pictures.track) {
+      fillWith(ctx, pictures.track, 0, 0, width, height);
+    } else {
+      ctx.fillStyle = '#c98f5c';
+      ctx.fillRect(0, 0, width, height);
+      overlayNoise(ctx, width, height, noise, 0.55);
+    }
+    band(width / 2 - 90, 26, 'rgba(120, 70, 40, 0.2)', 40);
+    band(width / 2 + 90, 26, 'rgba(120, 70, 40, 0.2)', 40);
+    for (let i = 0; i < (pictures.track ? 0 : 700); i += 1) {
+      const tone = 120 + rand() * 90;
+      ctx.fillStyle = `rgba(${tone + 30}, ${tone - 10}, ${tone - 50}, 0.8)`;
+      ctx.beginPath();
+      ctx.ellipse(rand() * width, rand() * height, 1.5 + rand() * 5, 1.2 + rand() * 3.5, rand() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    overlayNoise(ctx, width, height, fine, 0.35);
   }
+  // Fade the sides out.
+  const mask = ctx.createLinearGradient(0, 0, width, 0);
+  mask.addColorStop(0, 'rgba(0,0,0,0)');
+  mask.addColorStop(fade, 'rgba(0,0,0,1)');
+  mask.addColorStop(1 - fade, 'rgba(0,0,0,1)');
+  mask.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = mask;
+  ctx.fillRect(0, 0, width, height);
+  ctx.globalCompositeOperation = 'source-over';
   return toTexture(canvas);
 }
 
-// Ramp and quarter pipe surfaces, 4 m square per repeat.
+// The hillside around the strip, 8 m square per repeat. It is light and
+// nearly gray, because the hill's own colors are multiplied onto it.
+export function groundTexture(scenario) {
+  const size = 512;
+  const canvas = makeCanvas(size, size);
+  const ctx = canvas.getContext('2d');
+  const rand = random(88);
+  ctx.fillStyle = '#e4e4e0';
+  ctx.fillRect(0, 0, size, size);
+  overlayNoise(ctx, size, size, noiseCanvas(256, 4, 4, 61), 0.6);
+  if (scenario === 'meadow' || scenario === 'sea') {
+    // Blades of grass.
+    for (let i = 0; i < 9000; i += 1) {
+      const x = rand() * size;
+      const y = rand() * size;
+      const tone = 150 + rand() * 105;
+      ctx.strokeStyle = `rgba(${tone - 20}, ${tone}, ${tone - 40}, 0.55)`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (rand() - 0.5) * 6, y - 4 - rand() * 8);
+      ctx.stroke();
+    }
+  } else if (scenario === 'mountain') {
+    // Wind-blown snow.
+    for (let i = 0; i < 60; i += 1) {
+      ctx.strokeStyle = `rgba(170, 190, 225, ${0.1 + rand() * 0.15})`;
+      ctx.lineWidth = 2 + rand() * 4;
+      const y = rand() * size;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.bezierCurveTo(size / 3, y + (rand() - 0.5) * 40, (size * 2) / 3, y + (rand() - 0.5) * 40, size, y);
+      ctx.stroke();
+    }
+  } else {
+    // Sand ripples and grit.
+    for (let y = 0; y < size; y += 12) {
+      ctx.strokeStyle = 'rgba(150, 110, 80, 0.22)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let x = 0; x <= size; x += 16) {
+        ctx.lineTo(x, y + Math.sin((x / size) * Math.PI * 4 + y) * 4);
+      }
+      ctx.stroke();
+    }
+    for (let i = 0; i < 900; i += 1) {
+      const tone = 130 + rand() * 100;
+      ctx.fillStyle = `rgba(${tone}, ${tone - 20}, ${tone - 40}, 0.6)`;
+      ctx.fillRect(rand() * size, rand() * size, 2, 2);
+    }
+  }
+  overlayNoise(ctx, size, size, noiseCanvas(256, 24, 2, 62), 0.3);
+  return toTexture(canvas);
+}
+
+// The tops of ramps, tables and ledges, 4 m square per repeat.
 export function rampTexture(scenario) {
   const size = 256;
   const canvas = makeCanvas(size, size);
   const ctx = canvas.getContext('2d');
   const noise = noiseCanvas(64, 3, 3, 21);
-  if (scenario === 'sea') {
+  if (scenario === 'meadow') {
+    // Weathered wooden planks.
+    for (let i = 0; i < 8; i += 1) {
+      const tone = 172 - (i % 3) * 14;
+      ctx.fillStyle = `rgb(${tone + 20}, ${tone - 18}, ${tone - 62})`;
+      ctx.fillRect(0, i * 32, size, 32);
+      ctx.fillStyle = 'rgba(60, 36, 16, 0.5)';
+      ctx.fillRect(0, i * 32, size, 2);
+    }
+    overlayNoise(ctx, size, size, noise, 0.4);
+  } else if (scenario === 'sea') {
     // Painted wooden planks.
     for (let i = 0; i < 8; i += 1) {
       const tone = 236 - (i % 3) * 6;
@@ -457,33 +644,6 @@ export function windowsTexture(style = 'city') {
   finishCtx.fillStyle = 'rgb(0 215 0)';
   finishCtx.fillRect(0, 0, 20, 20);
   return { map: toTexture(color), height: toTexture(height, { color: false }), finish: toTexture(finish, { color: false }) };
-}
-
-// A graffiti wall for the city.
-export function graffitiTexture() {
-  const width = 512;
-  const height = 128;
-  const canvas = makeCanvas(width, height);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#8f8a84';
-  ctx.fillRect(0, 0, width, height);
-  overlayNoise(ctx, width, height, noiseCanvas(64, 4, 3, 31), 0.3);
-  const blobs = [['#ff3fa4', 40], ['#35c8ff', 170], ['#ffd23f', 300], ['#7cff6a', 420]];
-  blobs.forEach(([color, x], i) => {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.ellipse(x + 40, 64, 64, 40, (i - 1.5) * 0.2, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.font = 'italic 900 64px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = '#1a1030';
-  ctx.strokeText('SKATE!', width / 2, 66);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('SKATE!', width / 2, 66);
-  return toTexture(canvas, { repeat: false });
 }
 
 // Where a surface is rough and where it is smooth, as soft patches:

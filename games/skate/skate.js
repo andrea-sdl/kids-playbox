@@ -7,6 +7,7 @@ import * as THREE from '../../vendor/three/three.min.js';
 import {
   BOARDS,
   BOARD_OPTIONS,
+  CONTROLS,
   MODES,
   PRESETS,
   RIDER_OPTIONS,
@@ -19,12 +20,13 @@ import {
   presetLook,
   starsFor,
 } from './world.js';
-import { CRUISE, GRAVITY, MAX_SPEED, createRider, placeAtStart, startBail, stepRider } from './physics.js';
+import { MAX_SPEED, START_SPEED, createRider, placeAtStart, startBail, stepRider } from './physics.js';
 import { createTricks, praise } from './tricks.js';
 import { buildRider } from './rider.js';
 import { createScene } from './scene.js';
 import { createSounds } from './sound.js';
 import { createMusic } from './music.js';
+import { createTilt, tiltAvailable } from '../../shared/tilt.js';
 
 const GAME_ID = 'skate';
 const STORE_KEY = 'game:skate';
@@ -33,6 +35,8 @@ const WORD_BONUS = 1000;
 const PICKUP_RADIUS = 1.9;
 // A jump pressed a moment before it can happen still counts.
 const JUMP_BUFFER = 0.15;
+// A press held this long in the air is a grab, not a flip.
+const HOLD_SECONDS = 0.2;
 
 registerServiceWorker(GAME_ID);
 setupLanguage();
@@ -73,9 +77,9 @@ const els = {
   countdown: $('.countdown'),
   left: $('.steer-left'),
   right: $('.steer-right'),
-  jump: $('.jump-button'),
-  flip: $('.flip-button'),
-  grab: $('.grab-button'),
+  steeringPick: $('.steering-pick'),
+  controlOptions: $('.control-options'),
+  controlNote: $('.control-note'),
   pause: $('.pause-button'),
   pausePanel: $('.pause-panel'),
   resume: $('.resume-button'),
@@ -107,13 +111,15 @@ const numbers = new Intl.NumberFormat(getLanguage());
 
 // 'shop' | 'countdown' | 'riding' | 'paused' | 'finished'
 let mode = 'shop';
-let park = null;
+let hill = null;
 let rider = null;
 let model = null;
 let tricks = createTricks(save.board);
 const session = { score: 0, time: SESSION_SECONDS, letters: [], ending: false };
-const input = { left: false, right: false, grab: false, jumpBuffer: 0, flipQueued: false, keys: new Set() };
-const look = { spin: 0, land: 0, bail: 0, shake: 0, camYaw: 0, orientation: new THREE.Quaternion(), vertSpan: 1 };
+const input = { left: false, right: false, grab: false, jumpBuffer: 0, keys: new Set() };
+// The one action: a tap. `flip` says it began in the air.
+const tap = { down: false, held: 0, flip: false };
+const look = { spin: 0, land: 0, bail: 0, shake: 0, camYaw: 0, orientation: new THREE.Quaternion() };
 let toastTimer = null;
 let countdownTimer = null;
 let pausedFrom = null;
@@ -134,22 +140,24 @@ function setRider() {
   syncModel(0);
 }
 
-function loadScenario() {
+async function loadScenario() {
   els.loading.hidden = false;
   document.body.dataset.scenario = save.scenario;
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      park = view.setScenario(save.scenario, word());
-      if (!rider) {
-        rider = createRider(park);
-      }
-      placeAtStart(rider, park);
-      look.camYaw = rider.heading;
-      updateMusic();
-      els.loading.hidden = true;
-      resolve();
-    }, 30);
-  });
+  // Let the "Building…" note show before the work starts.
+  await new Promise((resolve) => { setTimeout(resolve, 30); });
+  const built = await view.setScenario(save.scenario, word());
+  // Another hill was picked meanwhile: that load takes over.
+  if (!built) {
+    return;
+  }
+  hill = built;
+  if (!rider) {
+    rider = createRider(hill);
+  }
+  placeAtStart(rider, hill);
+  look.camYaw = rider.heading;
+  updateMusic();
+  els.loading.hidden = true;
 }
 
 /* ---------- Riding ---------- */
@@ -162,6 +170,9 @@ function steerInput() {
   if (input.right || input.keys.has('right')) {
     steer += 1;
   }
+  if (steer === 0 && tiltOn()) {
+    steer = tilt.steer();
+  }
   return steer;
 }
 
@@ -169,36 +180,46 @@ function pressJump() {
   input.jumpBuffer = JUMP_BUFFER;
 }
 
-// Flip and grab work from the ground too: they jump first.
-function pressFlip() {
-  if (mode !== 'riding') {
+// The whole game is played with one tap (anywhere on the picture, or the
+// space bar). On the ground it jumps. In the air a quick tap does the next
+// flip, and holding it down grabs for as long as it is held. So two quick
+// taps are a jump and a flip.
+function tapDown() {
+  if (mode !== 'riding' || rider.mode === 'bail' || tap.down) {
     return;
   }
-  if (rider.mode === 'air') {
-    if (tricks.pressFlip()) {
-      sounds.trick();
-    }
-    return;
-  }
-  if (rider.mode !== 'bail') {
+  tap.down = true;
+  tap.held = 0;
+  tap.flip = rider.mode === 'air';
+  if (!tap.flip) {
     pressJump();
-    input.flipQueued = true;
   }
 }
 
-function pressGrab(held) {
-  input.grab = held;
-  if (held && mode === 'riding' && (rider.mode === 'ground' || rider.mode === 'grind')) {
-    pressJump();
+function tapUp() {
+  if (!tap.down) {
+    return;
+  }
+  tap.down = false;
+  if (input.grab) {
+    input.grab = false;
+    return;
+  }
+  if (tap.flip && mode === 'riding' && rider.mode === 'air' && tricks.pressFlip()) {
+    sounds.trick();
   }
 }
 
 function ride(dt) {
   const wasAir = rider.mode === 'air';
   const steer = rider.mode === 'bail' ? 0 : steerInput();
-  const events = stepRider(rider, { steer, jump: input.jumpBuffer > 0 && rider.mode !== 'bail' }, dt, park);
+  const events = stepRider(rider, { steer, jump: input.jumpBuffer > 0 && rider.mode !== 'bail' }, dt, hill);
   input.jumpBuffer = Math.max(0, input.jumpBuffer - dt);
   events.forEach((event) => handle(event, wasAir));
+  if (tap.down && rider.mode === 'air') {
+    tap.held += dt;
+    input.grab = tap.held >= HOLD_SECONDS;
+  }
   if (rider.mode === 'air') {
     if (tricks.setGrab(input.grab)) {
       sounds.trick();
@@ -212,22 +233,13 @@ function ride(dt) {
 }
 
 function handle(event, wasAir) {
-  if (event.type === 'ollie' || event.type === 'launch' || event.type === 'vert') {
+  if (event.type === 'ollie' || event.type === 'launch') {
     if (event.type === 'ollie') {
       input.jumpBuffer = 0;
       sounds.pop();
     }
     if (!(event.type === 'ollie' && wasAir)) {
       tricks.takeOff();
-    }
-    if (event.type === 'vert') {
-      look.vertSpan = (2 * rider.vy) / GRAVITY;
-    }
-    if (input.flipQueued) {
-      input.flipQueued = false;
-      if (tricks.pressFlip()) {
-        sounds.trick();
-      }
     }
   }
   if (event.type === 'land') {
@@ -257,6 +269,14 @@ function handle(event, wasAir) {
   if (event.type === 'bump') {
     sounds.bump();
     look.shake = Math.max(look.shake, 0.2);
+  }
+  // Rode straight into something: a fall, and the combo is gone.
+  if (event.type === 'crash') {
+    tricks.lose();
+    startBail(rider);
+    sounds.bail();
+    look.shake = 0.4;
+    toast(t('skate.crash'), 1400);
   }
 }
 
@@ -315,27 +335,15 @@ function wrap(angle) {
   return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
 
-// Which way the body faces: the heading, turned through a quarter-pipe
-// air, plus any spin.
-function displayHeading() {
-  if (rider.mode === 'air' && rider.air?.vert) {
-    const { from, to } = rider.air.vert;
-    const progress = Math.min(1, rider.air.time / Math.max(0.3, look.vertSpan));
-    const eased = progress * progress * (3 - 2 * progress);
-    return from + wrap(to - from) * eased;
-  }
-  return rider.heading;
-}
-
 function syncModel(dt) {
   if (!model || !rider) {
     return;
   }
-  const heading = displayHeading();
+  const { heading } = rider;
   model.group.position.set(rider.x, rider.y, rider.z);
   // Stand on the slope on the ground; upright in the air and on rails.
   if (rider.mode === 'ground' || rider.mode === 'bail') {
-    const { gx, gz } = park.surface(rider.x, rider.z);
+    const { gx, gz } = hill.surface(rider.x, rider.z);
     up.set(-gx, 1, -gz).normalize();
   } else {
     up.set(0, 1, 0);
@@ -382,6 +390,7 @@ function syncModel(dt) {
     side: rider.mode === 'grind' && rider.grind?.side,
     land: look.land,
     bail,
+    speed: mode === 'shop' ? 0 : rider.speed,
     time: clock,
   });
   view.follow(rider.x, rider.y, rider.z);
@@ -393,7 +402,7 @@ function spray(dt) {
     const tail = model.boardWorld(-model.length * 0.4, 0.02);
     view.effects.trail(dt, { x: tail.x, y: tail.y, z: tail.z, speed: rider.speed, turn: Math.abs(steerInput()), kind });
   }
-  if (rider.mode === 'grind' && save.board === 'skate' && Math.random() < 0.7) {
+  if (rider.mode === 'grind' && save.board !== 'snow' && Math.random() < 0.7) {
     const point = model.boardWorld(0, 0);
     view.effects.sparks(point.x, point.y, point.z, Math.sin(rider.heading) * rider.speed, Math.cos(rider.heading) * rider.speed);
   }
@@ -409,35 +418,42 @@ function portrait() {
 }
 
 function chaseCamera(dt, snap = false) {
-  // Turn with the rider, but hold still through a quarter-pipe air.
+  // Behind and above the rider, looking down the hill past them, so the
+  // slope ahead and the sea below are both in view.
   let goal = rider.heading;
   if (rider.mode === 'air') {
-    goal = rider.air?.vert ? look.camYaw : Math.atan2(rider.vx, rider.vz);
+    goal = Math.atan2(rider.vx, rider.vz);
   }
-  const rate = rider.mode === 'air' ? 1.5 : 3.5;
+  // Follow only part of each turn, so the view stays down the hill.
+  goal *= 0.55;
+  const rate = rider.mode === 'air' ? 1.5 : 3;
   look.camYaw += wrap(goal - look.camYaw) * Math.min(1, dt * rate);
   if (snap) {
     look.camYaw = goal;
   }
   const tall = portrait();
-  // By the sea the camera rides higher, to see down to the coast.
-  const lift = save.scenario === 'sea' ? 1.3 : 0;
-  const distance = 5.8 + tall * 2.4 + lift;
+  const fast = Math.min(1, rider.speed / 20);
+  const distance = 5 + tall * 2.4 + fast * 1;
   const back = { x: Math.sin(look.camYaw), z: Math.cos(look.camYaw) };
-  const groundY = rider.mode === 'air' ? Math.max(rider.y * 0.6, park.height(rider.x, rider.z)) : rider.y;
-  cameraTarget.set(rider.x - back.x * distance, groundY + 2.9 + tall * 1.2 + lift, rider.z - back.z * distance);
-  const floor = park.height(cameraTarget.x, cameraTarget.z) + 1.2;
-  cameraTarget.y = Math.max(cameraTarget.y, floor);
-  const follow = snap ? 1 : 1 - Math.exp(-dt * 6);
+  cameraTarget.set(rider.x - back.x * distance, 0, rider.z - back.z * distance);
+  // Height is measured from the ground under the camera, so jumps rise
+  // and fall in the picture.
+  const under = hill.height(cameraTarget.x, cameraTarget.z);
+  cameraTarget.y = Math.max(under + 2.3 + tall * 1.3, rider.y + 1.5);
+  const follow = snap ? 1 : 1 - Math.exp(-dt * 10);
   view.camera.position.lerp(cameraTarget, follow);
   if (look.shake > 0) {
     look.shake = Math.max(0, look.shake - dt);
     view.camera.position.x += (Math.random() - 0.5) * look.shake;
     view.camera.position.y += (Math.random() - 0.5) * look.shake;
   }
-  lookTarget.set(rider.x + back.x * 3, rider.y + 1.1, rider.z + back.z * 3);
+  const reach = 9;
+  lookTarget.set(rider.x + back.x * reach, hill.height(rider.x + back.x * reach, rider.z + back.z * reach) + 1.2, rider.z + back.z * reach);
+  // Look a little above the slope, so the hill falls away below and the
+  // sea and sky fill the top of the picture.
+  lookTarget.y = Math.min(lookTarget.y, rider.y + 1.2) + 1.5;
   view.camera.lookAt(lookTarget);
-  const fov = 62 + Math.min(1, rider.speed / 16) * 6 + tall * 16;
+  const fov = 58 + fast * 9 + tall * 16;
   view.camera.fov += (fov - view.camera.fov) * Math.min(1, dt * 3);
   view.camera.updateProjectionMatrix();
 }
@@ -557,6 +573,8 @@ function setMode(next) {
     view.camera.clearViewOffset();
   }
   document.body.classList.toggle('is-shop', next === 'shop');
+  // The arrow buttons hide only once tilt readings really arrive.
+  document.body.classList.toggle('is-tilt', tiltOn());
   els.shop.hidden = next !== 'shop';
   els.hud.hidden = next === 'shop';
   els.pause.hidden = next !== 'riding' && next !== 'countdown';
@@ -571,20 +589,29 @@ function setMode(next) {
 
 function resetRun() {
   tricks = createTricks(save.board);
-  placeAtStart(rider, park);
+  placeAtStart(rider, hill);
   look.camYaw = rider.heading;
   look.spin = 0;
   Object.assign(session, { score: 0, time: SESSION_SECONDS, letters: [], ending: false });
   view.resetLetters(word());
   input.jumpBuffer = 0;
-  input.flipQueued = false;
+  input.grab = false;
+  tap.down = false;
   delete els.finishPanel.dataset.ready;
   renderLetters();
   renderHud();
 }
 
-function startRun() {
+async function startRun() {
   sounds.unlock();
+  // iPhones only allow the motion sensor after a tap, each visit.
+  if (save.control === 'tilt' && !tilt.ready) {
+    const allowed = await tilt.enable();
+    if (!allowed) {
+      useButtons();
+      toast(t('skate.tiltDenied'), 3500);
+    }
+  }
   resetRun();
   setMode('countdown');
   syncModel(0);
@@ -604,9 +631,11 @@ function startRun() {
     clearInterval(countdownTimer);
     els.countdown.textContent = t('skate.countGo');
     sounds.count(true);
-    rider.speed = CRUISE * 0.5;
+    rider.speed = START_SPEED;
     setMode('riding');
-    toast(t('skate.tip'), 2600);
+    // However the phone is held now counts as straight ahead.
+    tilt.recenter();
+    toast(t(tiltOn() ? 'skate.tipTilt' : 'skate.tip'), 3200);
     setTimeout(() => els.countdown.classList.remove('is-on'), 700);
   }, 800);
 }
@@ -682,7 +711,7 @@ function toShop() {
     recordPlay(GAME_ID, { key: 'progress.skate', vars: { count: session.score } });
   }
   tricks = createTricks(save.board);
-  placeAtStart(rider, park);
+  placeAtStart(rider, hill);
   setMode('shop');
   renderShop();
 }
@@ -705,7 +734,7 @@ function loop(now) {
 
 function step(dt) {
   clock += dt;
-  if (!park || !rider || !model) {
+  if (!hill || !rider || !model) {
     return;
   }
   if (mode === 'riding') {
@@ -720,7 +749,7 @@ function step(dt) {
     syncModel(dt);
     spray(dt);
     chaseCamera(dt);
-    sounds.ride(Math.min(1, rider.speed / 14), view.groundKind(), rider.mode);
+    sounds.ride(Math.min(1, rider.speed / 20), view.groundKind(), rider.mode);
     renderHud();
   } else if (mode === 'countdown' || mode === 'finished') {
     if (mode === 'finished') {
@@ -743,9 +772,7 @@ function step(dt) {
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
-  Space: 'jump', ArrowUp: 'jump', KeyW: 'jump',
-  KeyJ: 'flip', KeyX: 'flip',
-  KeyK: 'grab', KeyC: 'grab',
+  Space: 'tap', ArrowUp: 'tap', KeyW: 'tap',
 };
 
 document.addEventListener('keydown', (event) => {
@@ -764,12 +791,8 @@ document.addEventListener('keydown', (event) => {
   if (event.repeat) {
     return;
   }
-  if (action === 'jump' && mode === 'riding') {
-    pressJump();
-  } else if (action === 'flip') {
-    pressFlip();
-  } else if (action === 'grab') {
-    pressGrab(true);
+  if (action === 'tap') {
+    tapDown();
   } else {
     input.keys.add(action);
   }
@@ -777,15 +800,15 @@ document.addEventListener('keydown', (event) => {
 
 document.addEventListener('keyup', (event) => {
   const action = KEYS[event.code];
-  if (action === 'grab') {
-    pressGrab(false);
+  if (action === 'tap') {
+    tapUp();
   }
   if (action) {
     input.keys.delete(action);
   }
 });
 
-// Touch pads: steering and grab are held, jump and flip are tapped.
+// The arrow buttons are held down to turn.
 function holdPad(button, onDown, onUp = () => {}) {
   const release = () => {
     if (button.classList.contains('is-held')) {
@@ -808,13 +831,28 @@ function holdPad(button, onDown, onUp = () => {}) {
 
 holdPad(els.left, () => { input.left = true; }, () => { input.left = false; });
 holdPad(els.right, () => { input.right = true; }, () => { input.right = false; });
-holdPad(els.jump, () => {
-  if (mode === 'riding') {
-    pressJump();
+
+// A tap anywhere on the picture, away from the buttons.
+let tapPointer = null;
+els.view.addEventListener('pointerdown', (event) => {
+  if (mode !== 'riding' || event.target.closest('button, a, .panel, .shop')) {
+    return;
   }
+  event.preventDefault();
+  tapPointer = event.pointerId;
+  tapDown();
 });
-holdPad(els.flip, pressFlip);
-holdPad(els.grab, () => pressGrab(true), () => pressGrab(false));
+
+function liftTap(event) {
+  if (event.pointerId === tapPointer) {
+    tapPointer = null;
+    tapUp();
+  }
+}
+
+window.addEventListener('pointerup', liftTap);
+window.addEventListener('pointercancel', liftTap);
+els.view.addEventListener('contextmenu', (event) => event.preventDefault());
 
 els.pause.addEventListener('click', pause);
 els.resume.addEventListener('click', resume);
@@ -835,7 +873,50 @@ window.addEventListener('blur', () => {
   input.left = false;
   input.right = false;
   input.grab = false;
+  tap.down = false;
 });
+
+/* ---------- Steering ---------- */
+
+const tilt = createTilt();
+
+function tiltOn() {
+  return save.control === 'tilt' && tilt.ready;
+}
+
+function useButtons() {
+  save.control = 'buttons';
+  store();
+  tilt.disable();
+  renderControls();
+}
+
+// Arrow buttons or tilt. Tilt is only offered where there's a motion
+// sensor; asking for it has to happen in the tap itself, so this listens
+// to clicks.
+function renderControls() {
+  els.steeringPick.hidden = !tiltAvailable();
+  els.controlNote.textContent = save.control === 'tilt' ? t('skate.tiltNote') : '';
+  els.controlOptions.replaceChildren(...CONTROLS.map((control) => {
+    const card = radioCard('control', control, save.control === control, `<strong>${t(`skate.control.${control}`)}</strong>`, () => {});
+    card.querySelector('input').addEventListener('click', async () => {
+      if (control === 'buttons') {
+        useButtons();
+        return;
+      }
+      const allowed = await tilt.enable();
+      if (!allowed) {
+        useButtons();
+        els.controlNote.textContent = t('skate.tiltDenied');
+        return;
+      }
+      save.control = 'tilt';
+      store();
+      renderControls();
+    });
+    return card;
+  }));
+}
 
 function updateMusic() {
   if (save.music && heardTap && document.visibilityState === 'visible') {
@@ -873,7 +954,13 @@ function radioCard(name, value, checked, inner, onPick) {
   return label;
 }
 
+// A picture of each ride for its card.
 const BOARD_ART = {
+  bike: `
+    <svg viewBox="0 0 64 24" aria-hidden="true">
+      <circle class="sil-ring" cx="14" cy="16" r="6.5"/><circle class="sil-ring" cx="50" cy="16" r="6.5"/>
+      <path class="sil-frame" d="M14 16 L26 6 H42 L50 16 M26 6 L33 16 H14 M33 16 L42 6 M40 3 H46 M23 4 H29"/>
+    </svg>`,
   skate: `
     <svg viewBox="0 0 64 24" aria-hidden="true">
       <path class="sil-board" d="M6 9 Q2 9 3 5 L8 11 H56 L61 5 Q62 9 58 9 L56 12 H8 Z"/>
@@ -929,6 +1016,7 @@ function renderShop() {
     return swatch;
   }));
   renderCustom();
+  renderControls();
   els.modeOptions.replaceChildren(...MODES.map((value) => radioCard(
     'mode',
     value,
@@ -960,6 +1048,9 @@ function customRow(key) {
   let label = t(`skate.custom.${key}`);
   if (key === 'wheels' && save.board === 'snow') {
     label = t('skate.custom.bindings');
+  }
+  if (key === 'wheels' && save.board === 'bike') {
+    label = t('skate.custom.rims');
   }
   title.textContent = label;
   const options = document.createElement('div');
@@ -1012,7 +1103,10 @@ function presetRow() {
 
 function renderCustom() {
   const riderKeys = Object.keys(RIDER_OPTIONS).filter((key) => key !== 'hatColor' || save.look.hat !== 'none');
-  const boardKeys = ['graphic', 'graphicColor', 'wheels'].filter((key) => key !== 'graphicColor' || save.look.graphic !== 'none');
+  // A bike has no deck to paint a picture on.
+  const boardKeys = ['graphic', 'graphicColor', 'wheels']
+    .filter((key) => save.board !== 'bike' || key === 'wheels')
+    .filter((key) => key !== 'graphicColor' || save.look.graphic !== 'none');
   els.presetOptions.replaceChildren(presetRow());
   els.riderRows.replaceChildren(...riderKeys.map(customRow));
   els.boardRows.replaceChildren(...boardKeys.map(customRow));

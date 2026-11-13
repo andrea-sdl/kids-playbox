@@ -1,34 +1,44 @@
-// Riding: rolling on the ground and up the ramps, flying, grinding rails and
-// falling over. No Three.js here, so it can be tested. Distances are in
-// meters, speeds in meters per second.
+// Riding down the hill: rolling on the ground and up the ramps, flying,
+// grinding rails and falling over. No Three.js here, so it can be tested.
+// Distances are in meters, speeds in meters per second.
 //
-// On the ground the rider has a speed along the surface and a heading. The
-// board rolls on its own (no pushing needed); hills slow it down or speed it
-// up. When the ground drops away faster than the rider falls, or the rider
-// jumps, they fly until they land again.
-
-import { VERT_D } from './world.js';
+// On the ground the rider has a speed along the surface and a heading
+// (0 is straight down the hill, toward +z). The hill does the pushing: the
+// steeper it is, the faster it goes, until the wind holds it back. Carving
+// left and right slows down. When the ground drops away faster than the
+// rider falls, or the rider jumps, they fly until they land again.
 
 export const GRAVITY = 16;
-export const CRUISE = 11;
-const PUSH = 7;
-export const MAX_SPEED = 20;
+// The speed the rider sets off at, and never drops far below.
+export const START_SPEED = 7;
+const PUSH = 6;
+export const MAX_SPEED = 26;
+// Wind: grows with the square of the speed. On the average slope this
+// settles near 17 m/s.
+const DRAG = 0.016;
+// How much a hard turn slows the ride.
+const CARVE = 0.22;
 export const OLLIE = 6.8;
-// The smallest pop when flying out of a quarter pipe.
-const VERT_POP = 9;
 // Ledges taller than this are walls.
 export const STEP = 0.35;
 const TURN = 2.5;
+// How strongly the slope pulls the nose back downhill, and how strongly
+// the rider follows the bends of the strip without steering.
+const FALL_LINE = 0.5;
+const FOLLOW = 2.2;
+// The rider can't turn back up the hill.
+export const MAX_HEADING = 1.05;
 const AIR_SPIN = 7;
 // After rolling off an edge there's still a moment to jump.
 const COYOTE = 0.18;
-const GRIND_REACH = 0.6;
+// How close to a rail counts as landing on it: generous, for small hands.
+const GRIND_REACH = 0.9;
 
-function wrap(angle) {
-  return Math.atan2(Math.sin(angle), Math.cos(angle));
+function clamp(value, low, high) {
+  return Math.min(high, Math.max(low, value));
 }
 
-export function createRider(park) {
+export function createRider(hill) {
   const rider = {
     x: 0, y: 0, z: 0, heading: 0, speed: 0,
     vx: 0, vy: 0, vz: 0,
@@ -37,18 +47,18 @@ export function createRider(park) {
     grind: null,
     bail: 0,
     slope: 0,
-    normal: { x: 0, y: 1, z: 0 },
+    onEdge: false,
   };
-  placeAtStart(rider, park);
+  placeAtStart(rider, hill);
   return rider;
 }
 
-export function placeAtStart(rider, park) {
+export function placeAtStart(rider, hill) {
   Object.assign(rider, {
-    x: park.start.x,
-    z: park.start.z,
-    y: park.height(park.start.x, park.start.z),
-    heading: park.start.heading,
+    x: hill.start.x,
+    z: hill.start.z,
+    y: hill.height(hill.start.x, hill.start.z),
+    heading: hill.start.heading,
     speed: 0,
     vx: 0, vy: 0, vz: 0,
     mode: 'ground',
@@ -56,11 +66,6 @@ export function placeAtStart(rider, park) {
     grind: null,
     bail: 0,
   });
-}
-
-export function slopeAt(park, x, z) {
-  const { gx, gz } = park.surface(x, z);
-  return { gx, gz };
 }
 
 function forward(heading) {
@@ -74,49 +79,48 @@ function takeOff(rider, events, kind, vy) {
   rider.vz = f.z * horizontal;
   rider.vy = vy;
   rider.mode = 'air';
-  rider.air = { time: 0, spin: 0, vert: null, jumped: kind === 'ollie', coyote: kind === 'launch' ? COYOTE : 0, from: kind };
+  rider.air = { time: 0, spin: 0, jumped: kind === 'ollie', coyote: kind === 'launch' ? COYOTE : 0, from: kind };
   events.push({ type: kind });
 }
 
-// Keeps the rider inside the park. Returns true when it bumped.
-function clampToBounds(rider, park) {
-  const { minX, maxX, minZ, maxZ } = park.bounds;
-  let bumped = false;
-  if (rider.x < minX || rider.x > maxX) {
-    rider.x = Math.min(maxX, Math.max(minX, rider.x));
-    rider.vx = -rider.vx * 0.5;
-    bumped = 'x';
+// Keeps the rider on the strip. Returns which edge it bumped: 1 for the
+// +x edge, -1 for the other, 0 for none.
+function keepOnStrip(rider, hill) {
+  const { min, max } = hill.edges(rider.z);
+  if (rider.x >= min && rider.x <= max) {
+    return 0;
   }
-  if (rider.z < minZ || rider.z > maxZ) {
-    rider.z = Math.min(maxZ, Math.max(minZ, rider.z));
-    rider.vz = -rider.vz * 0.5;
-    bumped = bumped ? 'xz' : 'z';
-  }
-  return bumped;
+  const side = rider.x > max ? 1 : -1;
+  rider.x = clamp(rider.x, min, max);
+  rider.vx = -rider.vx * 0.5;
+  return side;
 }
 
-function bounceHeading(rider, axis) {
-  const f = forward(rider.heading);
-  if (axis.includes('x')) {
-    f.x = -f.x;
-  }
-  if (axis.includes('z')) {
-    f.z = -f.z;
-  }
-  rider.heading = Math.atan2(f.x, f.z);
+// Hit something head-on: stop there and let the game make it a fall.
+function crash(rider, events) {
+  rider.speed *= 0.4;
+  rider.vx = 0;
+  rider.vy = 0;
+  rider.vz = 0;
+  rider.mode = 'ground';
+  rider.air = null;
+  events.push({ type: 'crash' });
 }
 
 /* ---------- On the ground ---------- */
 
-function rideGround(rider, input, dt, park, events) {
-  const { gx, gz } = slopeAt(park, rider.x, rider.z);
+function rideGround(rider, input, dt, hill, events) {
+  const { gx, gz } = hill.surface(rider.x, rider.z);
   let f = forward(rider.heading);
-  // Downhill pulls the nose around on the walls of a quarter pipe.
   const rightX = -f.z;
   const rightZ = f.x;
   const downhillRight = -(gx * rightX + gz * rightZ);
   const grip = Math.min(1, rider.speed / 3);
-  rider.heading -= (input.steer * TURN * grip + downhillRight * 0.9) * dt;
+  rider.heading -= (input.steer * TURN * grip + downhillRight * FALL_LINE) * dt;
+  if (input.steer === 0) {
+    rider.heading += (hill.direction(rider.z) - rider.heading) * Math.min(1, FOLLOW * dt);
+  }
+  rider.heading = clamp(rider.heading, -MAX_HEADING, MAX_HEADING);
   f = forward(rider.heading);
 
   const m = gx * f.x + gz * f.z;
@@ -124,57 +128,34 @@ function rideGround(rider, input, dt, park, events) {
   const cos = 1 / Math.sqrt(1 + m * m);
   const sin = m * cos;
   rider.speed -= GRAVITY * sin * dt;
-  if (Math.abs(m) < 0.15) {
-    if (rider.speed < CRUISE) {
-      rider.speed = Math.min(CRUISE, rider.speed + PUSH * dt);
-    } else {
-      rider.speed -= (rider.speed - CRUISE) * 0.5 * dt;
-    }
+  rider.speed -= (DRAG * rider.speed + CARVE * Math.abs(input.steer)) * rider.speed * dt;
+  if (rider.speed < START_SPEED) {
+    rider.speed = Math.min(START_SPEED, rider.speed + PUSH * dt);
   }
   rider.speed = Math.min(MAX_SPEED, rider.speed);
-  // Rolled back down a wall: turn around and keep going.
-  if (rider.speed < 0) {
-    rider.heading = wrap(rider.heading + Math.PI);
-    rider.speed = -rider.speed;
-    events.push({ type: 'turnAround' });
-    return;
-  }
 
   const step = rider.speed * cos * dt;
-  let nx = rider.x + f.x * step;
-  let nz = rider.z + f.z * step;
-  let hn = park.height(nx, nz);
+  const nx = rider.x + f.x * step;
+  const nz = rider.z + f.z * step;
+  let hn = hill.height(nx, nz);
   if (hn - rider.y > STEP) {
-    // A wall: slide along it if one direction is free, else turn back.
-    const hx = park.height(nx, rider.z);
-    const hz = park.height(rider.x, nz);
-    if (hx - rider.y <= STEP) {
-      nz = rider.z;
-      hn = hx;
-      bounceHeading(rider, 'z');
-    } else if (hz - rider.y <= STEP) {
-      nx = rider.x;
-      hn = hz;
-      bounceHeading(rider, 'x');
-    } else {
-      rider.heading = wrap(rider.heading + Math.PI);
-      nx = rider.x;
-      nz = rider.z;
-      hn = rider.y;
-    }
-    rider.speed *= 0.5;
-    events.push({ type: 'bump' });
+    crash(rider, events);
+    return;
   }
   const expected = rider.y + rider.speed * sin * dt;
   rider.x = nx;
   rider.z = nz;
-  const bumped = clampToBounds(rider, park);
-  if (bumped) {
-    bounceHeading(rider, bumped);
-    rider.speed *= 0.6;
-    hn = park.height(rider.x, rider.z);
-    events.push({ type: 'bump' });
+  const side = keepOnStrip(rider, hill);
+  if (side !== 0) {
+    // Slide along the edge, nose a little back toward the middle.
+    rider.heading = hill.direction(rider.z) - side * 0.12;
+    hn = hill.height(rider.x, rider.z);
+    if (!rider.onEdge) {
+      rider.speed *= 0.8;
+      events.push({ type: 'bump' });
+    }
   }
+  rider.onEdge = side !== 0;
 
   // The ground fell away: fly.
   if (hn < expected - 0.06) {
@@ -184,29 +165,6 @@ function rideGround(rider, input, dt, park, events) {
   }
   rider.y = hn;
 
-  // High up a quarter pipe and still going up it: fly straight up, and
-  // come back down facing the other way.
-  const pipe = park.quarterPipeAt(rider.x, rider.z);
-  if (pipe && pipe.d > VERT_D && f.x * pipe.nx + f.z * pipe.nz > 0.15) {
-    const horizontal = rider.speed * cos;
-    const out = horizontal * (f.x * pipe.nx + f.z * pipe.nz);
-    const tx = f.x * horizontal - pipe.nx * out;
-    const tz = f.z * horizontal - pipe.nz * out;
-    const along = Math.hypot(tx, tz);
-    const up = Math.max(VERT_POP, Math.sqrt(Math.max(0, rider.speed ** 2 - along ** 2)));
-    const facing = { x: f.x - 2 * (f.x * pipe.nx + f.z * pipe.nz) * pipe.nx, z: f.z - 2 * (f.x * pipe.nx + f.z * pipe.nz) * pipe.nz };
-    rider.mode = 'air';
-    rider.vx = tx;
-    rider.vz = tz;
-    rider.vy = up;
-    rider.air = {
-      time: 0, spin: 0, jumped: false, coyote: 0, from: 'vert',
-      vert: { from: rider.heading, to: Math.atan2(facing.x, facing.z) },
-    };
-    events.push({ type: 'vert' });
-    return;
-  }
-
   if (input.jump) {
     takeOff(rider, events, 'ollie', rider.speed * sin + OLLIE);
   }
@@ -214,12 +172,12 @@ function rideGround(rider, input, dt, park, events) {
 
 /* ---------- In the air ---------- */
 
-function findRail(rider, park, nx, ny, nz) {
+function findRail(rider, hill, nx, ny, nz) {
   if (rider.vy > 1) {
     return null;
   }
   let best = null;
-  for (const rail of park.rails) {
+  for (const rail of hill.railsAt(nz)) {
     const ex = rail.bx - rail.ax;
     const ez = rail.bz - rail.az;
     const t = ((nx - rail.ax) * ex + (nz - rail.az) * ez) / (rail.flat * rail.flat);
@@ -252,7 +210,7 @@ function findRail(rider, park, nx, ny, nz) {
   return best;
 }
 
-function fly(rider, input, dt, park, events) {
+function fly(rider, input, dt, hill, events) {
   const air = rider.air;
   air.time += dt;
   air.coyote = Math.max(0, air.coyote - dt);
@@ -263,15 +221,13 @@ function fly(rider, input, dt, park, events) {
     air.from = 'ollie';
     events.push({ type: 'ollie' });
   }
-  if (!air.vert) {
-    air.spin -= input.steer * AIR_SPIN * dt;
-  }
+  air.spin -= input.steer * AIR_SPIN * dt;
   rider.vy -= GRAVITY * dt;
   const nx = rider.x + rider.vx * dt;
   const ny = rider.y + rider.vy * dt;
   const nz = rider.z + rider.vz * dt;
 
-  const hit = findRail(rider, park, nx, ny, nz);
+  const hit = findRail(rider, hill, nx, ny, nz);
   if (hit) {
     const { rail, t, align, speed } = hit;
     const direction = Math.sign(align) || 1;
@@ -287,29 +243,22 @@ function fly(rider, input, dt, park, events) {
     return;
   }
 
-  const ground = park.height(nx, nz);
+  const ground = hill.height(nx, nz);
   if (ny <= ground && ground - rider.y > STEP && ground - ny > STEP) {
-    // Flew into the side of something: bounce off, keep falling.
-    const hx = park.height(nx, rider.z);
-    if (hx - rider.y > STEP) {
-      rider.vx = -rider.vx * 0.4;
-    }
-    const hz = park.height(rider.x, nz);
-    if (hz - rider.y > STEP) {
-      rider.vz = -rider.vz * 0.4;
-    }
-    rider.y = ny;
-    events.push({ type: 'bump' });
+    // Flew into the side of something.
+    rider.y = hill.height(rider.x, rider.z);
+    rider.speed = Math.hypot(rider.vx, rider.vz);
+    crash(rider, events);
     return;
   }
 
   rider.x = nx;
   rider.y = ny;
   rider.z = nz;
-  if (clampToBounds(rider, park)) {
+  if (keepOnStrip(rider, hill) !== 0) {
     events.push({ type: 'bump' });
   }
-  const below = park.height(rider.x, rider.z);
+  const below = hill.height(rider.x, rider.z);
   if (rider.y > below) {
     return;
   }
@@ -317,22 +266,17 @@ function fly(rider, input, dt, park, events) {
   // Landed.
   rider.y = below;
   const horizontal = Math.hypot(rider.vx, rider.vz);
-  if (air.vert) {
-    rider.heading = air.vert.to;
-    rider.speed = Math.min(MAX_SPEED, Math.hypot(horizontal, rider.vy) * 0.9);
-  } else {
-    if (horizontal > 0.5) {
-      rider.heading = Math.atan2(rider.vx, rider.vz);
-    }
-    const { gx, gz } = slopeAt(park, rider.x, rider.z);
-    const f = forward(rider.heading);
-    const m = gx * f.x + gz * f.z;
-    // Landing on a downhill keeps some of the fall as speed.
-    const extra = m < 0 ? -rider.vy * (-m / Math.sqrt(1 + m * m)) : 0;
-    rider.speed = Math.min(MAX_SPEED, horizontal + extra);
+  if (horizontal > 0.5) {
+    rider.heading = clamp(Math.atan2(rider.vx, rider.vz), -MAX_HEADING, MAX_HEADING);
   }
+  const { gx, gz } = hill.surface(rider.x, rider.z);
+  const f = forward(rider.heading);
+  const m = gx * f.x + gz * f.z;
+  // Landing on a downhill keeps some of the fall as speed.
+  const extra = m < 0 ? -rider.vy * (-m / Math.sqrt(1 + m * m)) : 0;
+  rider.speed = Math.min(MAX_SPEED, horizontal + extra);
   rider.mode = 'ground';
-  events.push({ type: 'land', airTime: air.time, spin: air.spin, vert: Boolean(air.vert), from: air.from, fall: -rider.vy });
+  events.push({ type: 'land', airTime: air.time, spin: air.spin, from: air.from, fall: -rider.vy });
   rider.vy = 0;
   rider.air = null;
 }
@@ -345,7 +289,7 @@ function leaveRail(rider, events, extraUp) {
   rider.vz = rail.dz * direction * rider.speed;
   rider.vy = rail.dy * direction * rider.speed + extraUp;
   rider.mode = 'air';
-  rider.air = { time: 0, spin: 0, vert: null, jumped: extraUp > 2, coyote: extraUp > 2 ? 0 : COYOTE, from: 'grind' };
+  rider.air = { time: 0, spin: 0, jumped: extraUp > 2, coyote: extraUp > 2 ? 0 : COYOTE, from: 'grind' };
   rider.grind = null;
   events.push({ type: 'grindEnd' });
 }
@@ -380,47 +324,34 @@ export function startBail(rider) {
   rider.grind = null;
 }
 
-function slide(rider, dt, park, events) {
+// Tumbling on down the hill, over whatever is in the way.
+function slide(rider, dt, hill, events) {
   rider.bail -= dt;
-  rider.speed *= Math.exp(-dt * 2.5);
+  rider.speed = Math.max(3, rider.speed * Math.exp(-dt * 2.5));
+  rider.heading *= Math.exp(-dt * 4);
   const f = forward(rider.heading);
-  const nx = rider.x + f.x * rider.speed * dt;
-  const nz = rider.z + f.z * rider.speed * dt;
-  const hn = park.height(nx, nz);
-  if (Math.abs(hn - rider.y) <= STEP) {
-    rider.x = nx;
-    rider.z = nz;
-  } else {
-    rider.speed = 0;
-  }
-  clampToBounds(rider, park);
-  const below = park.height(rider.x, rider.z);
-  // Slide down the walls of a quarter pipe.
-  rider.y = below;
-  const { gx, gz } = slopeAt(park, rider.x, rider.z);
-  if (Math.hypot(gx, gz) > 0.3) {
-    rider.heading = Math.atan2(-gx, -gz);
-    rider.speed = Math.max(rider.speed, 3);
-  }
+  rider.x += f.x * rider.speed * dt;
+  rider.z += f.z * rider.speed * dt;
+  keepOnStrip(rider, hill);
+  rider.y = hill.height(rider.x, rider.z);
   if (rider.bail <= 0) {
     rider.mode = 'ground';
-    rider.speed = 1;
     events.push({ type: 'recover' });
   }
 }
 
 // One step of riding. Returns what happened (jumps, landings, grinds) so
 // the game can score tricks and play sounds.
-export function stepRider(rider, input, dt, park) {
+export function stepRider(rider, input, dt, hill) {
   const events = [];
   if (rider.mode === 'ground') {
-    rideGround(rider, input, dt, park, events);
+    rideGround(rider, input, dt, hill, events);
   } else if (rider.mode === 'air') {
-    fly(rider, input, dt, park, events);
+    fly(rider, input, dt, hill, events);
   } else if (rider.mode === 'grind') {
     grind(rider, input, dt, events);
   } else if (rider.mode === 'bail') {
-    slide(rider, dt, park, events);
+    slide(rider, dt, hill, events);
   }
   return events;
 }

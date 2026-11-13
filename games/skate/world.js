@@ -1,29 +1,34 @@
-// The four parks, the rider's clothes and board, and saved settings, kept
-// free of Three.js so they can be tested.
+// The hill, the rider's clothes and ride, and saved settings, kept free of
+// Three.js so they can be tested.
 //
-// A park is a flat floor inside a rectangle. Some sides end in a quarter
-// pipe (a curved wall to ride up and fly out of), the others in a fence.
-// Ramps, boxes, stairs and rails sit on the floor. The ground height at any
-// point is the highest of all those shapes, which is all the riding needs.
+// The hill is one long steep slope that always goes down, toward +z. It is
+// built as a lap that repeats: after LAP meters the same ground comes again,
+// DROP meters lower, so the ride never ends and the join can't be seen. The
+// rideable strip follows a winding center line and is HALF_WIDTH wide on
+// each side. Jumps, ledges, tables and rails sit on it. The ground height
+// at any point is the slope plus the highest piece there, which is all the
+// riding needs.
 
-export const SCENARIOS = ['city', 'sea', 'mountain', 'desert'];
-export const BOARDS = ['skate', 'snow'];
+export const SCENARIOS = ['meadow', 'sea', 'mountain', 'desert'];
+// What to ride: a skateboard, a snowboard or a bicycle.
+export const BOARDS = ['skate', 'snow', 'bike'];
 // A two-minute session with a score to beat, or riding with no clock.
 export const MODES = ['session', 'free'];
 export const SESSION_SECONDS = 120;
+// Steering: the two arrow buttons, or tilting the phone.
+export const CONTROLS = ['buttons', 'tilt'];
 
-// The floor is 84 × 64 m.
-export const HALF_W = 42;
-export const HALF_D = 32;
-// Quarter pipes: a circle's curve, cut just before it turns straight up.
-export const QP_RADIUS = 5;
-export const QP_TOP = QP_RADIUS * 0.97;
-export const QP_HEIGHT = QP_RADIUS - Math.sqrt(QP_RADIUS ** 2 - QP_TOP ** 2);
-// Riding past this far up a quarter pipe sends the rider flying.
-export const VERT_D = QP_RADIUS * 0.93;
+export const LAP = 640;
+// How steep the hill is on average: meters down per meter forward.
+export const SLOPE = 0.3;
+export const DROP = LAP * SLOPE;
+export const HALF_WIDTH = 9;
+// Nothing to hit this close to the ends of a lap, so laps join cleanly.
+const CLEAR_START = 70;
+const CLEAR_END = 40;
 
-// The letters to collect in each park, by board.
-export const WORDS = { skate: 'SKATE', snow: 'BOARD' };
+// The letters to collect on each ride.
+export const WORDS = { skate: 'SKATE', snow: 'BOARD', bike: 'RIDER' };
 
 /* ---------- Clothes and board ---------- */
 
@@ -34,7 +39,7 @@ const BOARD_COLORS = ['#e3242b', '#ff7a1a', '#ffd23f', '#3fbf5f', '#2f9bff', '#8
 const DETAIL_COLORS = ['#ffffff', '#16161c', '#ffd23f', '#e3242b', '#35f2ff', '#2f9bff', '#ff5fb4', '#3fbf5f'];
 
 // Every choice in the shop. The first value is the default.
-// Rider keys come first, then board keys.
+// Rider keys come first, then the keys for the board or bike.
 export const RIDER_OPTIONS = {
   skin: SKINS,
   hair: ['short', 'long', 'ponytail', 'curly', 'mohawk', 'buzz'],
@@ -53,13 +58,13 @@ export const BOARD_OPTIONS = {
   deck: BOARD_COLORS,
   graphic: ['none', 'stripes', 'flames', 'stars', 'checker', 'bolt', 'wave'],
   graphicColor: DETAIL_COLORS,
-  // Wheels on a skateboard, bindings on a snowboard.
+  // Wheels on a skateboard or a bike, bindings on a snowboard.
   wheels: ['#f2f2f2', '#ffd23f', '#e3242b', '#2f9bff', '#3fbf5f', '#ff5fb4', '#16161c'],
 };
 
 export const LOOK_OPTIONS = { ...RIDER_OPTIONS, ...BOARD_OPTIONS };
 
-// Ready-made looks: one tap sets everything (and the board type).
+// Ready-made looks: one tap sets everything (and what to ride).
 export const PRESETS = [
   {
     id: 'street',
@@ -82,6 +87,11 @@ export const PRESETS = [
     look: { skin: '#c98c62', hair: 'ponytail', hairColor: '#2a1b12', hat: 'none', hatColor: '#f2f2f2', glasses: 'shades', top: 'hoodie', topColor: '#c9b48a', bottom: 'shorts', bottomColor: '#8a5a3a', shoes: '#e3242b', deck: '#c8a36a', graphic: 'stripes', graphicColor: '#e3242b', wheels: '#16161c' },
   },
   {
+    id: 'trail',
+    board: 'bike',
+    look: { skin: '#eabb94', hair: 'short', hairColor: '#6b3e1f', hat: 'helmet', hatColor: '#f2f2f2', glasses: 'shades', top: 'tee', topColor: '#7fd8ff', bottom: 'shorts', bottomColor: '#2a2a33', shoes: '#16161c', deck: '#3fbf5f', graphic: 'none', graphicColor: '#ffffff', wheels: '#16161c' },
+  },
+  {
     id: 'anime',
     board: 'skate',
     look: { skin: '#f6d3b3', hair: 'mohawk', hairColor: '#3a7bff', hat: 'none', hatColor: '#f2f2f2', glasses: 'none', top: 'hoodie', topColor: '#ff5fb4', bottom: 'shorts', bottomColor: '#2a2a33', shoes: '#ffd23f', deck: '#f2f2f2', graphic: 'wave', graphicColor: '#2f9bff', wheels: '#ff5fb4' },
@@ -97,133 +107,139 @@ export function presetLook(preset) {
   return { ...defaultLook(), ...preset.look };
 }
 
-/* ---------- Park pieces ---------- */
+/* ---------- The hill ---------- */
 
-// Every piece sits at (x, z) and faces `yaw`: its length runs along
-// (sin yaw, cos yaw), the way a rider goes to use it.
-//   kicker – a ramp rising along its length to height h, then a drop
-//   box    – a flat-topped block; its top edges can be ground
-//   stairs – steps going down along its length, from `top` to the floor
-//   rail   – a bar from a to b, [x, y, z] each; only for grinding
-function kicker(x, z, yaw, w, l, h) {
-  return { type: 'kicker', x, z, yaw, w, l, h };
-}
-
-function box(x, z, yaw, w, l, h, grind = true) {
-  return { type: 'box', x, z, yaw, w, l, h, grind };
-}
-
-function rail(a, b) {
-  return { type: 'rail', a, b };
-}
-
-function along(x, z, yaw, u, v = 0) {
-  return [x + Math.sin(yaw) * u + Math.cos(yaw) * v, z + Math.cos(yaw) * u - Math.sin(yaw) * v];
-}
-
-// A box with a ramp up on one end and a ramp down on the other.
-function funbox(x, z, yaw, { w, top, h, ramp }) {
-  const [ax, az] = along(x, z, yaw, -(top + ramp) / 2);
-  const [bx, bz] = along(x, z, yaw, (top + ramp) / 2);
-  return [
-    kicker(ax, az, yaw, w, ramp, h),
-    box(x, z, yaw, w, top, h),
-    kicker(bx, bz, yaw + Math.PI, w, ramp, h),
-  ];
-}
-
-// A ramp up to a platform, then stairs down, with a handrail beside them.
-// (x, z) is the top of the stairs.
-function stairSet(x, z, yaw, { w, top, deck, run, steps, ramp }) {
-  const [px, pz] = along(x, z, yaw, -deck / 2);
-  const [sx, sz] = along(x, z, yaw, run / 2);
-  const [rx, rz] = along(x, z, yaw, -deck - ramp / 2);
-  const side = w / 2 - 0.45;
-  const [ax, az] = along(x, z, yaw, 0.1, side);
-  const [bx, bz] = along(x, z, yaw, run + 0.6, side);
-  const railHeight = 0.8;
-  return [
-    kicker(rx, rz, yaw, w, ramp, top),
-    box(px, pz, yaw, w, deck, top, false),
-    { type: 'stairs', x: sx, z: sz, yaw, w, l: run, top, steps },
-    rail([ax, top + railHeight, az], [bx, railHeight - (0.6 / run) * top, bz]),
-  ];
-}
-
-const PI = Math.PI;
-
-// Sides: north is -z, south +z, west -x, east +x.
-export const PARKS = {
-  // A city plaza: quarter pipes on two sides, the street on the others.
-  city: {
-    sides: { north: 'qp', west: 'qp', south: 'fence', east: 'fence' },
-    start: { x: 0, z: 24, heading: PI },
-    pieces: [
-      ...funbox(0, 2, PI, { w: 6, top: 6, h: 1, ramp: 3.5 }),
-      rail([-14, 0.7, 14], [-14, 0.7, -6]),
-      box(14, 6, 0, 1, 14, 0.5),
-      kicker(-28, 20, PI, 4, 3.5, 1.3),
-      kicker(30, -16, -PI / 2, 4, 3.5, 1.2),
-      ...stairSet(-22, -14, PI / 2, { w: 6, top: 1.5, deck: 6, run: 4, steps: 5, ramp: 5 }),
-      box(8, 27, PI / 2, 0.7, 3.5, 0.45),
-      box(-8, 27, PI / 2, 0.7, 3.5, 0.45),
-    ],
-    letters: [[0, 3.4, 2], [-14, 2.2, 4], [6, 6, -36.4], [-15, 2.8, -14], [23, 3.2, -16]],
-  },
-  // A park on a hill above the sea. The sea side has a railing to grind.
-  sea: {
-    sides: { north: 'qp', west: 'qp', east: 'qp', south: 'fence' },
-    start: { x: -30, z: 24, heading: PI / 2 },
-    pieces: [
-      kicker(-12, 2, 0, 4, 3.5, 1.2),
-      kicker(12, 2, 0, 4, 3.5, 1.2),
-      ...funbox(0, 14, PI / 2, { w: 5, top: 5, h: 0.9, ramp: 3 }),
-      box(-26, -8, 0, 1, 12, 0.55),
-      ...stairSet(22, -14, 0, { w: 6, top: 1.5, deck: 6, run: 4, steps: 5, ramp: 5 }),
-      box(-24, 22, PI / 2, 0.7, 3.5, 0.45),
-      rail([-38, 1, HALF_D], [38, 1, HALF_D]),
-    ],
-    letters: [[0, 3.2, 14], [46.4, 6, 0], [20, 2.4, 31.6], [22, 2.6, -8], [-12, 3.2, 9]],
-  },
-  // A snow park in a valley: a big jump, rails, boxes and a log.
-  mountain: {
-    sides: { north: 'qp', west: 'qp', east: 'qp', south: 'fence' },
-    start: { x: 0, z: 24, heading: PI },
-    pieces: [
-      kicker(0, 6, PI, 6, 5, 1.8),
-      kicker(-20, 12, PI, 4, 3.5, 1.2),
-      rail([20, 0.8, 18], [20, 0.8, -2]),
-      box(-20, -10, PI, 1, 10, 0.6),
-      box(10, -20, PI / 2, 0.9, 10, 0.5),
-      ...funbox(28, -6, PI, { w: 5, top: 5, h: 1, ramp: 3.5 }),
-    ],
-    letters: [[0, 4.6, -3], [20, 2, 8], [-46.4, 6, 0], [-20, 2, -10], [28, 3.2, -6]],
-  },
-  // Sand dunes with stone ruins; an oasis lies beyond the fence.
-  desert: {
-    sides: { north: 'qp', west: 'qp', south: 'fence', east: 'fence' },
-    start: { x: 0, z: 22, heading: PI },
-    pieces: [
-      kicker(0, 8, PI, 5, 4, 1.4),
-      ...stairSet(-20, -6, PI / 2, { w: 6, top: 1.5, deck: 6, run: 4, steps: 5, ramp: 5 }),
-      rail([14, 0.7, 18], [14, 0.7, -2]),
-      box(28, -10, 0, 1.2, 10, 0.55),
-      ...funbox(8, -20, PI / 2, { w: 5, top: 5, h: 0.9, ramp: 3.5 }),
-      kicker(-28, 20, PI, 4, 3.5, 1.2),
-    ],
-    letters: [[0, 4, 0], [14, 2, 8], [-46.4, 6, -8], [-14, 2.8, -6], [8, 3.2, -20]],
-  },
+// Each hill's shape. `rolls` make the slope steeper and gentler along the
+// way: [how many per lap, height in meters, where it starts]. `bends` move
+// the center line left and right the same way. `seed` picks where the
+// pieces go. Whole numbers per lap keep the ends of a lap matching.
+export const HILLS = {
+  // A green meadow above a bay.
+  meadow: { seed: 11, rolls: [[3, 5, 0.4], [7, 1.4, 2.1]], bends: [[1, 9, 0], [3, 4, 1.3]] },
+  // A coast road along a cliff.
+  sea: { seed: 23, rolls: [[2, 7, 1.2], [5, 2, 0.3]], bends: [[2, 8, 0.6], [5, 2.5, 2]] },
+  // A ski run down to a fjord.
+  mountain: { seed: 37, rolls: [[4, 4.2, 2.6], [9, 1, 0.9]], bends: [[1, 7, 2.2], [4, 3.5, 0.2]] },
+  // A canyon track at sunset.
+  desert: { seed: 52, rolls: [[3, 5.5, 3.3], [8, 1.2, 1.5]], bends: [[2, 9, 1.1], [3, 3, 2.9]] },
 };
 
-/* ---------- Ground height ---------- */
+const TURN = (Math.PI * 2) / LAP;
 
-function prepare(piece) {
-  const prepared = { ...piece, sin: Math.sin(piece.yaw || 0), cos: Math.cos(piece.yaw || 0) };
-  if (piece.type !== 'rail') {
-    prepared.reach = Math.hypot(piece.w, piece.l) / 2 + 0.01;
+function wave(list, z) {
+  let sum = 0;
+  for (const [count, size, start] of list) {
+    sum += size * Math.sin(TURN * count * z + start);
   }
-  return prepared;
+  return sum;
 }
+
+function waveSlope(list, z) {
+  let sum = 0;
+  for (const [count, size, start] of list) {
+    sum += size * TURN * count * Math.cos(TURN * count * z + start);
+  }
+  return sum;
+}
+
+// The same "random" numbers every time, so a hill is always the same.
+function dice(seed) {
+  let value = seed;
+  return () => {
+    value = (value * 1664525 + 1013904223) % 4294967296;
+    return value / 4294967296;
+  };
+}
+
+/* ---------- Pieces ---------- */
+
+// Every piece sits `u` meters left of the center line at `z`, and faces
+// `yaw`: its length runs along (sin yaw, cos yaw), the way a rider goes to
+// use it. Heights are above the slope.
+//   kicker – a ramp rising along its length to height h, then a drop
+//   box    – a flat-topped block; its top edges can be ground
+//   rail   – a bar `l` meters long, `from` high at its start and `to` at
+//            its end; only for grinding
+function kicker(u, z, w, l, h, yaw = 0) {
+  return { type: 'kicker', u, z, yaw, w, l, h };
+}
+
+function box(u, z, w, l, h, style = 'box') {
+  return { type: 'box', u, z, yaw: 0, w, l, h, style };
+}
+
+function rail(u, z, l, from, to = from) {
+  return { type: 'rail', u, z, l, from, to };
+}
+
+// A low block with a little ramp onto it, so rolling straight at it rides
+// up on top instead of crashing.
+function ledge(u, z, w, l, h, style) {
+  return [kicker(u, z + 1.25, w + 0.4, 2.5, h), box(u, z + 2.5 + l / 2, w, l, h, style)];
+}
+
+// Things to trick on. Each takes where it starts, how far off center, and
+// the dice, and gives its pieces, how long it is, how much clear ground it
+// needs after it, and where a letter could float.
+export const FEATURES = {
+  jump: (z, u, roll) => {
+    const h = 1.5 + roll() * 0.6;
+    return { pieces: [kicker(u, z + 3, 5, 6, h)], length: 6, after: 16, letter: [u, 3, z + 14], reach: 2.5 };
+  },
+  twin: (z, u) => ({
+    pieces: [kicker(u - 3.5, z + 2.5, 4, 5, 1.2), kicker(u + 3.5, z + 3, 4, 6, 2.1)],
+    length: 6, after: 18, letter: [u + 3.5, 3.4, z + 16], reach: 5.5,
+  }),
+  rail: (z, u) => ({ pieces: [rail(u, z, 24, 0.6, 0.5)], length: 24, after: 0, letter: [u, 1.9, z + 12], reach: 0.5 }),
+  jumpRail: (z, u) => ({
+    pieces: [kicker(u, z + 2.5, 4, 5, 1.2), rail(u, z + 10, 24, 1.3, 0.7)],
+    length: 34, after: 0, letter: [u, 2.5, z + 20], reach: 2,
+  }),
+  ledge: (z, u) => ({ pieces: ledge(u, z, 1.2, 14, 0.5, 'box'), length: 16.5, after: 0, letter: [u, 1.9, z + 10], reach: 0.8 }),
+  log: (z, u) => ({ pieces: ledge(u, z, 0.8, 10, 0.45, 'log'), length: 12.5, after: 0, letter: [u, 1.8, z + 8], reach: 0.6 }),
+  table: (z, u) => ({
+    pieces: [kicker(u, z + 2.5, 6, 5, 1.3), box(u, z + 8.5, 6, 7, 1.3, 'deck'), kicker(u, z + 14.5, 6, 5, 1.3, Math.PI)],
+    length: 17, after: 4, letter: [u, 3.3, z + 8.5], reach: 3,
+  }),
+  benches: (z, u) => ({
+    pieces: [...ledge(u - 4, z, 0.8, 5, 0.45, 'bench'), ...ledge(u, z + 10, 0.8, 5, 0.45, 'bench'), ...ledge(u + 4, z + 20, 0.8, 5, 0.45, 'bench')],
+    length: 27.5, after: 0, letter: [u, 1.8, z + 14], reach: 4.6,
+  }),
+};
+
+const DECK = ['jump', 'rail', 'ledge', 'table', 'jumpRail', 'twin', 'log', 'benches', 'jump', 'rail'];
+
+// Lays features down a lap, one after another with room between them.
+function layout(seed) {
+  const roll = dice(seed);
+  const order = [...DECK];
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(roll() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  const pieces = [];
+  const spots = [];
+  let z = CLEAR_START;
+  for (let i = 0; ; i += 1) {
+    const feature = FEATURES[order[i % order.length]];
+    // Far enough from the edges that the whole thing fits on the strip.
+    const probe = feature(0, 0, () => 0);
+    const room = HALF_WIDTH - 1.5 - probe.reach;
+    const u = (roll() * 2 - 1) * room;
+    const made = feature(z, u, roll);
+    if (z + made.length + made.after > LAP - CLEAR_END) {
+      break;
+    }
+    // Remember where the feature starts, to turn it along the strip later.
+    const frame = { z, u, length: made.length };
+    pieces.push(...made.pieces.map((piece) => ({ ...piece, frame })));
+    spots.push({ at: made.letter, frame });
+    z += made.length + made.after + 24 + roll() * 12;
+  }
+  return { pieces, spots };
+}
+
+/* ---------- Ground height ---------- */
 
 // The piece's own coordinates: u along its length, v across it.
 function local(piece, x, z) {
@@ -236,9 +252,10 @@ export function kickerHeight(h, t) {
   return h * t ** 1.5;
 }
 
-// Height and slope (rise per meter along u) of a piece at a point.
+// Height above the slope and steepness (rise per meter along its length)
+// of a piece at a point, or null off the piece.
 function pieceSurface(piece, x, z) {
-  if (piece.type === 'rail' || Math.abs(x - piece.x) > piece.reach || Math.abs(z - piece.z) > piece.reach) {
+  if (Math.abs(x - piece.x) > piece.reach || Math.abs(z - piece.z) > piece.reach) {
     return null;
   }
   const { u, v } = local(piece, x, z);
@@ -249,65 +266,64 @@ function pieceSurface(piece, x, z) {
     const t = (u + piece.l / 2) / piece.l;
     return { h: kickerHeight(piece.h, t), rise: (1.5 * piece.h * Math.sqrt(t)) / piece.l };
   }
-  return { h: pieceHeight(piece, x, z), rise: 0 };
+  return { h: piece.h, rise: 0 };
 }
 
-function pieceHeight(piece, x, z) {
-  if (piece.type === 'rail' || Math.abs(x - piece.x) > piece.reach || Math.abs(z - piece.z) > piece.reach) {
-    return 0;
-  }
-  const { u, v } = local(piece, x, z);
-  if (Math.abs(u) > piece.l / 2 || Math.abs(v) > piece.w / 2) {
-    return 0;
-  }
-  if (piece.type === 'kicker') {
-    return kickerHeight(piece.h, (u + piece.l / 2) / piece.l);
-  }
-  if (piece.type === 'stairs') {
-    const step = Math.min(piece.steps - 1, Math.floor(((u + piece.l / 2) / piece.l) * piece.steps));
-    return piece.top * (1 - (step + 1) / piece.steps);
-  }
-  return piece.h;
-}
+const CELL = 20;
 
-// Steepness of a quarter pipe (rise per meter outward), capped near the top.
-export function qpRise(d) {
-  if (d <= 0 || d >= QP_TOP) {
-    return 0;
+// The ready-to-ride hill: ground height, slopes, rails and edges. Every z
+// works, however far down: the lap just repeats.
+export function buildHill(name) {
+  const spec = HILLS[name];
+  const base = (z) => -SLOPE * z + wave(spec.rolls, z);
+  const baseSlope = (z) => -SLOPE + waveSlope(spec.rolls, z);
+  const center = (z) => wave(spec.bends, z);
+  // The heading that follows the strip's bends at z.
+  const direction = (z) => Math.atan(waveSlope(spec.bends, z));
+  const made = layout(spec.seed);
+
+  // A feature is laid out straight, then turned to point the way the
+  // strip runs there, so a rider following the bends stays lined up with
+  // it. This gives the world place of a point of a feature.
+  function turned(frame, u, z) {
+    const yaw = direction(frame.z + frame.length / 2);
+    const across = u - frame.u;
+    const along = z - frame.z;
+    return {
+      yaw,
+      x: center(frame.z) + frame.u + across * Math.cos(yaw) + along * Math.sin(yaw),
+      z: frame.z + along * Math.cos(yaw) - across * Math.sin(yaw),
+    };
   }
-  return Math.min(4.2, d / Math.sqrt(QP_RADIUS ** 2 - d ** 2));
-}
 
-// Height of a quarter pipe at `d` meters past the edge of the floor.
-export function qpHeight(d) {
-  if (d <= 0) {
-    return 0;
-  }
-  if (d >= QP_TOP) {
-    return QP_HEIGHT;
-  }
-  return QP_RADIUS - Math.sqrt(QP_RADIUS ** 2 - d ** 2);
-}
-
-const SIDE_INFO = {
-  north: { nx: 0, nz: -1, edge: -HALF_D },
-  south: { nx: 0, nz: 1, edge: HALF_D },
-  west: { nx: -1, nz: 0, edge: -HALF_W },
-  east: { nx: 1, nz: 0, edge: HALF_W },
-};
-
-// How far past a side's edge a point is (negative inside the floor).
-function past(side, x, z) {
-  const info = SIDE_INFO[side];
-  return (info.nx * x + info.nz * z) - Math.abs(info.edge);
-}
-
-// The ready-to-ride park: ground height, slopes, rails and limits.
-export function buildPark(name) {
-  const spec = PARKS[name];
-  const pieces = spec.pieces.map(prepare);
+  // Pieces get their place on the first lap.
+  const pieces = made.pieces.map((piece) => {
+    if (piece.type === 'rail') {
+      const a = turned(piece.frame, piece.u, piece.z);
+      const b = turned(piece.frame, piece.u, piece.z + piece.l);
+      return { ...piece, a: [a.x, base(a.z) + piece.from, a.z], b: [b.x, base(b.z) + piece.to, b.z] };
+    }
+    const at = turned(piece.frame, piece.u, piece.z);
+    const yaw = piece.yaw + at.yaw;
+    return {
+      ...piece,
+      x: at.x,
+      z: at.z,
+      yaw,
+      sin: Math.sin(yaw),
+      cos: Math.cos(yaw),
+      reach: Math.hypot(piece.w, piece.l) / 2 + 0.01,
+    };
+  });
   const solid = pieces.filter((piece) => piece.type !== 'rail');
-  const quarterPipes = Object.keys(spec.sides).filter((side) => spec.sides[side] === 'qp');
+  const cells = Array.from({ length: Math.ceil(LAP / CELL) }, () => []);
+  solid.forEach((piece) => {
+    const from = Math.max(0, Math.floor((piece.z - piece.reach) / CELL));
+    const to = Math.min(cells.length - 1, Math.floor((piece.z + piece.reach) / CELL));
+    for (let i = from; i <= to; i += 1) {
+      cells[i].push(piece);
+    }
+  });
 
   // Rails, and the top edges of boxes. Narrow boxes are ground along the
   // middle; wide ones along both long edges.
@@ -316,85 +332,110 @@ export function buildPark(name) {
     if (piece.type === 'rail') {
       rails.push(makeRail(piece.a, piece.b, 'rail'));
     }
-    if (piece.type === 'box' && piece.grind) {
+    if (piece.type === 'box') {
       const offsets = piece.w <= 1.3 ? [0] : [piece.w / 2 - 0.05, -piece.w / 2 + 0.05];
       offsets.forEach((v) => {
-        const [ax, az] = along(piece.x, piece.z, piece.yaw, -piece.l / 2, v);
-        const [bx, bz] = along(piece.x, piece.z, piece.yaw, piece.l / 2, v);
-        rails.push(makeRail([ax, piece.h, az], [bx, piece.h, bz], 'ledge'));
+        const [from, to] = [-piece.l / 2, piece.l / 2].map((u) => {
+          const x = piece.x + piece.sin * u + piece.cos * v;
+          const z = piece.z + piece.cos * u - piece.sin * v;
+          return [x, base(z) + piece.h, z];
+        });
+        rails.push(makeRail(from, to, 'ledge'));
       });
     }
   });
 
-  // How far the rider may go: up to the top of a quarter pipe, or to the fence.
-  const limit = (side) => (spec.sides[side] === 'qp' ? QP_TOP - 0.1 : -0.6);
-  const bounds = {
-    minX: -HALF_W - limit('west'),
-    maxX: HALF_W + limit('east'),
-    minZ: -HALF_D - limit('north'),
-    maxZ: HALF_D + limit('south'),
-  };
+  // The best piece under a point of the first lap.
+  function pieceAt(x, z) {
+    let best = null;
+    let on = null;
+    for (const piece of cells[Math.min(cells.length - 1, Math.floor(z / CELL))]) {
+      const found = pieceSurface(piece, x, z);
+      if (found && (!best || found.h > best.h)) {
+        best = found;
+        on = piece;
+      }
+    }
+    return best ? { ...best, piece: on } : null;
+  }
+
+  function lapOf(z) {
+    return Math.floor(z / LAP);
+  }
 
   function height(x, z) {
-    let h = 0;
-    quarterPipes.forEach((side) => {
-      h = Math.max(h, qpHeight(past(side, x, z)));
-    });
-    for (const piece of solid) {
-      const value = pieceHeight(piece, x, z);
-      if (value > h) {
-        h = value;
-      }
-    }
-    return h;
+    const lap = lapOf(z);
+    const within = z - lap * LAP;
+    return base(within) - lap * DROP + (pieceAt(x, within)?.h || 0);
   }
 
-  // Height and slope (gx, gz: rise per meter along x and z). Flat tops and
-  // stairs count as flat, so their edges don't tip the rider.
+  // Height and slope (gx, gz: rise per meter along x and z).
   function surface(x, z) {
-    let best = { h: 0, gx: 0, gz: 0 };
-    quarterPipes.forEach((side) => {
-      const d = past(side, x, z);
-      const h = qpHeight(d);
-      if (h > best.h) {
-        const rise = qpRise(d);
-        best = { h, gx: SIDE_INFO[side].nx * rise, gz: SIDE_INFO[side].nz * rise };
-      }
-    });
-    for (const piece of solid) {
-      const found = pieceSurface(piece, x, z);
-      if (found && found.h > best.h) {
-        best = { h: found.h, gx: piece.sin * found.rise, gz: piece.cos * found.rise };
-      }
+    const lap = lapOf(z);
+    const within = z - lap * LAP;
+    const found = pieceAt(x, within);
+    const slope = baseSlope(within);
+    if (!found) {
+      return { h: base(within) - lap * DROP, gx: 0, gz: slope };
     }
-    return best;
+    return {
+      h: base(within) - lap * DROP + found.h,
+      gx: found.piece.sin * found.rise,
+      gz: slope + found.piece.cos * found.rise,
+    };
   }
 
-  // The quarter pipe the point is on, if any: how far up it, and which way
-  // is "out" (toward the wall).
-  function quarterPipeAt(x, z) {
-    let best = null;
-    quarterPipes.forEach((side) => {
-      const d = past(side, x, z);
-      if (d > 0 && (!best || d > best.d)) {
-        best = { side, d, nx: SIDE_INFO[side].nx, nz: SIDE_INFO[side].nz };
+  // How far left and right the rider may go at z.
+  function edges(z) {
+    const middle = center(z);
+    return { min: middle - HALF_WIDTH, max: middle + HALF_WIDTH };
+  }
+
+  // The rails of the lap that z is on, in world coordinates.
+  const shifted = new Map();
+  function railsAt(z) {
+    const lap = lapOf(z);
+    if (lap === 0) {
+      return rails;
+    }
+    if (!shifted.has(lap)) {
+      if (shifted.size > 3) {
+        shifted.clear();
       }
-    });
-    return best;
+      shifted.set(lap, rails.map((rail) => ({
+        ...rail,
+        ay: rail.ay - lap * DROP, by: rail.by - lap * DROP,
+        az: rail.az + lap * LAP, bz: rail.bz + lap * LAP,
+      })));
+    }
+    return shifted.get(lap);
   }
 
+  // Five letters, spread down the lap.
+  const letters = Array.from({ length: 5 }, (unused, i) => {
+    const spot = made.spots[Math.round((i * (made.spots.length - 1)) / 4)];
+    const [u, up, z] = spot.at;
+    const at = turned(spot.frame, u, z);
+    return { x: at.x, y: base(at.z) + up, z: at.z };
+  });
+
+  const startZ = 24;
   return {
     name,
     spec,
     pieces,
     rails,
-    bounds,
-    quarterPipes,
+    base,
+    baseSlope,
+    center,
+    direction,
     height,
     surface,
-    quarterPipeAt,
-    letters: spec.letters.map(([x, y, z]) => ({ x, y, z })),
-    start: { ...spec.start },
+    edges,
+    railsAt,
+    lapOf,
+    letters,
+    start: { x: center(startZ), z: startZ, heading: 0 },
   };
 }
 
@@ -428,8 +469,11 @@ export function formatClock(seconds) {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
 }
 
+// Scores from before the hill (version 1) were for another game.
+const SAVE_VERSION = 2;
+
 export function normalizeSave(raw) {
-  const save = { scenario: 'city', board: 'skate', mode: 'session', look: defaultLook(), sound: true, music: true, best: {}, stars: {} };
+  const save = { version: SAVE_VERSION, scenario: 'meadow', board: 'skate', mode: 'session', control: 'buttons', look: defaultLook(), sound: true, music: true, best: {}, stars: {} };
   if (!raw || typeof raw !== 'object') {
     return save;
   }
@@ -441,6 +485,9 @@ export function normalizeSave(raw) {
   }
   if (MODES.includes(raw.mode)) {
     save.mode = raw.mode;
+  }
+  if (CONTROLS.includes(raw.control)) {
+    save.control = raw.control;
   }
   if (typeof raw.sound === 'boolean') {
     save.sound = raw.sound;
@@ -456,7 +503,7 @@ export function normalizeSave(raw) {
     });
   }
   ['best', 'stars'].forEach((field) => {
-    if (!raw[field] || typeof raw[field] !== 'object') {
+    if (raw.version !== SAVE_VERSION || !raw[field] || typeof raw[field] !== 'object') {
       return;
     }
     SCENARIOS.forEach((scenario) => {

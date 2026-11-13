@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { steerFromTilt, wheelAngle } from '../games/drive/tilt.js';
+import { steerFromTilt, wheelAngle } from '../shared/tilt.js';
 
 test('the wheel angle comes from gamma upright and from beta on either side', () => {
   const reading = { beta: 12, gamma: -7 };

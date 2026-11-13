@@ -8,6 +8,13 @@
 
 export const RELEASES = [
   {
+    version: 27,
+    date: '2026-11-13',
+    changes: [
+      { target: 'skate', type: 'updated', text: 'changes.v27.skate' },
+    ],
+  },
+  {
     version: 26,
     date: '2026-11-11',
     changes: [

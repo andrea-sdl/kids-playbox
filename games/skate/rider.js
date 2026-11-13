@@ -1,13 +1,23 @@
-// The rider and the board. The rider is built like a person: a chest wider
-// than the waist, arms and legs that taper with a little muscle, hands with
-// fingers, sneakers with laces, and a face with eyelids, brows, a nose and
-// a smile. Every piece of clothing can be swapped and recolored. Arms and
-// legs are placed each frame with two-bone IK: the feet stay on the board
-// and the hands reach for wherever the pose wants them (out for balance,
-// or grabbing the board).
+// The rider and what they ride: a skateboard, a snowboard or a bicycle.
 //
-// The board points along +z (the way of travel) and the rider stands
-// sideways on it, facing +x, looking ahead over the front shoulder.
+// The rider is one continuous body, not a set of loose parts. A skeleton
+// of bones sits inside it, and every point of the skin and the clothes
+// follows the bones near it, so knees, elbows, wrists and the waist bend as
+// one smooth surface. The body is shaped ring by ring from tables of real
+// proportions (about seven and a half heads tall): shoulders wider than
+// hips, a chest, shoulder blades, thighs, calves and tapering forearms.
+// Clothes are a second layer with thickness, hems and folds. The head is
+// sculpted (brow, eye sockets, nose, lips, jaw), with hair that has volume
+// and locks. Hands have fingers that close around the bars or the board.
+//
+// Each frame the pose is worked out the same way as before: two-bone IK
+// keeps the feet on the board or pedals and sends the hands where the pose
+// wants them. The joints it finds then place the bones.
+//
+// A board points along +z (the way of travel) and the rider stands
+// sideways on it, facing +x, looking ahead over the front shoulder. On the
+// bicycle the rider faces the way of travel, standing on the pedals with
+// their hands on the bars.
 
 import * as THREE from '../../vendor/three/three.min.js';
 import { boardTexture, bumpTexture } from './textures.js';
@@ -17,90 +27,137 @@ const THIGH = 0.44;
 const SHIN = 0.44;
 const UPPER_ARM = 0.29;
 const FOREARM = 0.28;
+// How high the ankle joint is above the sole of the shoe.
+const ANKLE = 0.085;
 // Height of the board's top, and how far apart the feet are.
-const DECK = { skate: 0.1, snow: 0.045 };
-const FEET = { skate: 0.25, snow: 0.29 };
+const DECK = { skate: 0.1, snow: 0.045, bike: 0 };
+const FEET = { skate: 0.25, snow: 0.29, bike: 0.13 };
+// The bicycle, a hardtail mountain bike, seen from its left side:
+// [forward, up] in meters. The fork runs straight down the steering axis
+// from `headLow` (the fork's crown) to the front axle.
+const WHEEL = 0.33;
+const BIKE = {
+  rear: [-0.5, WHEEL], front: [0.6, WHEEL], crank: [0, 0.3], seat: [-0.2, 0.8],
+  head: [0.334, 0.901], headLow: [0.389, 0.783], bar: [0.385, 1], grip: 0.27, pedal: 0.17,
+};
 
-// How much smaller the head is than the cartoon head its parts were first
-// sized for, and how high it sits above the chest.
-const HEAD_SCALE = 0.86;
-const HEAD_HEIGHT = 0.272;
-// The body's outline from the hips up to the neck: [how far out, height].
-// It is turned around the spine, then flattened front to back.
-const TORSO = [[0, -0.03], [0.112, -0.03], [0.134, 0.02], [0.128, 0.12], [0.14, 0.22], [0.16, 0.33], [0.172, 0.42], [0.162, 0.48], [0.122, 0.525], [0.072, 0.555], [0.052, 0.585], [0, 0.585]];
-const TORSO_DEPTH = 0.66;
+/* ---------- The body's measurements ---------- */
 
-// How far the front of the body is from the spine at a height.
-function chestFront(height) {
-  for (let i = 1; i < TORSO.length; i += 1) {
-    if (height <= TORSO[i][1]) {
-      const [r0, y0] = TORSO[i - 1];
-      const [r1, y1] = TORSO[i];
-      const t = y1 === y0 ? 0 : (height - y0) / (y1 - y0);
-      return (r0 + (r1 - r0) * t) * TORSO_DEPTH;
-    }
-  }
-  return 0;
+// The body is built standing straight with its arms down (the "rest"
+// pose), then the bones move it. Heights here are in that pose.
+const REST_HIPS = 1;
+// Half the distance between the hip joints, and between the shoulders.
+const HIP = 0.095;
+const SHOULDER = 0.185;
+// Above the hips: where the spine bends, the chest, and the head's middle.
+const WAIST_Y = 0.18;
+const CHEST_Y = 0.48;
+const HEAD_Y = 0.215;
+const REST_HEAD = REST_HIPS + CHEST_Y + HEAD_Y;
+
+// The trunk from the crotch to the neck: [height above the hips, half
+// width, how far the front is from the spine, how far the back is].
+const TORSO = [
+  [-0.105, 0.075, 0.06, 0.07],
+  [-0.06, 0.15, 0.092, 0.112],
+  [0, 0.166, 0.1, 0.12],
+  [0.06, 0.16, 0.102, 0.108],
+  [0.12, 0.146, 0.098, 0.09],
+  [0.19, 0.138, 0.095, 0.084],
+  [0.27, 0.15, 0.106, 0.09],
+  [0.35, 0.168, 0.122, 0.1],
+  [0.42, 0.186, 0.12, 0.108],
+  [0.475, 0.19, 0.098, 0.102],
+  [0.505, 0.17, 0.082, 0.09],
+  [0.53, 0.105, 0.07, 0.076],
+  [0.545, 0.075, 0.06, 0.064],
+  [0.57, 0.056, 0.054, 0.056],
+];
+// An arm from just above the shoulder to the wrist, and a leg from inside
+// the hip to the ankle: [distance down, front, back, outer side, inner side].
+const ARM = [
+  [-0.05, 0.01, 0.01, 0.01, 0.01],
+  [-0.042, 0.03, 0.03, 0.03, 0.03],
+  [-0.02, 0.046, 0.048, 0.045, 0.045],
+  [0.02, 0.056, 0.058, 0.058, 0.05],
+  [0.07, 0.054, 0.056, 0.058, 0.048],
+  [0.13, 0.05, 0.049, 0.048, 0.045],
+  [0.2, 0.046, 0.046, 0.043, 0.042],
+  [0.26, 0.041, 0.042, 0.041, 0.04],
+  [0.29, 0.039, 0.043, 0.041, 0.04],
+  [0.33, 0.044, 0.042, 0.046, 0.042],
+  [0.39, 0.043, 0.039, 0.044, 0.04],
+  [0.47, 0.034, 0.032, 0.035, 0.033],
+  [0.54, 0.029, 0.028, 0.026, 0.025],
+  [0.585, 0.029, 0.028, 0.021, 0.02],
+];
+const LEG = [
+  [-0.07, 0.03, 0.03, 0.03, 0.03],
+  [-0.04, 0.075, 0.08, 0.075, 0.07],
+  [0, 0.09, 0.098, 0.09, 0.082],
+  [0.06, 0.092, 0.094, 0.09, 0.082],
+  [0.14, 0.088, 0.086, 0.084, 0.078],
+  [0.24, 0.078, 0.075, 0.074, 0.07],
+  [0.34, 0.066, 0.062, 0.062, 0.06],
+  [0.41, 0.058, 0.054, 0.056, 0.055],
+  [0.44, 0.058, 0.052, 0.055, 0.054],
+  [0.48, 0.052, 0.054, 0.053, 0.052],
+  [0.55, 0.046, 0.064, 0.056, 0.052],
+  [0.62, 0.043, 0.06, 0.052, 0.048],
+  [0.72, 0.038, 0.044, 0.042, 0.04],
+  [0.81, 0.034, 0.036, 0.035, 0.034],
+  [0.87, 0.034, 0.038, 0.034, 0.034],
+  [0.9, 0.03, 0.03, 0.03, 0.03],
+];
+
+// The bones. Each side has eight, after the three in the middle.
+const HIPS = 0;
+const CHEST = 1;
+const HEAD = 2;
+const UPPER = 0;
+const FORE = 1;
+const HAND = 2;
+const KNUCKLES = 3;
+const FINGERS = 4;
+const THIGH_BONE = 5;
+const SHIN_BONE = 6;
+const FOOT = 7;
+const BONES = 19;
+
+function boneOf(side, part) {
+  return 3 + (side > 0 ? 8 : 0) + part;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+
+function smooth(from, to, value) {
+  const t = Math.min(1, Math.max(0, (value - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+}
+
+// A row of a measurement table at any height in between its rows.
+function measure(table, at) {
+  if (at <= table[0][0]) {
+    return table[0];
+  }
+  for (let i = 1; i < table.length; i += 1) {
+    if (at <= table[i][0]) {
+      const a = table[i - 1];
+      const b = table[i];
+      const t = smooth(0, 1, (at - a[0]) / (b[0] - a[0]));
+      return a.map((value, k) => value + (b[k] - value) * t);
+    }
+  }
+  return table[table.length - 1];
+}
 
 function mat(color, options = {}) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.75, metalness: 0, ...options });
 }
 
-// Skin has a soft sheen at its edges, like light through a cheek.
-function skinMaterial(color) {
-  return new THREE.MeshPhysicalMaterial({
-    color, roughness: 0.52, sheen: 0.6, sheenRoughness: 0.45, sheenColor: new THREE.Color(color).lerp(new THREE.Color('#ff9a7a'), 0.5),
-  });
-}
-
 function shadowed(mesh) {
   mesh.castShadow = true;
   return mesh;
-}
-
-// A rounded tube between two points (an arm or leg bone).
-function limb(radius, length, material) {
-  const geometry = new THREE.CapsuleGeometry(radius, length, 4, 10);
-  return shadowed(new THREE.Mesh(geometry, material));
-}
-
-// A piece of an arm or a leg: round at both ends, `from` wide where it
-// starts and `to` wide at its far end, with a little muscle that is
-// thickest `at` that share of the way along. It runs along y, far end up.
-function segment(length, from, to, material, { swell = 0, at = 0.4 } = {}) {
-  const points = [];
-  const half = length / 2;
-  const peak = Math.log(0.5) / Math.log(at);
-  for (let i = 0; i <= 5; i += 1) {
-    const angle = (i / 5) * (Math.PI / 2);
-    points.push(new THREE.Vector2(Math.sin(angle) * from, -half - Math.cos(angle) * from));
-  }
-  for (let i = 1; i < 9; i += 1) {
-    const t = i / 9;
-    points.push(new THREE.Vector2(from + (to - from) * t + swell * Math.sin(Math.PI * t ** peak), -half + length * t));
-  }
-  for (let i = 0; i <= 5; i += 1) {
-    const angle = (i / 5) * (Math.PI / 2);
-    points.push(new THREE.Vector2(Math.cos(angle) * to, half + Math.sin(angle) * to));
-  }
-  return shadowed(new THREE.Mesh(new THREE.LatheGeometry(points, 16), material));
-}
-
-// An open tube of cloth around part of a segment: a sleeve, a shorts leg,
-// a cuff or a sock. `low` and `high` are heights along the segment.
-function wrap(low, high, lowRadius, highRadius, material) {
-  const tube = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(highRadius, lowRadius, high - low, 16, 1, true), material));
-  tube.position.y = (low + high) / 2;
-  return tube;
-}
-
-// A thin rounded line through some points: a brow, a smile, a lace.
-function line(points, radius, material) {
-  const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
-  return new THREE.Mesh(new THREE.TubeGeometry(curve, 12, radius, 6), material);
 }
 
 // A ball squashed into any rounded shape.
@@ -131,6 +188,281 @@ function twoBone(root, target, first, second, pole, joint, end) {
   ikBend.copy(pole).addScaledVector(ikDir, -pole.dot(ikDir)).normalize();
   joint.copy(root).addScaledVector(ikDir, first * Math.cos(angle)).addScaledVector(ikBend, first * Math.sin(angle));
   end.copy(root).addScaledVector(ikDir, distance);
+}
+
+// Joins the plain meshes right inside a group into one mesh per material,
+// so a bike frame is a few things to draw instead of dozens.
+function fuse(group) {
+  const sets = new Map();
+  [...group.children].forEach((child) => {
+    if (!child.isMesh || Array.isArray(child.material)) {
+      return;
+    }
+    child.updateMatrix();
+    // Some shapes share their corner points and some don't; joined ones
+    // must all be the same kind.
+    const own = child.geometry.index ? child.geometry.toNonIndexed() : child.geometry.clone();
+    const piece = own.applyMatrix4(child.matrix);
+    if (!sets.has(child.material)) {
+      sets.set(child.material, []);
+    }
+    sets.get(child.material).push(piece);
+    group.remove(child);
+  });
+  sets.forEach((pieces, material) => {
+    group.add(shadowed(new THREE.Mesh(THREE.mergeGeometries(pieces), material)));
+    pieces.forEach((piece) => piece.dispose());
+  });
+}
+
+/* ---------- Sculpting ---------- */
+
+// How many times the cloth weave repeats per meter.
+const WEAVE = 36;
+const AXIS_X = [1, 0, 0];
+const AXIS_Z = [0, 0, 1];
+const edgeA = new THREE.Vector3();
+const edgeB = new THREE.Vector3();
+
+function asWeights(weights, x, y, z) {
+  if (typeof weights === 'number') {
+    return [[weights, 1]];
+  }
+  if (typeof weights === 'function') {
+    return weights(x, y, z);
+  }
+  return weights;
+}
+
+// Collects the points and triangles of everything made of one material,
+// each point knowing its color and which bones it follows.
+class Sculpt {
+  constructor() {
+    this.position = [];
+    this.color = [];
+    this.uv = [];
+    this.bones = [];
+    this.weights = [];
+    this.index = [];
+    this.seams = [];
+  }
+
+  vertex(x, y, z, color, u, v, weights) {
+    const i = this.position.length / 3;
+    this.position.push(x, y, z);
+    this.color.push(color.r, color.g, color.b);
+    this.uv.push(u, v);
+    const list = asWeights(weights, x, y, z);
+    for (let k = 0; k < 4; k += 1) {
+      this.bones.push(list[k] ? list[k][0] : 0);
+      this.weights.push(list[k] ? list[k][1] : 0);
+    }
+    return i;
+  }
+
+  // Turns the triangles added since `start` to face away from `center`,
+  // judging by the triangle at `probe`.
+  faceOut(start, probe, center) {
+    const [a, b, c] = [0, 1, 2].map((k) => this.index[probe + k] * 3);
+    const p = this.position;
+    edgeA.set(p[b] - p[a], p[b + 1] - p[a + 1], p[b + 2] - p[a + 2]);
+    edgeB.set(p[c] - p[a], p[c + 1] - p[a + 1], p[c + 2] - p[a + 2]);
+    edgeA.cross(edgeB);
+    const out = edgeA.x * (p[a] - center[0]) + edgeA.y * (p[a + 1] - center[1]) + edgeA.z * (p[a + 2] - center[2]);
+    if (out < 0) {
+      for (let k = start; k < this.index.length; k += 3) {
+        [this.index[k + 1], this.index[k + 2]] = [this.index[k + 2], this.index[k + 1]];
+      }
+    }
+  }
+
+  // A tube through a list of rings. A ring has a middle (`at`), and how
+  // far it reaches (`r`): one number, or [front, back, +side, -side] along
+  // its two axes `u` and `v` (x and z unless given).
+  // `map` places a picture on it instead of the cloth weave: a fixed spot
+  // [u, v], or (share of the way around, ring) => [u, v].
+  tube(rings, { around = 16, color, weights, capStart = false, capEnd = false, map = null } = {}) {
+    const spot = (share, ring) => (typeof map === 'function' ? map(share, ring) : map);
+    const first = this.position.length / 3;
+    const start = this.index.length;
+    const row = around + 1;
+    let run = 0;
+    rings.forEach((ring, i) => {
+      if (i > 0) {
+        run += Math.hypot(ring.at[0] - rings[i - 1].at[0], ring.at[1] - rings[i - 1].at[1], ring.at[2] - rings[i - 1].at[2]);
+      }
+      const r = typeof ring.r === 'number' ? [ring.r, ring.r, ring.r, ring.r] : ring.r;
+      const u = ring.u || AXIS_X;
+      const v = ring.v || AXIS_Z;
+      const girth = (r[0] + r[1] + r[2] + r[3]) * 1.6;
+      for (let j = 0; j <= around; j += 1) {
+        const angle = (j / around) * Math.PI * 2;
+        const cu = Math.cos(angle);
+        const cv = Math.sin(angle);
+        const pu = cu * (cu >= 0 ? r[0] : r[1]);
+        const pv = cv * (cv >= 0 ? r[2] : r[3]);
+        const [tu, tv] = map ? spot(j / around, ring) : [(j / around) * girth * WEAVE, run * WEAVE];
+        this.vertex(
+          ring.at[0] + u[0] * pu + v[0] * pv, ring.at[1] + u[1] * pu + v[1] * pv, ring.at[2] + u[2] * pu + v[2] * pv,
+          ring.color || color, tu, tv, ring.weights || weights,
+        );
+      }
+      this.seams.push([first + i * row, first + i * row + around]);
+      if (i > 0) {
+        for (let j = 0; j < around; j += 1) {
+          const a = first + (i - 1) * row + j;
+          const c = a + row;
+          this.index.push(a, c, a + 1, a + 1, c, c + 1);
+        }
+      }
+    });
+    const cap = (ring, base, flip) => {
+      const [tu, tv] = map ? spot(0.5, ring) : [0, 0];
+      const middle = this.vertex(ring.at[0], ring.at[1], ring.at[2], ring.color || color, tu, tv, ring.weights || weights);
+      for (let j = 0; j < around; j += 1) {
+        this.index.push(middle, base + j + (flip ? 1 : 0), base + j + (flip ? 0 : 1));
+      }
+    };
+    if (capStart) {
+      cap(rings[0], first, false);
+    }
+    if (capEnd) {
+      cap(rings[rings.length - 1], first + (rings.length - 1) * row, true);
+    }
+    // Judge by a ring with some width to it.
+    let wide = 1;
+    for (let i = 1; i < rings.length - 1; i += 1) {
+      const size = (ring) => (typeof ring.r === 'number' ? ring.r : ring.r[0] + ring.r[2]);
+      if (size(rings[i]) > size(rings[wide])) {
+        wide = i;
+      }
+    }
+    const probe = start + (wide - 1) * around * 6 + 3;
+    const [a, b] = [rings[wide - 1].at, rings[wide].at];
+    this.faceOut(start, probe, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2]);
+  }
+
+  // A tube along a curved line through `points`: a lock of hair, a strap,
+  // a finger. `radius` is a number or (0 to 1 along it) => a number or
+  // [across, tall]; `tall` is measured toward `up`.
+  path(points, radius, { around = 8, steps = points.length * 3, up = [0, 1, 0], ...options } = {}) {
+    const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)));
+    const rings = [];
+    const lift = new THREE.Vector3();
+    const across = new THREE.Vector3();
+    for (let i = 0; i <= steps; i += 1) {
+      const t = i / steps;
+      const at = curve.getPoint(t);
+      const along = curve.getTangent(t);
+      lift.fromArray(up);
+      lift.addScaledVector(along, -lift.dot(along));
+      if (lift.lengthSq() < 1e-6) {
+        lift.set(1, 0, 0).addScaledVector(along, -along.x);
+      }
+      lift.normalize();
+      across.crossVectors(lift, along);
+      const size = typeof radius === 'function' ? radius(t) : radius;
+      const [wide, tall] = typeof size === 'number' ? [size, size] : size;
+      rings.push({ at: at.toArray(), u: across.toArray(), v: lift.toArray(), r: [wide, wide, tall, tall] });
+    }
+    this.tube(rings, { around, capStart: true, capEnd: true, ...options });
+  }
+
+  // A sheet of points, `rows` by `cols`, from make(row, col) => { at,
+  // color }. `center` is a point inside the shape it wraps around.
+  grid(rows, cols, make, { weights, center, wrap = true } = {}) {
+    const first = this.position.length / 3;
+    const start = this.index.length;
+    for (let i = 0; i <= rows; i += 1) {
+      for (let j = 0; j <= cols; j += 1) {
+        const made = make(i, j);
+        this.vertex(made.at[0], made.at[1], made.at[2], made.color, (j / cols) * 12, (i / rows) * 6, weights);
+      }
+      if (wrap) {
+        this.seams.push([first + i * (cols + 1), first + i * (cols + 1) + cols]);
+      }
+      if (i > 0) {
+        for (let j = 0; j < cols; j += 1) {
+          const a = first + (i - 1) * (cols + 1) + j;
+          const c = a + cols + 1;
+          this.index.push(a, c, a + 1, a + 1, c, c + 1);
+        }
+      }
+    }
+    const probe = start + (Math.floor(rows / 2) * cols + Math.floor(cols / 4)) * 6;
+    this.faceOut(start, probe, center);
+  }
+
+  // Any ready-made shape, moved into place by `matrix`.
+  solid(geometry, matrix, color, weights) {
+    const first = this.position.length / 3;
+    const place = geometry.attributes.position;
+    for (let i = 0; i < place.count; i += 1) {
+      tmp.fromBufferAttribute(place, i).applyMatrix4(matrix);
+      this.vertex(tmp.x, tmp.y, tmp.z, color, 0, 0, weights);
+    }
+    if (geometry.index) {
+      for (let i = 0; i < geometry.index.count; i += 1) {
+        this.index.push(first + geometry.index.getX(i));
+      }
+    } else {
+      for (let i = 0; i < place.count; i += 1) {
+        this.index.push(first + i);
+      }
+    }
+    geometry.dispose();
+  }
+
+  // A ball stretched to `size`, at `at`, turned by `turn` (x, y, z angles).
+  ball(at, size, color, weights, { segments = 10, turn = [0, 0, 0] } = {}) {
+    const matrix = new THREE.Matrix4().compose(
+      new THREE.Vector3(...at),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(...turn)),
+      new THREE.Vector3(...size),
+    );
+    this.solid(new THREE.SphereGeometry(1, segments, Math.max(4, Math.round(segments * 0.7))), matrix, color, weights);
+  }
+
+  // A box with rounded edges. `soft` is how finely the edges are rounded;
+  // 0 leaves them sharp, for small things nobody sees up close.
+  block(at, size, color, weights, turn = [0, 0, 0], soft = 2) {
+    const matrix = new THREE.Matrix4().compose(
+      new THREE.Vector3(...at),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(...turn)),
+      new THREE.Vector3(1, 1, 1),
+    );
+    const round = Math.min(size[0], size[1], size[2]) * 0.3;
+    const shape = soft > 0 ? new THREE.RoundedBoxGeometry(size[0], size[1], size[2], soft, round) : new THREE.BoxGeometry(size[0], size[1], size[2]);
+    this.solid(shape, matrix, color, weights);
+  }
+
+  get empty() {
+    return this.index.length === 0;
+  }
+
+  // The finished mesh, ready to be bound to a skeleton.
+  mesh(material) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(this.position, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(this.color, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(this.uv, 2));
+    geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(this.bones, 4));
+    geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(this.weights, 4));
+    geometry.setIndex(this.index);
+    geometry.computeVertexNormals();
+    // Where a tube's surface meets itself, share the light across the join.
+    const normal = geometry.attributes.normal;
+    this.seams.forEach(([a, b]) => {
+      tmp.set(normal.getX(a) + normal.getX(b), normal.getY(a) + normal.getY(b), normal.getZ(a) + normal.getZ(b)).normalize();
+      normal.setXYZ(a, tmp.x, tmp.y, tmp.z);
+      normal.setXYZ(b, tmp.x, tmp.y, tmp.z);
+    });
+    const mesh = new THREE.SkinnedMesh(geometry, material);
+    mesh.castShadow = true;
+    // Its bones move it far from where it was built.
+    mesh.frustumCulled = false;
+    return mesh;
+  }
 }
 
 /* ---------- The board ---------- */
@@ -206,461 +538,1464 @@ function buildBoard(type, look, owned) {
       group.add(band);
     });
   }
+  fuse(group);
   return group;
 }
 
-/* ---------- The rider's head ---------- */
+/* ---------- The bicycle ---------- */
 
-function sphere(radius, material, { from = 0, to = Math.PI, segments = 18 } = {}) {
-  return shadowed(new THREE.Mesh(new THREE.SphereGeometry(radius, segments, Math.round(segments * 0.7), 0, Math.PI * 2, from, to), material));
+// A straight tube between two points, `radius` thick at a and `radiusEnd`
+// at b.
+function tube(a, b, radius, material, radiusEnd = radius, sides = 8) {
+  const length = a.distanceTo(b);
+  const mesh = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(radiusEnd, radius, length, sides), material));
+  placeLimb(mesh, a, b);
+  return mesh;
 }
 
-function buildHead(look, skin) {
-  const head = new THREE.Group();
-  // The skull, a little taller than wide, with a jaw and chin below it.
-  const skull = sphere(0.15, skin, { segments: 24 });
-  skull.scale.set(1, 1.06, 0.93);
-  head.add(skull);
-  const jaw = sphere(0.112, skin, { segments: 18 });
-  jaw.position.set(0.022, -0.078, 0);
-  jaw.scale.set(1, 0.86, 0.9);
-  head.add(jaw);
+// A flat ring standing on its edge, like a brake disc, a cog or a rim: a
+// hole `inner` across, `outer` to its edge, `thick` from side to side.
+function ring(at, inner, outer, thick, material, sides = 20) {
+  const half = thick / 2;
+  const outline = [[inner, -half], [outer, -half], [outer, half], [inner, half], [inner, -half]].map(([r, y]) => new THREE.Vector2(r, y));
+  const geometry = new THREE.LatheGeometry(outline, sides);
+  geometry.rotateX(Math.PI / 2);
+  const mesh = shadowed(new THREE.Mesh(geometry, material));
+  mesh.position.copy(at);
+  return mesh;
+}
 
-  const white = mat('#fbfbf6', { roughness: 0.25 });
-  const iris = mat('#4f3420', { roughness: 0.3 });
-  const dark = mat('#1a1420', { roughness: 0.3 });
-  const lash = mat('#2a1c18', { roughness: 0.6 });
-  const brow = mat(new THREE.Color(look.hairColor).multiplyScalar(0.75), { roughness: 0.7 });
-  const cheekBlush = mat('#ff8fa3', { transparent: true, opacity: 0.28 });
+// A thin hose or cable hanging through some points.
+function hose(points, radius, material) {
+  const curve = new THREE.CatmullRomCurve3(points);
+  return shadowed(new THREE.Mesh(new THREE.TubeGeometry(curve, points.length * 4, radius, 5), material));
+}
+
+function slab(at, size, material, turn = 0) {
+  const mesh = shadowed(new THREE.Mesh(new THREE.RoundedBoxGeometry(size[0], size[1], size[2], 1, Math.min(...size) * 0.3), material));
+  mesh.position.copy(at);
+  mesh.rotation.z = turn;
+  return mesh;
+}
+
+// How thick the tire is, and how far its tread blocks stick out.
+const TIRE = 0.034;
+const TREAD = 0.007;
+
+// A wheel: a fat tire with rows of tread blocks, a deep rim, laced spokes,
+// a hub and a brake disc on the left (-z) side.
+function buildWheel(paints) {
+  const { rubber, rim, metal } = paints;
+  const wheel = new THREE.Group();
+  const middle = new THREE.Vector3();
+  wheel.add(shadowed(new THREE.Mesh(new THREE.TorusGeometry(WHEEL - TREAD - TIRE, TIRE, 8, 36), rubber)));
+  // Tread: a block down the middle, then a pair on the shoulders, in turn.
+  const block = new THREE.BoxGeometry(0.03, TREAD * 2.4, 0.017);
+  const steps = 36;
+  for (let k = 0; k < steps; k += 1) {
+    const angle = (k / steps) * Math.PI * 2;
+    const lanes = k % 2 ? [-0.023, 0.023] : [0];
+    lanes.forEach((z) => {
+      const out = WHEEL - TREAD * 1.2 - (z === 0 ? 0 : 0.011);
+      const knob = new THREE.Mesh(block, rubber);
+      knob.position.set(Math.cos(angle) * out, Math.sin(angle) * out, z);
+      knob.rotation.set(0, 0, angle - Math.PI / 2);
+      knob.rotateX(z === 0 ? 0 : Math.sign(z) * 0.5);
+      wheel.add(knob);
+    });
+  }
+  const rimEdge = WHEEL - TREAD - TIRE * 1.75;
+  wheel.add(ring(middle, rimEdge - 0.032, rimEdge, 0.03, rim, 36));
+  // The hub, its two flanges, and spokes laced from them to the rim.
+  const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.019, 0.12, 12), metal);
+  axle.rotation.x = Math.PI / 2;
+  wheel.add(axle);
+  [-0.038, 0.038].forEach((z) => wheel.add(ring(new THREE.Vector3(0, 0, z), 0.012, 0.036, 0.005, metal, 16)));
+  const spokes = 24;
+  for (let k = 0; k < spokes; k += 1) {
+    const side = k % 2 ? 1 : -1;
+    const from = (k / spokes) * Math.PI * 2;
+    const to = from + (k % 4 < 2 ? 0.55 : -0.55);
+    const a = new THREE.Vector3(Math.cos(from) * 0.033, Math.sin(from) * 0.033, side * 0.038);
+    const b = new THREE.Vector3(Math.cos(to) * (rimEdge - 0.03), Math.sin(to) * (rimEdge - 0.03), 0);
+    const spoke = tube(a, b, 0.0022, metal, 0.0022, 4);
+    spoke.castShadow = false;
+    wheel.add(spoke);
+  }
+  // The brake disc, on its six-armed carrier.
+  wheel.add(ring(new THREE.Vector3(0, 0, -0.05), 0.062, 0.088, 0.003, metal, 24));
+  for (let k = 0; k < 6; k += 1) {
+    const angle = (k / 6) * Math.PI * 2;
+    const a = new THREE.Vector3(Math.cos(angle) * 0.02, Math.sin(angle) * 0.02, -0.05);
+    const b = new THREE.Vector3(Math.cos(angle + 0.5) * 0.066, Math.sin(angle + 0.5) * 0.066, -0.05);
+    wheel.add(tube(a, b, 0.005, metal, 0.004, 4));
+  }
+  fuse(wheel);
+  return wheel;
+}
+
+// The bike points along +x, with its chain on the right (+z). It comes in
+// two parts that both turn around the steering axis: the front (bars,
+// fork, front wheel) for steering and barspins, and the rest for tailwhips.
+function buildBike(look) {
+  const root = new THREE.Group();
+  const both = { side: THREE.DoubleSide };
+  const paint = new THREE.MeshPhysicalMaterial({ color: look.deck, roughness: 0.3, metalness: 0.3, clearcoat: 0.7, clearcoatRoughness: 0.25 });
+  const metal = mat('#c3c8d0', { roughness: 0.32, metalness: 0.85, ...both });
+  const rubber = mat('#19191d', { roughness: 0.94 });
+  const rim = mat(look.wheels, { roughness: 0.38, metalness: 0.55, ...both });
+  // Black anodized parts: bars, stem, cranks, fork lowers, saddle.
+  const dark = mat('#202026', { roughness: 0.5, metalness: 0.35, ...both });
+  const gold = mat('#c79a45', { roughness: 0.28, metalness: 0.85 });
+  const paints = { rubber, rim, metal };
+  const pivot = new THREE.Vector3(BIKE.head[0], BIKE.head[1], 0);
+  // Points are given on the bike, then moved so the pivot is the origin.
+  const at = (x, y, z = 0) => new THREE.Vector3(x, y, z).sub(pivot);
+  const between = (a, b, share) => a.clone().lerp(b, share);
+  const steerAxis = at(...BIKE.head).sub(at(...BIKE.headLow)).normalize();
+  const frame = new THREE.Group();
+  const steer = new THREE.Group();
+  frame.position.copy(pivot);
+  steer.position.copy(pivot);
+  root.add(frame, steer);
+
+  const [seatX, seatY] = BIKE.seat;
+  const [crankX, crankY] = BIKE.crank;
+  const [rearX, rearY] = BIKE.rear;
+  const crank = at(crankX, crankY);
+  const seatTop = at(seatX, seatY - 0.07);
+  const headTop = at(...BIKE.head);
+  const headLow = at(...BIKE.headLow);
+  // Where the sloping top tube and the seat stays meet the seat tube.
+  const join = between(crank, seatTop, 0.74);
+  const topFront = between(headLow, headTop, 0.72).add(new THREE.Vector3(-0.012, 0, 0));
+  const downFront = between(headLow, headTop, 0.2).add(new THREE.Vector3(-0.014, 0, 0));
+
+  // The frame: a thick down tube, a sloping top tube with a brace up to
+  // the seat tube, and thin stays back to the rear axle.
+  frame.add(tube(headLow, headTop, 0.031, paint, 0.026, 14));
+  frame.add(tube(crank, downFront, 0.031, paint, 0.027, 12));
+  frame.add(tube(join, topFront, 0.019, paint, 0.022, 12));
+  frame.add(tube(crank, seatTop, 0.02, paint, 0.018, 12));
+  frame.add(tube(between(join, topFront, 0.2), between(join, seatTop, 0.8), 0.011, paint));
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.09, 14), paint);
+  shell.rotation.x = Math.PI / 2;
+  shell.position.copy(crank);
+  frame.add(shadowed(shell));
   [-1, 1].forEach((side) => {
-    const z = side * 0.054;
-    // The eye: white, a brown iris, the pupil and a glint of light, under
-    // an eyelid with a dark lash line.
-    const ball = blob(0.0105, 0.0216, 0.03, white, 12);
-    ball.position.set(0.128, 0.022, z);
-    const color = blob(0.005, 0.0165, 0.0165, iris, 10);
-    color.position.set(0.1375, 0.02, z);
-    const pupil = blob(0.004, 0.008, 0.008, dark, 8);
-    pupil.position.set(0.1405, 0.02, z);
-    const glint = blob(0.003, 0.0045, 0.0045, mat('#ffffff', { emissive: '#ffffff', emissiveIntensity: 0.4 }), 6);
-    glint.position.set(0.143, 0.027, z + 0.006);
-    const lid = sphere(0.0315, skin, { to: Math.PI * 0.36, segments: 12 });
-    lid.position.set(0.128, 0.022, z);
-    lid.scale.set(0.37, 0.74, 1.03);
-    head.add(ball, color, pupil, glint, lid);
-    head.add(line([[0.1355, 0.03, z - 0.027], [0.1405, 0.0365, z], [0.1355, 0.03, z + 0.027]], 0.0032, lash));
-    head.add(line([[0.127, 0.06, side * 0.088], [0.1395, 0.071, side * 0.058], [0.143, 0.066, side * 0.03]], 0.0058, brow));
-    const cheek = blob(0.01, 0.016, 0.026, cheekBlush, 8);
-    cheek.position.set(0.119, -0.036, side * 0.084);
-    cheek.castShadow = false;
-    head.add(cheek);
-    // The ear, with its darker hollow.
-    const ear = blob(0.022, 0.03, 0.013, skin, 10);
-    ear.position.set(-0.004, -0.002, side * 0.14);
-    const hollow = blob(0.012, 0.018, 0.005, mat(new THREE.Color(look.skin).multiplyScalar(0.72)), 8);
-    hollow.position.set(0, -0.002, side * 0.151);
-    head.add(ear, hollow);
-    const nostril = blob(0.011, 0.009, 0.011, skin, 8);
-    nostril.position.set(0.146, -0.03, side * 0.013);
-    head.add(nostril);
+    const axle = at(rearX, rearY, side * 0.066);
+    frame.add(tube(axle, at(crankX + 0.01, crankY, side * 0.04), 0.011, paint, 0.014));
+    frame.add(tube(axle, join.clone().setZ(side * 0.022), 0.009, paint, 0.011));
+    frame.add(slab(axle, [0.045, 0.05, 0.008], dark));
   });
-  // The nose: a bridge down to a rounded tip.
-  const bridge = limb(0.012, 0.03, skin);
-  bridge.position.set(0.147, 0.008, 0);
-  bridge.rotation.z = -0.32;
-  const tip = blob(0.018, 0.015, 0.019, skin, 10);
-  tip.position.set(0.157, -0.021, 0);
-  head.add(bridge, tip);
-  // A smile.
-  head.add(line([[0.127, -0.057, -0.037], [0.137, -0.068, -0.019], [0.1405, -0.0715, 0], [0.137, -0.068, 0.019], [0.127, -0.057, 0.037]], 0.0048, mat('#a8453f', { roughness: 0.5 })));
+  // Dark bands of lettering along the tubes.
+  frame.add(tube(between(crank, downFront, 0.28), between(crank, downFront, 0.74), 0.0312, dark, 0.0298, 12));
+  frame.add(tube(between(join, topFront, 0.34), between(join, topFront, 0.7), 0.0206, dark, 0.0214, 12));
 
-  const hair = mat(look.hairColor, { roughness: 0.65 });
-  const hatOn = look.hat !== 'none';
-  const cap = (radius, cover = 0.52) => {
-    const piece = sphere(radius, hair, { to: Math.PI * cover });
-    piece.rotation.z = 0.42;
-    return piece;
+  // The seatpost and saddle.
+  frame.add(tube(seatTop, at(seatX - 0.014, seatY + 0.035), 0.0125, dark));
+  frame.add(tube(seatTop.clone().add(new THREE.Vector3(0.002, -0.012, 0)), seatTop.clone().add(new THREE.Vector3(-0.001, 0.008, 0)), 0.023, dark));
+  const saddle = blob(0.105, 0.02, 0.064, dark, 12);
+  saddle.position.copy(at(seatX - 0.055, seatY + 0.06));
+  const nose = blob(0.1, 0.017, 0.026, dark, 10);
+  nose.position.copy(at(seatX + 0.045, seatY + 0.056));
+  frame.add(saddle, nose);
+
+  // The drivetrain, on the right: cranks and flat pedals (the front foot's
+  // is forward), a chainring, a stack of cogs, a derailleur and the chain.
+  [-1, 1].forEach((side) => {
+    const hub = at(crankX, crankY, side * 0.075);
+    const pedal = at(crankX + side * BIKE.pedal, crankY, side * 0.08);
+    frame.add(tube(hub, pedal, 0.014, dark, 0.01, 8));
+    frame.add(tube(pedal, pedal.clone().setZ(side * 0.14), 0.006, metal, 0.006, 6));
+    frame.add(slab(pedal.clone().setZ(side * 0.14), [0.1, 0.016, 0.095], dark));
+  });
+  frame.add(tube(at(crankX, crankY, -0.082), at(crankX, crankY, 0.082), 0.013, metal));
+  const chainZ = 0.052;
+  frame.add(ring(at(crankX, crankY, chainZ), 0.06, 0.088, 0.005, dark, 24));
+  for (let k = 0; k < 4; k += 1) {
+    const angle = (k / 4) * Math.PI * 2 + 0.4;
+    frame.add(tube(at(crankX, crankY, chainZ), at(crankX + Math.cos(angle) * 0.066, crankY + Math.sin(angle) * 0.066, chainZ), 0.008, dark, 0.006, 5));
+  }
+  [0.078, 0.069, 0.06, 0.051, 0.042, 0.034].forEach((size, k) => {
+    frame.add(ring(at(rearX, rearY, 0.03 + k * 0.0052), 0.02, size, 0.0032, metal, 16));
+  });
+  const upperPulley = at(rearX + 0.012, rearY - 0.085, chainZ - 0.004);
+  const lowerPulley = at(rearX + 0.055, rearY - 0.175, chainZ - 0.004);
+  frame.add(slab(at(rearX + 0.004, rearY - 0.045, chainZ + 0.012), [0.04, 0.05, 0.022], dark));
+  frame.add(tube(upperPulley, lowerPulley, 0.009, dark, 0.009, 6));
+  frame.add(ring(upperPulley, 0.004, 0.02, 0.008, dark, 12), ring(lowerPulley, 0.004, 0.02, 0.008, dark, 12));
+  const link = mat('#8d8f96', { roughness: 0.45, metalness: 0.8 });
+  const chain = (a, b) => {
+    const run = tube(a, b, 0.0045, link, 0.0045, 4);
+    run.castShadow = false;
+    frame.add(run);
   };
-  const cropped = look.hair === 'buzz' || look.hair === 'mohawk';
-  if (cropped) {
-    head.add(cap(0.153, 0.5));
-  } else {
-    head.add(cap(0.163));
-    // Hair down the back of the head, to the neck.
-    const nape = blob(0.085, 0.11, 0.128, hair);
-    nape.position.set(-0.07, -0.045, 0);
-    head.add(nape);
+  chain(at(crankX, crankY + 0.088, chainZ), at(rearX, rearY + 0.05, chainZ - 0.006));
+  chain(at(crankX, crankY - 0.088, chainZ), lowerPulley.clone().add(new THREE.Vector3(0, -0.02, 0)));
+  chain(lowerPulley.clone().add(new THREE.Vector3(0.02, 0, 0)), upperPulley.clone().add(new THREE.Vector3(0.02, 0, 0)));
+  chain(upperPulley.clone().add(new THREE.Vector3(-0.02, 0, 0)), at(rearX - 0.03, rearY - 0.04, chainZ - 0.006));
+
+  // The rear brake, and its hose along the frame.
+  frame.add(slab(at(rearX + 0.06, rearY + 0.072, -0.052), [0.05, 0.036, 0.03], dark, 0.6));
+  frame.add(hose([
+    downFront.clone().add(new THREE.Vector3(0.01, -0.035, -0.03)),
+    between(crank, downFront, 0.5).add(new THREE.Vector3(0.012, -0.03, -0.022)),
+    at(crankX + 0.03, crankY + 0.03, -0.04),
+    at(rearX + 0.26, rearY + 0.02, -0.05),
+    at(rearX + 0.075, rearY + 0.085, -0.055),
+  ], 0.0038, rubber));
+  const rear = buildWheel(paints);
+  rear.position.copy(at(rearX, rearY));
+  frame.add(rear);
+
+  // The front: spacers and a short stem up to a wide flat bar, with
+  // lock-on grips and brake levers.
+  const bar = at(...BIKE.bar);
+  const stemFoot = headTop.clone().addScaledVector(steerAxis, 0.05);
+  steer.add(tube(headTop, stemFoot, 0.019, dark, 0.019, 12));
+  steer.add(tube(stemFoot.clone().addScaledVector(steerAxis, -0.012), bar, 0.02, dark, 0.018, 10));
+  steer.add(slab(bar.clone().add(new THREE.Vector3(0.012, 0, 0)), [0.022, 0.044, 0.05], dark));
+  const reach = BIKE.grip + 0.075;
+  steer.add(tube(bar.clone().setZ(-reach), bar.clone().setZ(reach), 0.0125, dark));
+  [-1, 1].forEach((side) => {
+    const z = (out) => bar.clone().setZ(side * out);
+    steer.add(tube(z(BIKE.grip - 0.07), z(BIKE.grip + 0.07), 0.0178, rubber, 0.0178, 12));
+    [BIKE.grip - 0.075, BIKE.grip + 0.073].forEach((out) => steer.add(tube(z(out - 0.005), z(out + 0.005), 0.0195, metal, 0.0195, 12)));
+    // The lever: a clamp inboard of the grip, and a blade under the fingers.
+    const clamp = z(BIKE.grip - 0.1).add(new THREE.Vector3(0.018, -0.008, 0));
+    steer.add(slab(clamp, [0.04, 0.026, 0.026], dark));
+    steer.add(tube(clamp.clone().add(new THREE.Vector3(0.016, -0.006, 0)), z(BIKE.grip + 0.03).add(new THREE.Vector3(0.052, -0.02, 0)), 0.0058, metal, 0.0045, 6));
+  });
+
+  // The suspension fork: a crown, gold upper legs that slide into thick
+  // lowers, an arch over the tire and the front brake.
+  const axleFront = at(...BIKE.front);
+  steer.add(tube(headLow.clone().setZ(-0.082), headLow.clone().setZ(0.082), 0.024, dark, 0.024, 12));
+  steer.add(slab(headLow, [0.06, 0.04, 0.07], dark, Math.atan2(steerAxis.x, steerAxis.y) * -1));
+  const legs = [-1, 1].map((side) => {
+    const top = headLow.clone().setZ(side * 0.066);
+    const foot = axleFront.clone().setZ(side * 0.066);
+    steer.add(tube(top, between(top, foot, 0.34), 0.0165, gold, 0.0165, 12));
+    steer.add(tube(between(top, foot, 0.26), foot, 0.025, dark, 0.021, 12));
+    steer.add(tube(between(top, foot, 0.25), between(top, foot, 0.275), 0.0265, rubber, 0.0265, 12));
+    steer.add(slab(foot.clone().addScaledVector(steerAxis, -0.012), [0.04, 0.05, 0.022], dark, Math.atan2(steerAxis.x, steerAxis.y) * -1));
+    return { top, foot };
+  });
+  const forward = new THREE.Vector3(steerAxis.y, -steerAxis.x, 0);
+  const archAt = (leg) => between(leg.top, leg.foot, 0.29).addScaledVector(forward, 0.02);
+  steer.add(hose([
+    archAt(legs[0]),
+    between(legs[0].top, legs[0].foot, 0.22).setZ(-0.03).addScaledVector(forward, 0.05),
+    between(legs[0].top, legs[0].foot, 0.22).setZ(0.03).addScaledVector(forward, 0.05),
+    archAt(legs[1]),
+  ], 0.012, dark));
+  steer.add(slab(between(legs[0].top, legs[0].foot, 0.8).addScaledVector(forward, -0.038).setZ(-0.056), [0.036, 0.05, 0.03], dark, Math.atan2(steerAxis.x, steerAxis.y) * -1));
+  // Hoses droop from the levers: one to the front brake, one to the frame.
+  const lever = (side) => bar.clone().setZ(side * (BIKE.grip - 0.1)).add(new THREE.Vector3(0.04, -0.01, 0));
+  steer.add(hose([
+    lever(-1),
+    bar.clone().add(new THREE.Vector3(0.13, -0.07, -0.12)),
+    headLow.clone().add(new THREE.Vector3(0.09, -0.03, -0.085)),
+    between(legs[0].top, legs[0].foot, 0.5).addScaledVector(forward, -0.03).setZ(-0.075),
+    between(legs[0].top, legs[0].foot, 0.76).addScaledVector(forward, -0.04).setZ(-0.06),
+  ], 0.0038, rubber));
+  steer.add(hose([
+    lever(1),
+    bar.clone().add(new THREE.Vector3(0.14, -0.06, 0.1)),
+    headTop.clone().add(new THREE.Vector3(0.075, -0.05, 0.03)),
+    between(headLow, headTop, 0.3).add(new THREE.Vector3(0.036, 0, 0.012)),
+  ], 0.0038, rubber));
+  const front = buildWheel(paints);
+  front.position.copy(axleFront);
+  steer.add(front);
+
+  fuse(frame);
+  fuse(steer);
+  return { root, frame, steer, steerAxis, pivot, wheels: [front, rear] };
+}
+
+/* ---------- The body ---------- */
+
+function trunkWeights(y) {
+  const t = smooth(0.08, 0.3, y);
+  return [[HIPS, 1 - t], [CHEST, t]];
+}
+
+// The same for any point in the rest pose, for things stuck on the trunk.
+function onTrunk(x, y) {
+  return trunkWeights(y - REST_HIPS);
+}
+
+function armWeights(side, t) {
+  if (t > 0.5) {
+    const v = smooth(0.53, 0.6, t);
+    return [[boneOf(side, FORE), 1 - v], [boneOf(side, HAND), v]];
   }
-  if (!cropped && !hatOn && look.hair !== 'curly') {
-    // A fringe of tufts over the forehead, swept to one side.
-    [-0.085, -0.045, 0, 0.045, 0.085].forEach((z, i) => {
-      const tuft = blob(0.05, 0.03, 0.036, hair, 10);
-      tuft.position.set(0.105 - Math.abs(z) * 0.5, 0.118 - i * 0.004, z);
-      tuft.rotation.set(0.5, 0, -0.55);
-      head.add(tuft);
+  const u = smooth(0.235, 0.345, t);
+  return [[boneOf(side, UPPER), 1 - u], [boneOf(side, FORE), u]];
+}
+
+function legWeights(side, t) {
+  if (t > 0.7) {
+    const v = smooth(0.8, 0.9, t);
+    return [[boneOf(side, SHIN_BONE), 1 - v], [boneOf(side, FOOT), v]];
+  }
+  const u = smooth(0.385, 0.5, t);
+  return [[boneOf(side, THIGH_BONE), 1 - u], [boneOf(side, SHIN_BONE), u]];
+}
+
+// A turned-in edge, so cloth has thickness where it ends.
+function lip(ring, depth = 0.012) {
+  const r = (typeof ring.r === 'number' ? [ring.r, ring.r, ring.r, ring.r] : ring.r).map((value) => Math.max(0.004, value - depth));
+  return { ...ring, r };
+}
+
+// Part of the trunk, from one height to another (above the hips), `pad`
+// thicker than the body and never thinner than `least` [side, front, back].
+function trunk(sculpt, { from, to, pad = 0, least = [0, 0, 0], color, tint = () => color, shape = () => 1, lipStart = false, lipEnd = false, capStart = false, map = null }) {
+  const rings = [];
+  const count = Math.max(2, Math.round((to - from) / 0.02));
+  for (let i = 0; i <= count; i += 1) {
+    const y = from + ((to - from) * i) / count;
+    const [, side, front, back] = measure(TORSO, y);
+    const more = shape(y);
+    // Loose clothes hang straight from the chest down, not at the shoulders.
+    const hang = 1 - smooth(0.3, 0.44, y);
+    const wide = Math.max(side + pad, least[0] * hang) * more;
+    rings.push({
+      at: [0, REST_HIPS + y, 0],
+      r: [Math.max(front + pad, least[1] * hang) * more, Math.max(back + pad, least[2] * hang) * more, wide, wide],
+      weights: trunkWeights(y),
+      color: tint(y),
+      // How far up this part it is, for placing a print.
+      share: i / count,
     });
   }
-  if (look.hair === 'long') {
-    const back = limb(0.1, 0.2, hair);
-    back.position.set(-0.07, -0.13, 0);
-    back.scale.set(0.55, 1, 1.45);
-    head.add(back);
+  if (lipStart) {
+    rings.unshift(lip(rings[0]));
   }
-  if (look.hair === 'ponytail') {
-    const knot = sphere(0.055, hair, { segments: 10 });
-    knot.position.set(-0.155, 0.04, 0);
-    head.add(knot);
-    const tail = limb(0.04, 0.2, hair);
-    tail.position.set(-0.2, -0.08, 0);
-    tail.rotation.z = -0.35;
-    head.add(tail);
+  if (lipEnd) {
+    rings.push(lip(rings[rings.length - 1]));
   }
-  if (look.hair === 'curly' && !hatOn) {
-    for (let i = 0; i < 10; i += 1) {
-      const angle = (i / 10) * Math.PI * 2;
-      const curl = sphere(0.058, hair, { segments: 10 });
-      curl.position.set(Math.cos(angle) * 0.11 - 0.03, 0.1 + (i % 2) * 0.03, Math.sin(angle) * 0.11);
-      head.add(curl);
+  sculpt.tube(rings, { around: 24, color, capStart, map });
+}
+
+// Part of an arm or a leg, from `from` to `to` meters down it.
+function limb(sculpt, table, origin, side, weights, { from, to, pad = 0, least = 0, color, tint = () => color, shape = () => 1, lipStart = false, lipEnd = false, capStart = false, capEnd = false, map = null }) {
+  const rings = [];
+  const count = Math.max(2, Math.round((to - from) / 0.02));
+  for (let i = 0; i <= count; i += 1) {
+    const t = from + ((to - from) * i) / count;
+    const [, front, back, outer, inner] = measure(table, t);
+    const more = shape(t);
+    // The rounded top of a limb stays small, so it closes.
+    const fit = (value) => Math.max(value + pad, t > 0.02 ? least : 0) * more;
+    rings.push({
+      at: [origin[0], origin[1] - t, origin[2]],
+      r: [fit(front), fit(back), fit(side > 0 ? outer : inner), fit(side > 0 ? inner : outer)],
+      weights: weights(side, t),
+      color: tint(t),
+    });
+  }
+  if (lipStart) {
+    rings.unshift(lip(rings[0]));
+  }
+  if (lipEnd) {
+    rings.push(lip(rings[rings.length - 1]));
+  }
+  sculpt.tube(rings, { around: 16, color, capStart, capEnd, map });
+}
+
+// Soft folds in cloth around a height, fading out `reach` away from it.
+function folds(at, reach, depth, rate = 110) {
+  return (t) => 1 + depth * Math.sin(t * rate) * (1 - smooth(0, reach, Math.abs(t - at)));
+}
+
+function shade(color, amount) {
+  return new THREE.Color(color).multiplyScalar(amount);
+}
+
+const WHITE = new THREE.Color('#f1f1ec');
+const DARK = new THREE.Color('#22222a');
+const PLAIN = new THREE.Color('#ffffff');
+// Where on the print's picture the sleeves, hem and collar take their
+// color from, and where the body's part of it starts.
+const PRINT_TRIM = [0.5, 0.02];
+const PRINT_FOOT = 0.06;
+
+// The print on a jersey or a T-shirt, wrapped once around the body: the
+// chest is at the left and right edges of the picture and the back is in
+// the middle. Bold slanted shards and a bolt in two tones made from the
+// top's own color. A strip along the bottom is the color of the sleeves,
+// hem and collar. `full` prints the chest too; otherwise only the back,
+// with a small mark on the chest.
+function printTexture(color, full) {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const css = (tone) => `#${tone.getHexString()}`;
+  const base = new THREE.Color(color);
+  const hsl = base.getHSL({});
+  // A dark tone from across the color wheel (teal for an orange jersey),
+  // and a brighter, warmer one. Grays and whites get a dark blue instead.
+  // It is kept dark and strong so it never looks like bare skin.
+  const deep = hsl.s < 0.15 ? new THREE.Color('#24405e') : new THREE.Color().setHSL((hsl.h + 0.42) % 1, 0.55, 0.2);
+  const bright = base.clone().offsetHSL(0.07, 0.05, hsl.l > 0.6 ? -0.2 : 0.16);
+  const pale = base.clone().lerp(new THREE.Color('#fff6dc'), 0.78);
+  ctx.fillStyle = css(base);
+  ctx.fillRect(0, 0, size, size);
+  const body = size * (1 - PRINT_FOOT);
+  const shard = (middle, points, tone) => {
+    ctx.fillStyle = css(tone);
+    ctx.beginPath();
+    points.forEach(([x, y]) => ctx.lineTo(middle + x * size, y * body));
+    ctx.fill();
+  };
+  const panel = (middle) => {
+    shard(middle, [[-0.25, 0.42], [-0.11, 0.1], [0.02, 0.1], [-0.17, 0.62]], bright);
+    shard(middle, [[-0.2, 0.98], [-0.04, 0.98], [0.22, 0.26], [0.07, 0.26]], deep);
+    shard(middle, [[0, 0.98], [0.11, 0.98], [0.25, 0.52], [0.2, 0.42]], bright);
+    shard(middle, [[-0.25, 0.14], [-0.04, 0.06], [0.25, 0.1], [0.25, 0.19], [-0.02, 0.15], [-0.25, 0.24]], deep);
+    shard(middle, [[0.03, 0.3], [0.13, 0.3], [0.04, 0.52], [0.11, 0.52], [-0.08, 0.88], [-0.02, 0.61], [-0.09, 0.61]], pale);
+  };
+  if (full) {
+    panel(0);
+    panel(size);
+  } else {
+    shard(size * 0.92, [[-0.04, 0.2], [0.03, 0.2], [0.01, 0.26], [0.04, 0.26], [-0.03, 0.36], [-0.01, 0.29], [-0.05, 0.29]], deep);
+  }
+  panel(size / 2);
+  // The collar and the strip the sleeves and hem are cut from.
+  ctx.fillStyle = css(deep);
+  ctx.fillRect(0, 0, size, size * 0.022);
+  ctx.fillRect(0, body, size, size - body);
+  // The knit: fine specks, and soft folds running down.
+  let seed = 11;
+  const next = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  for (let i = 0; i < 9000; i += 1) {
+    ctx.fillStyle = next() < 0.5 ? 'rgba(0, 0, 0, 0.07)' : 'rgba(255, 255, 255, 0.06)';
+    ctx.fillRect(next() * size, next() * size, 2, 2);
+  }
+  for (let i = 0; i < 14; i += 1) {
+    const x = next() * size;
+    const fold = ctx.createLinearGradient(x - 14, 0, x + 14, 0);
+    fold.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    fold.addColorStop(0.5, 'rgba(0, 0, 0, 0.1)');
+    fold.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = fold;
+    ctx.fillRect(x - 14, size * 0.45, 28, size * 0.5);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.anisotropy = 8;
+  return texture;
+}
+
+function buildBody(kit, look, board) {
+  const { skin, cloth, print, gear } = kit;
+  const bike = board === 'bike';
+  const skinColor = new THREE.Color(look.skin);
+  const top = new THREE.Color(look.topColor);
+  const topTrim = shade(look.topColor, 0.72);
+  const bottom = new THREE.Color(look.bottomColor);
+  const bottomTrim = shade(look.bottomColor, 0.7);
+  const shoulderY = REST_HIPS + CHEST_Y + 0.02;
+  const hipY = REST_HIPS - 0.02;
+
+  // Skin: the base of the neck and the neck itself, the arms and the legs.
+  trunk(skin, { from: 0.42, to: 0.57, color: skinColor });
+  skin.tube([
+    { at: [0, REST_HIPS + 0.5, 0], r: [0.058, 0.062, 0.058, 0.058], weights: CHEST },
+    { at: [0.004, REST_HIPS + 0.54, 0], r: [0.054, 0.056, 0.053, 0.053], weights: [[CHEST, 0.8], [HEAD, 0.2]] },
+    { at: [0.008, REST_HIPS + 0.575, 0], r: [0.051, 0.053, 0.05, 0.05], weights: [[CHEST, 0.45], [HEAD, 0.55]] },
+    { at: [0.01, REST_HIPS + 0.615, 0], r: [0.05, 0.052, 0.05, 0.05], weights: HEAD },
+  ], { around: 16, color: skinColor });
+  [-1, 1].forEach((side) => {
+    // The shoulders are always under a sleeve.
+    limb(skin, ARM, [0, shoulderY, side * SHOULDER], side, armWeights, { from: look.top === 'tee' ? 0.07 : 0.42, to: 0.585, color: skinColor });
+    limb(skin, LEG, [0, hipY, side * HIP], side, legWeights, { from: 0.1, to: 0.9, color: skinColor, capEnd: true });
+  });
+
+  // The top. A hoodie hangs loose and boxy, a jacket a little less, a
+  // T-shirt follows the body.
+  const fit = {
+    tee: { pad: 0.007, hem: 0.04, least: [0, 0, 0], crease: 0.006, sleeve: 0.006 },
+    hoodie: { pad: 0.02, hem: -0.025, least: [0.172, 0.118, 0.106], crease: 0.02, sleeve: 0.02 },
+    jacket: { pad: 0.015, hem: -0.015, least: [0.164, 0.11, 0.098], crease: 0.016, sleeve: 0.015 },
+  }[look.top];
+  const tee = look.top === 'tee';
+  const frontAt = (y) => Math.max(measure(TORSO, y)[2] + fit.pad, y < 0.4 ? fit.least[1] : 0);
+  const neckline = tee ? 0.538 : 0.55;
+  // A T-shirt carries a print, so it is drawn from its picture; the other
+  // tops are plain cloth.
+  trunk(tee ? print : cloth, {
+    from: fit.hem, to: neckline, pad: fit.pad, least: fit.least, color: tee ? PLAIN : top, lipStart: true, lipEnd: true,
+    shape: folds(0.17, 0.14, fit.crease, 90),
+    tint: (y) => {
+      if (tee) {
+        return PLAIN;
+      }
+      return y < fit.hem + 0.04 ? topTrim : top;
+    },
+    map: tee ? (share, ring) => [share, PRINT_FOOT + (1 - PRINT_FOOT) * ring.share] : null,
+  });
+  [-1, 1].forEach((side) => {
+    const origin = [0, shoulderY, side * SHOULDER];
+    if (tee) {
+      limb(print, ARM, origin, side, armWeights, {
+        from: -0.05, to: 0.17, pad: fit.sleeve + 0.002, least: 0.052, color: PLAIN, lipEnd: true, capStart: true,
+        shape: folds(0.12, 0.06, 0.02, 150),
+        map: PRINT_TRIM,
+      });
+      return;
     }
-    const top = sphere(0.07, hair, { segments: 10 });
-    top.position.set(-0.02, 0.15, 0);
-    head.add(top);
+    limb(cloth, ARM, origin, side, armWeights, {
+      from: -0.05, to: 0.56, pad: fit.sleeve, least: 0.04, color: top, lipEnd: true, capStart: true,
+      shape: folds(0.29, 0.1, 0.035, 130),
+      tint: (t) => (t > 0.515 ? topTrim : top),
+    });
+  });
+  if (look.top === 'hoodie') {
+    // The hood lying on the back, a pouch pocket and two drawstrings.
+    cloth.ball([-0.1, REST_HIPS + 0.535, 0], [0.062, 0.09, 0.118], top, CHEST, { segments: 14, turn: [0, 0, 0.35] });
+    cloth.ball([-0.05, REST_HIPS + 0.56, 0], [0.085, 0.03, 0.1], topTrim, CHEST, { segments: 12 });
+    cloth.block([frontAt(0.15) - 0.002, REST_HIPS + 0.15, 0], [0.016, 0.1, 0.2], topTrim, onTrunk);
+    [-1, 1].forEach((side) => {
+      cloth.path([[frontAt(0.52) - 0.004, REST_HIPS + 0.53, side * 0.03], [frontAt(0.47) + 0.004, REST_HIPS + 0.47, side * 0.034], [frontAt(0.4) + 0.004, REST_HIPS + 0.4, side * 0.03]], 0.0042, { around: 6, color: WHITE, weights: CHEST });
+    });
   }
-  if (look.hair === 'mohawk' && look.hat !== 'helmet' && look.hat !== 'beanie') {
-    for (let i = 0; i < 5; i += 1) {
-      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.13, 6), hair);
-      const angle = 0.95 - i * 0.42;
-      spike.position.set(Math.cos(angle + Math.PI / 2) * -0.15, Math.sin(angle + Math.PI / 2) * 0.15, 0);
-      spike.rotation.z = -angle;
-      head.add(shadowed(spike));
+  if (look.top === 'jacket') {
+    // A stand-up collar, a zip down the front and two chest pockets.
+    cloth.tube([
+      { at: [0.004, REST_HIPS + 0.535, 0], r: [0.075, 0.078, 0.078, 0.078] },
+      { at: [0.008, REST_HIPS + 0.6, 0], r: [0.068, 0.07, 0.068, 0.068] },
+      { at: [0.008, REST_HIPS + 0.6, 0], r: [0.058, 0.06, 0.058, 0.058] },
+    ], { around: 18, color: topTrim, weights: CHEST });
+    const zip = [];
+    for (let y = fit.hem + 0.01; y <= 0.56; y += 0.05) {
+      zip.push([frontAt(y) + 0.001, REST_HIPS + y, 0]);
     }
+    cloth.path(zip, [0.007, 0.004], { around: 6, up: [1, 0, 0], color: new THREE.Color('#d9dce2'), weights: onTrunk });
+    [-1, 1].forEach((side) => {
+      cloth.block([frontAt(0.38) - 0.012, REST_HIPS + 0.38, side * 0.088], [0.014, 0.02, 0.075], topTrim, CHEST);
+    });
   }
 
-  const hatMat = mat(look.hatColor, { roughness: look.hat === 'helmet' ? 0.25 : 0.7, metalness: look.hat === 'helmet' ? 0.1 : 0 });
-  if (look.hat === 'cap' || look.hat === 'backCap') {
-    const dome = sphere(0.168, hatMat, { to: Math.PI * 0.5 });
-    dome.position.y = 0.02;
-    head.add(dome);
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.014, 18), hatMat);
-    const side = look.hat === 'cap' ? 1 : -1;
-    brim.position.set(side * 0.15, 0.035, 0);
-    brim.scale.set(1.1, 1, 0.95);
-    brim.rotation.z = -side * 0.12;
-    head.add(shadowed(brim));
-    const button = sphere(0.018, hatMat, { segments: 8 });
-    button.position.y = 0.19;
-    head.add(button);
-  }
-  if (look.hat === 'beanie') {
-    const dome = sphere(0.17, hatMat, { to: Math.PI * 0.55 });
-    dome.scale.set(1, 1.18, 1);
-    head.add(dome);
-    const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.06, 20, 1, true), hatMat);
-    cuff.position.y = 0.01;
-    head.add(cuff);
-    const pom = sphere(0.05, mat('#ffffff', { roughness: 0.9 }), { segments: 10 });
-    pom.position.y = 0.23;
-    head.add(pom);
-  }
-  if (look.hat === 'helmet') {
-    const dome = sphere(0.188, hatMat, { to: Math.PI * 0.56 });
-    dome.position.y = 0.005;
-    head.add(dome);
-    const stripe = sphere(0.19, mat('#ffffff', { roughness: 0.3 }), { to: Math.PI * 0.56 });
-    stripe.scale.set(1, 1, 0.18);
-    stripe.position.y = 0.006;
-    head.add(stripe);
-  }
-  if (look.glasses === 'shades') {
-    const lens = mat('#101016', { roughness: 0.08, metalness: 0.6 });
-    const frame = mat('#16161c', { roughness: 0.4 });
-    [-1, 1].forEach((side) => {
-      const glass = blob(0.01, 0.027, 0.04, lens, 12);
-      glass.position.set(0.142, 0.022, side * 0.054);
-      head.add(glass);
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.008, 0.006), frame);
-      arm.position.set(0.07, 0.028, side * 0.134);
-      arm.rotation.y = side * -0.3;
-      head.add(arm);
+  // The bottoms: the seat, a waistband, then the legs.
+  const cut = {
+    // Baggy cargo shorts, down to the knee.
+    shorts: { pad: 0.02, to: 0.425, least: 0.086, loose: 0.012 },
+    pants: { pad: 0.01, to: 0.86, least: 0.046, loose: 0 },
+    baggy: { pad: 0.026, to: 0.875, least: 0.074, loose: 0.03 },
+  }[look.bottom];
+  trunk(cloth, {
+    from: -0.105, to: 0.135, pad: cut.pad, color: bottom, capStart: true, lipEnd: true,
+    tint: (y) => (y > 0.1 ? bottomTrim : bottom),
+  });
+  const seat = measure(TORSO, -0.01)[3] + cut.pad;
+  [-1, 1].forEach((side) => {
+    // Back pockets.
+    cloth.block([-seat + 0.004, REST_HIPS - 0.01, side * 0.075], [0.012, 0.085, 0.075], bottomTrim, HIPS);
+    limb(cloth, LEG, [0, hipY, side * HIP], side, legWeights, {
+      from: -0.04, to: cut.to, pad: cut.pad, least: cut.least, color: bottom, lipEnd: true,
+      shape: (t) => folds(0.44, 0.1, 0.03 + cut.loose, 120)(t) * (1 + cut.loose * 1.5 * Math.sin(t * 150) * smooth(0.68, 0.86, t)),
+      tint: (t) => (t > cut.to - 0.03 ? bottomTrim : bottom),
     });
-    const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.008, 0.04), frame);
-    bridge.position.set(0.15, 0.03, 0);
-    head.add(bridge);
+    if (look.bottom === 'shorts') {
+      // Cargo pockets on the thighs, each with a flap, and a seam down
+      // the outside of the leg.
+      const outer = measure(LEG, 0.25)[3] + cut.pad;
+      const thigh = boneOf(side, THIGH_BONE);
+      cloth.block([-0.004, hipY - 0.27, side * (HIP + outer + 0.002)], [0.1, 0.12, 0.02], bottom, thigh, [0, 0, 0], 1);
+      cloth.block([-0.004, hipY - 0.215, side * (HIP + outer + 0.008)], [0.108, 0.036, 0.018], bottomTrim, thigh, [0, 0, 0], 1);
+      cloth.block([-0.004, hipY - 0.228, side * (HIP + outer + 0.018)], [0.016, 0.012, 0.006], DARK, thigh, [0, 0, 0], 0);
+      cloth.path([[0, hipY - 0.03, side * (HIP + outer - 0.004)], [0, hipY - 0.12, side * (HIP + outer + 0.002)], [0, hipY - 0.2, side * (HIP + outer + 0.004)]], [0.004, 0.003], { around: 4, color: bottomTrim, weights: thigh, up: [0, 0, 1] });
+    }
+    if (look.bottom === 'shorts' && board !== 'snow') {
+      // Socks to the middle of the calf, with two stripes: dark on a
+      // bike, white on a skateboard.
+      const sock = bike ? DARK : WHITE;
+      const stripe = new THREE.Color(look.topColor);
+      limb(cloth, LEG, [0, hipY, side * HIP], side, legWeights, {
+        from: 0.63, to: 0.875, pad: 0.005, color: sock, lipStart: true,
+        tint: (t) => ((t > 0.665 && t < 0.69) || (t > 0.705 && t < 0.73) ? stripe : sock),
+      });
+    }
+    if (look.bottom === 'shorts' && bike) {
+      // Knee pads: a stretch sleeve with a hard cup over the kneecap.
+      const pad = shade('#22222a', 1.25);
+      limb(gear, LEG, [0, hipY, side * HIP], side, legWeights, { from: 0.37, to: 0.575, pad: 0.009, color: DARK, lipStart: true, lipEnd: true });
+      const both = [[boneOf(side, THIGH_BONE), 0.5], [boneOf(side, SHIN_BONE), 0.5]];
+      gear.ball([0.064, hipY - 0.455, side * HIP], [0.026, 0.066, 0.052], pad, both, { segments: 12 });
+      gear.ball([0.07, hipY - 0.41, side * HIP], [0.016, 0.022, 0.04], DARK, [[boneOf(side, THIGH_BONE), 1]], { segments: 8 });
+      gear.ball([0.066, hipY - 0.51, side * HIP], [0.016, 0.026, 0.04], DARK, [[boneOf(side, SHIN_BONE), 1]], { segments: 8 });
+    }
+  });
+}
+
+/* ---------- The head ---------- */
+
+function bump(y, z, atY, atZ, tall, wide) {
+  return Math.exp(-(((y - atY) / tall) ** 2) - ((z - atZ) / wide) ** 2);
+}
+
+// A point on the head, from how far down from the crown it is (`polar`)
+// and how far around from the nose (`around`), `lift` above the skin. The
+// head starts as an egg; then the jaw narrows, the back of the neck tucks
+// in, and the face is pressed out and in: brow, sockets, nose, cheeks,
+// lips and chin. Returns [x, y, z, how much lip] from the head's middle.
+function headPoint(polar, around, lift = 0) {
+  const ring = Math.sin(polar);
+  const dx = ring * Math.cos(around);
+  const dy = Math.cos(polar);
+  const dz = ring * Math.sin(around);
+  let x = dx * (dx >= 0 ? 0.098 : 0.104) - 0.006;
+  const y = dy * 0.1175;
+  let z = dz * 0.078;
+  const low = smooth(0.005, 0.1175, -y);
+  z *= 1 - 0.24 * low - 0.2 * low ** 3;
+  if (x < 0) {
+    x *= 1 - 0.42 * low;
+  }
+  const face = smooth(0.1, 0.5, dx);
+  const lips = bump(y, z, -0.0615, 0, 0.0062, 0.023) + bump(y, z, -0.0765, 0, 0.0066, 0.019);
+  x += face * (
+    0.024 * smooth(0.03, 0.11, -y)
+    + 0.006 * bump(y, z, 0.03, 0, 0.012, 0.06)
+    - 0.0115 * (bump(y, z, 0.008, 0.031, 0.012, 0.017) + bump(y, z, 0.008, -0.031, 0.012, 0.017))
+    + 0.021 * bump(y, z, -0.03, 0, 0.019, 0.0105)
+    + 0.01 * bump(y, z, 0, 0, 0.03, 0.008)
+    + 0.004 * (bump(y, z, -0.022, 0.047, 0.02, 0.02) + bump(y, z, -0.022, -0.047, 0.02, 0.02))
+    + 0.006 * lips
+    - 0.0045 * bump(y, z, -0.069, 0, 0.0028, 0.027)
+    + 0.007 * bump(y, z, -0.104, 0, 0.016, 0.022)
+  );
+  return [x + dx * lift, y + dy * lift, z + dz * lift, face * lips];
+}
+
+// The same point in the rest pose.
+function onHead(point) {
+  return [point[0], point[1] + REST_HEAD, point[2]];
+}
+
+// Around the head, with more columns over the face than the back.
+function faceAround(share) {
+  const s = share * 2 - 1;
+  return Math.PI * Math.sign(s) * Math.abs(s) ** 1.35;
+}
+
+// How far down from the crown the hair grows, by how far around from the
+// nose: the forehead, the temples, over the ears and down to the nape.
+const HAIRLINE = [[0, 55], [40, 59], [68, 73], [90, 88], [112, 110], [150, 126], [180, 130]];
+
+function hairline(around) {
+  const degrees = Math.abs(around) * (180 / Math.PI);
+  for (let i = 1; i < HAIRLINE.length; i += 1) {
+    if (degrees <= HAIRLINE[i][0]) {
+      const [a0, p0] = HAIRLINE[i - 1];
+      const [a1, p1] = HAIRLINE[i];
+      return (p0 + (p1 - p0) * smooth(a0, a1, degrees)) * (Math.PI / 180);
+    }
+  }
+  return 130 * (Math.PI / 180);
+}
+
+// A cap of something lying on the head: hair, a hat, a helmet. `reach`
+// says how far down it comes at each place around, `lift` how thick it is.
+function scalp(sculpt, color, { reach, lift, from = 0, rows = 14, cols = 40 }) {
+  sculpt.grid(rows, cols, (i, j) => {
+    const around = faceAround(j / cols);
+    const polar = from + (reach(around) - from) * (i / rows);
+    return { at: onHead(headPoint(polar, around, lift(polar, around, i / rows))), color };
+  }, { weights: HEAD, center: [0, REST_HEAD, 0] });
+}
+
+function buildHead(kit, look) {
+  const { skin, gloss, gear } = kit;
+  const skinColor = new THREE.Color(look.skin);
+  const lipColor = new THREE.Color(look.skin).lerp(new THREE.Color('#b8474a'), 0.36);
+  const tone = new THREE.Color();
+  skin.grid(44, 52, (i, j) => {
+    const point = headPoint((i / 44) * Math.PI, faceAround(j / 52));
+    tone.copy(skinColor).lerp(lipColor, Math.min(1, point[3] * 1.6));
+    return { at: onHead(point), color: tone.clone() };
+  }, { weights: HEAD, center: [0, REST_HEAD, 0] });
+
+  const browColor = shade(look.hairColor, 0.6);
+  [-1, 1].forEach((side) => {
+    const z = side * 0.031;
+    const eye = [0.0775, REST_HEAD + 0.008, z];
+    // The eye sits in its socket: white, iris, pupil and a glint, under a
+    // lid, with a lash line and a brow above.
+    gloss.ball(eye, [0.012, 0.012, 0.0135], new THREE.Color('#f4f3ee'), HEAD, { segments: 14 });
+    gloss.ball([eye[0] + 0.0072, eye[1] - 0.0005, z], [0.0055, 0.0068, 0.0068], new THREE.Color('#4a2f1c'), HEAD, { segments: 12 });
+    gloss.ball([eye[0] + 0.0108, eye[1] - 0.0005, z], [0.0026, 0.0033, 0.0033], new THREE.Color('#0d0a0c'), HEAD, { segments: 8 });
+    gloss.ball([eye[0] + 0.0124, eye[1] + 0.0026, z + 0.0026], [0.0011, 0.0013, 0.0013], new THREE.Color('#ffffff'), HEAD, { segments: 6 });
+    skin.ball([eye[0] - 0.0005, eye[1] + 0.0085, z], [0.0128, 0.0075, 0.0155], skinColor, HEAD, { segments: 12 });
+    skin.ball([eye[0] - 0.001, eye[1] - 0.0112, z], [0.0118, 0.005, 0.0145], skinColor, HEAD, { segments: 10 });
+    gear.path([[eye[0] + 0.0068, eye[1] + 0.0058, z - 0.013], [eye[0] + 0.0122, eye[1] + 0.0086, z], [eye[0] + 0.0068, eye[1] + 0.0058, z + 0.013]], 0.001, { around: 5, color: new THREE.Color('#2a1c18'), weights: HEAD });
+    const brow = [0.05, 0.03, 0.012].map((out, k) => {
+      const at = [0.02, 0.034, 0.032][k];
+      const surface = headPoint(Math.acos(at / 0.1175), Math.atan2(side * out, 0.085), 0.0015);
+      return onHead([surface[0], at, side * out]);
+    });
+    gear.path(brow, (t) => [0.0016, 0.0027 - t * 0.0009], { around: 6, color: browColor, weights: HEAD });
+    // The ear, with its darker hollow.
+    skin.ball([-0.012, REST_HEAD - 0.004, side * 0.079], [0.017, 0.03, 0.009], skinColor, HEAD, { segments: 12, turn: [side * 0.25, side * -0.35, 0.15] });
+    skin.ball([-0.008, REST_HEAD - 0.004, side * 0.0845], [0.009, 0.019, 0.005], shade(look.skin, 0.72), HEAD, { segments: 8, turn: [side * 0.25, side * -0.35, 0.15] });
+    // The wings of the nose.
+    skin.ball([0.0925, REST_HEAD - 0.04, side * 0.0105], [0.0062, 0.0052, 0.0066], skinColor, HEAD, { segments: 8 });
+  });
+}
+
+/* ---------- Hair, hats and glasses ---------- */
+
+// A picture of fine lines, for the shine of combed hair.
+function strandTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  let seed = 7;
+  for (let x = 0; x < 64; x += 1) {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    const tone = 70 + (seed / 2147483648) * 150;
+    ctx.fillStyle = `rgb(${tone}, ${tone}, ${tone})`;
+    ctx.fillRect(x, 0, 1, 64);
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+}
+
+// A lock of hair: thick at the root, thin and flat at the tip.
+function lock(hair, color, points, thick, tip = 0.25) {
+  hair.path(points.map(onHead), (t) => [thick * (1 - t * (1 - tip)), thick * 0.6 * (1 - t * (1 - tip))], { around: 6, color, weights: HEAD, up: [1, 0, 0] });
+}
+
+function buildHair(kit, look) {
+  const { hair } = kit;
+  const color = new THREE.Color(look.hairColor);
+  const dark = shade(look.hairColor, 0.78);
+  const pick = (k) => (k % 2 ? dark : color);
+  const hat = look.hat;
+  const covered = hat !== 'none';
+  const style = look.hair;
+  const cropped = style === 'buzz' || style === 'mohawk';
+  // The hair on the scalp: thick and wavy, or a short stubble.
+  const body = { short: 0.014, long: 0.017, ponytail: 0.011, curly: 0.012, mohawk: 0.0035, buzz: 0.0045 }[style];
+  scalp(hair, cropped ? dark : color, {
+    reach: (around) => hairline(around) + (style === 'long' ? 0.12 * smooth(1.2, 2.2, Math.abs(around)) : 0),
+    lift: (polar, around, share) => {
+      const edge = 0.25 + 0.75 * smooth(1, 0.8, share);
+      const wave = cropped ? 0 : 0.0028 * Math.sin(around * 23 + polar * 5) + 0.002 * Math.sin(around * 9 - polar * 11);
+      return (covered ? Math.min(body, 0.008) : body) * edge + wave * edge;
+    },
+    rows: 16,
+    cols: 48,
+  });
+
+  if (style === 'short' && !covered) {
+    // Layered locks combed forward and to one side, lying on the head.
+    for (let k = 0; k < 60; k += 1) {
+      const around = ((k * 2.399) % (Math.PI * 2)) - Math.PI;
+      const polar = 0.1 + ((k * 0.618) % 1) * 1.05;
+      if (polar > hairline(around) - 0.1) {
+        continue;
+      }
+      const root = headPoint(polar, around, 0.011);
+      // Each lock runs forward over the head and ends a little further on.
+      const ahead = (step) => {
+        const next = Math.abs(around) * (1 - 0.3 * step);
+        const at = headPoint(polar + 0.02 * step + (Math.abs(around) < 0.9 ? 0.2 * step : 0), Math.sign(around || 1) * next + 0.12 * step, 0.02 - 0.004 * step * step);
+        return [at[0], at[1], at[2]];
+      };
+      lock(hair, pick(k), [[root[0], root[1], root[2]], ahead(1), ahead(2)], 0.015, 0.3);
+    }
+  }
+  if (style === 'long') {
+    // A curtain of hair from the temples around the back, falling to the
+    // shoulders, with a few loose locks over it.
+    const fall = (around, share, lift) => {
+      const edge = hairline(around);
+      if (share < 0.3) {
+        return headPoint(edge - 0.3 + (share / 0.3) * 0.36, around, lift);
+      }
+      const from = headPoint(edge + 0.06, around, lift);
+      const down = (share - 0.3) / 0.7;
+      const swell = 1 + 0.1 * Math.sin(down * Math.PI) - 0.08 * down;
+      return [from[0] * swell - 0.012 * down, from[1] - down * (from[1] + 0.215 + 0.012 * Math.sin(around * 7)), from[2] * swell];
+    };
+    const sweep = (share) => {
+      const angle = 1.15 + share * (Math.PI * 2 - 2.3);
+      return angle > Math.PI ? angle - Math.PI * 2 : angle;
+    };
+    hair.grid(12, 44, (i, j) => {
+      const around = sweep(j / 44);
+      return { at: onHead(fall(around, i / 12, 0.019 + 0.003 * Math.sin(j * 2.3))), color: j % 5 === 0 ? dark : color };
+    }, { weights: HEAD, center: [0, REST_HEAD - 0.05, 0], wrap: false });
+    for (let k = 0; k < 16; k += 1) {
+      const around = sweep((k + 0.5) / 16);
+      lock(hair, pick(k), [0.05, 0.35, 0.65, 0.97].map((share) => fall(around, share, 0.026)), 0.013, 0.3);
+    }
+  }
+  if (style === 'ponytail') {
+    // Pulled back and plaited into a long braid down the middle of the
+    // back. Its top follows the head; the rest lies on the back, so it
+    // stays put when the rider bends over the bars.
+    const from = [-0.1, -0.05];
+    const links = 17;
+    hair.ball(onHead([from[0], from[1] + 0.012, 0]), [0.024, 0.024, 0.03], dark, HEAD, { segments: 10 });
+    for (let k = 0; k <= links; k += 1) {
+      const share = k / links;
+      const y = REST_HEAD + from[1] - share * 0.4;
+      const back = measure(TORSO, Math.min(0.56, y - REST_HIPS))[3];
+      const lying = smooth(0.02, 0.3, share);
+      const x = from[0] + (-(back + 0.034) - from[0]) * lying;
+      const follow = smooth(0.08, 0.34, share);
+      const size = 1 - 0.35 * share;
+      const weave = k % 2 ? 1 : -1;
+      hair.ball([x, y, weave * 0.008 * size], [0.019 * size, 0.021, 0.022 * size], pick(k), [[HEAD, 1 - follow], [CHEST, follow]], { segments: 8, turn: [weave * 0.55, 0, 0] });
+      if (k === links) {
+        // A band, then the loose end.
+        hair.ball([x, y - 0.012, 0], [0.013, 0.008, 0.013], new THREE.Color('#d8452e'), CHEST, { segments: 8 });
+        hair.ball([x + 0.002, y - 0.04, 0], [0.012, 0.03, 0.013], color, CHEST, { segments: 8 });
+      }
+    }
+  }
+  if (style === 'curly') {
+    // A mass of tight curls, all over the scalp.
+    for (let k = 0; k < 110; k += 1) {
+      const around = ((k * 2.399) % (Math.PI * 2)) - Math.PI;
+      const polar = 0.08 + ((k * 0.618) % 1) * (hairline(around) - 0.12);
+      if (covered && polar < 1.2) {
+        continue;
+      }
+      const size = 0.019 + (k % 4) * 0.0032;
+      const at = headPoint(polar, around, 0.012 + (k % 3) * 0.005);
+      hair.ball(onHead(at), [size, size, size], pick(k), HEAD, { segments: 7 });
+    }
+  }
+  if (style === 'mohawk' && hat !== 'helmet' && hat !== 'beanie') {
+    // A crest of spikes from the forehead to the nape.
+    for (let k = 0; k < 11; k += 1) {
+      const polar = -0.85 + k * 0.27;
+      const around = polar < 0 ? 0 : Math.PI;
+      const root = headPoint(Math.abs(polar), around, 0);
+      const tip = headPoint(Math.abs(polar), around, 0.085 - Math.abs(k - 5) * 0.006);
+      hair.path([onHead(root), onHead([(root[0] + tip[0]) / 2, (root[1] + tip[1]) / 2, 0]), onHead(tip)], (t) => [0.02 * (1 - t * 0.9), 0.011 * (1 - t * 0.8)], { around: 6, color: pick(k), weights: HEAD, up: [0, 0, 1] });
+    }
+  }
+}
+
+function buildHat(kit, look) {
+  const { gear, gloss, cloth } = kit;
+  const color = new THREE.Color(look.hatColor);
+  const trim = shade(look.hatColor, 0.7);
+  const hat = look.hat;
+  const degrees = Math.PI / 180;
+  if (hat === 'cap' || hat === 'backCap') {
+    // Six panels with a button on top, and a curved brim.
+    const way = hat === 'cap' ? 1 : -1;
+    scalp(cloth, color, {
+      reach: () => 80 * degrees,
+      lift: (polar, around) => 0.016 + 0.0016 * Math.cos(around * 6) - 0.004 * smooth(1.1, 1.4, polar),
+      rows: 12,
+    });
+    cloth.ball(onHead([0, 0.135, 0]), [0.011, 0.006, 0.011], trim, HEAD, { segments: 8 });
+    cloth.grid(5, 14, (i, j) => {
+      const around = (j / 14 - 0.5) * 1.9;
+      const root = headPoint(76 * degrees, around, 0.016);
+      const out = (i / 5) * 0.082 * (1 - 0.35 * (around / 0.95) ** 2);
+      return { at: onHead([way * (root[0] + out), root[1] - 0.004 - out * 0.22 - 0.012 * (around / 0.95) ** 2, root[2]]), color: i === 5 ? trim : color };
+    }, { weights: HEAD, center: [0, REST_HEAD - 0.5, 0], wrap: false });
+    // The band around the back, with its gap and strap.
+    cloth.path([-1, -0.5, 0, 0.5, 1].map((s) => {
+      const p = headPoint(80 * degrees, Math.PI + s * 0.5, 0.017);
+      return onHead([way * p[0], p[1], p[2]]);
+    }), [0.003, 0.008], { around: 6, color: trim, weights: HEAD });
+  }
+  if (hat === 'beanie') {
+    // A knitted hat with a turned-up, ribbed cuff and a bobble.
+    scalp(cloth, color, {
+      reach: (around) => (88 + 8 * smooth(0.6, 1.6, Math.abs(around))) * degrees,
+      lift: (polar, around) => 0.018 + 0.012 * smooth(0.5, 0, polar) + 0.0012 * Math.sin(around * 40),
+      rows: 14,
+    });
+    scalp(cloth, trim, {
+      from: 62 * degrees,
+      reach: (around) => (89 + 8 * smooth(0.6, 1.6, Math.abs(around))) * degrees,
+      lift: (polar, around, share) => 0.022 + 0.004 * Math.sin(share * Math.PI) + 0.0022 * Math.sin(around * 44),
+      rows: 5,
+    });
+    cloth.ball(onHead([-0.005, 0.158, 0]), [0.03, 0.028, 0.03], WHITE, HEAD, { segments: 10 });
+  }
+  if (hat === 'helmet') {
+    // A skate helmet: a hard shell with vents, a rim, a short visor and
+    // straps that meet under the chin.
+    const reach = (around) => (64 + 40 * smooth(0.5, 1.5, Math.abs(around)) + 8 * smooth(2, 3, Math.abs(around))) * degrees;
+    scalp(gloss, color, { reach, lift: (polar, around, share) => 0.03 - 0.008 * smooth(0.8, 1, share), rows: 16, cols: 44 });
+    const rim = [];
+    for (let k = 0; k <= 40; k += 1) {
+      const around = (k / 40) * Math.PI * 2 - Math.PI;
+      rim.push(onHead(headPoint(reach(around), around, 0.021)));
+    }
+    gear.path(rim, 0.0058, { around: 6, steps: 80, color: DARK, weights: HEAD });
+    // Long vents: three rows on each side from the front to the crown,
+    // and two at the back.
+    const vents = [];
+    for (let k = 0; k < 12; k += 1) {
+      const side = k % 2 ? 1 : -1;
+      vents.push([side * (0.3 + Math.floor(k / 4) * 0.72), 0.28 + Math.floor((k % 4) / 2) * 0.4]);
+    }
+    vents.push([Math.PI - 0.5, 0.95], [-Math.PI + 0.5, 0.95]);
+    vents.forEach(([around, polar]) => {
+      const a = headPoint(polar, around, 0.0305);
+      const b = headPoint(polar + 0.27, around, 0.0305);
+      gear.path([onHead(a), onHead(b)], [0.0075, 0.002], { around: 6, steps: 3, color: DARK, weights: HEAD, up: [a[0], a[1], a[2]] });
+    });
+    gloss.grid(3, 10, (i, j) => {
+      const around = (j / 10 - 0.5) * 1.5;
+      const root = headPoint(62 * degrees, around, 0.03);
+      const out = (i / 3) * 0.036;
+      return { at: onHead([root[0] + out, root[1] - 0.006 - out * 0.3, root[2]]), color: trim };
+    }, { weights: HEAD, center: [0, REST_HEAD - 0.5, 0], wrap: false });
+    [-1, 1].forEach((side) => {
+      const from = headPoint(96 * degrees, side * 1.25, 0.012);
+      const back = headPoint(104 * degrees, side * 1.95, 0.012);
+      const chin = [0.045, -0.128, side * 0.012];
+      gear.path([onHead(from), onHead([0.03, -0.07, side * 0.066]), onHead(chin)], [0.002, 0.007], { around: 4, color: DARK, weights: HEAD, up: [0, 0, 1] });
+      gear.path([onHead(back), onHead([0.012, -0.06, side * 0.074]), onHead([0.03, -0.07, side * 0.066])], [0.002, 0.006], { around: 4, color: DARK, weights: HEAD, up: [0, 0, 1] });
+    });
+    gear.block(onHead([0.045, -0.128, 0]), [0.014, 0.008, 0.03], DARK, HEAD);
+  }
+}
+
+function buildGlasses(kit, look) {
+  const { gear, gloss } = kit;
+  if (look.glasses === 'shades') {
+    // Two dark lenses in a frame, with arms back to the ears.
+    const frame = new THREE.Color('#15151a');
+    [-1, 1].forEach((side) => {
+      gloss.ball(onHead([0.091, 0.008, side * 0.032]), [0.0045, 0.018, 0.0255], new THREE.Color('#0c0c12'), HEAD, { segments: 14, turn: [0, side * -0.22, 0] });
+      const ring = [];
+      for (let k = 0; k <= 12; k += 1) {
+        const angle = (k / 12) * Math.PI * 2;
+        ring.push(onHead([0.0905 - Math.abs(Math.sin(angle)) * 0.0005 - (side * Math.sin(angle) > 0 ? 0.006 * Math.abs(Math.sin(angle)) : 0), 0.008 + Math.cos(angle) * 0.019, side * 0.032 + Math.sin(angle) * 0.0265]));
+      }
+      gear.path(ring, 0.0022, { around: 5, steps: 24, color: frame, weights: HEAD, capStart: false, capEnd: false });
+      gear.path([onHead([0.083, 0.014, side * 0.06]), onHead([0.03, 0.016, side * 0.079]), onHead([-0.02, 0.012, side * 0.08])], [0.0018, 0.0035], { around: 4, color: frame, weights: HEAD });
+    });
+    gear.path([onHead([0.094, 0.014, -0.008]), onHead([0.098, 0.016, 0]), onHead([0.094, 0.014, 0.008])], 0.0022, { around: 5, color: frame, weights: HEAD });
   }
   if (look.glasses === 'goggles') {
-    const lens = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.075, 0.22), mat('#ff9a2a', { roughness: 0.1, metalness: 0.7 }));
-    lens.position.set(0.14, 0.035, 0);
-    head.add(lens);
-    const strap = new THREE.Mesh(new THREE.CylinderGeometry(0.166, 0.166, 0.035, 22, 1, true), mat('#2a2a33'));
-    strap.position.y = 0.035;
-    head.add(strap);
+    // One wide mirrored lens in a soft frame, on a strap around the head.
+    const thick = look.hat === 'helmet' ? 0.034 : 0.022;
+    const strap = [];
+    for (let k = 0; k <= 32; k += 1) {
+      const around = (k / 32) * Math.PI * 2 - Math.PI;
+      const front = smooth(1.2, 0.5, Math.abs(around));
+      strap.push(onHead(headPoint(Math.acos(0.012 / 0.1175) - 0.02, around, thick * (1 - front) + 0.012 * front)));
+    }
+    gear.path(strap, [0.0025, 0.016], { around: 6, steps: 64, color: DARK, weights: HEAD });
+    gear.grid(6, 16, (i, j) => {
+      const around = (j / 16 - 0.5) * 1.75;
+      const p = headPoint(1.36 + (i / 6) * 0.42, around, 0.012 + 0.004 * Math.sin((i / 6) * Math.PI));
+      return { at: onHead(p), color: DARK };
+    }, { weights: HEAD, center: [0, REST_HEAD, 0], wrap: false });
+    gloss.grid(5, 14, (i, j) => {
+      const around = (j / 14 - 0.5) * 1.5;
+      const p = headPoint(1.4 + (i / 5) * 0.33, around, 0.018 + 0.003 * Math.sin((i / 5) * Math.PI));
+      return { at: onHead(p), color: new THREE.Color('#ff9a2a') };
+    }, { weights: HEAD, center: [0, REST_HEAD, 0], wrap: false });
   }
-  // Head sizes above are for a big cartoon head; a person's is smaller.
-  head.scale.setScalar(HEAD_SCALE);
-  return head;
 }
 
-/* ---------- Shoes and hands ---------- */
+/* ---------- Hands and shoes ---------- */
 
-// A sneaker (or a snowboard boot): a white sole with a rubber toe, the
-// upper, a tongue and laces, and a padded collar around the ankle. The toe
-// points along +x; the ankle is above the heel end.
-function buildShoe(boot, shoe, trim, sole, lace) {
-  const foot = new THREE.Group();
-  const base = shadowed(new THREE.Mesh(new THREE.RoundedBoxGeometry(0.27, 0.028, 0.104, 3, 0.012), sole));
-  base.position.set(0.035, 0.014, 0);
-  const heel = shadowed(new THREE.Mesh(new THREE.RoundedBoxGeometry(0.15, 0.078, 0.096, 4, 0.028), shoe));
-  heel.position.set(-0.02, 0.064, 0);
-  const toe = blob(0.085, 0.036, 0.049, shoe, 14);
-  toe.position.set(0.085, 0.05, 0);
-  const bumper = blob(0.04, 0.03, 0.05, sole, 12);
-  bumper.position.set(0.135, 0.04, 0);
-  const tongue = new THREE.Mesh(new THREE.RoundedBoxGeometry(0.075, 0.02, 0.05, 2, 0.008), trim);
-  tongue.position.set(0.04, 0.096, 0);
-  tongue.rotation.z = -0.42;
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.037, 0.014, 8, 16), trim);
-  collar.rotation.x = Math.PI / 2;
-  collar.position.set(-0.028, 0.104, 0);
-  foot.add(base, heel, toe, bumper, tongue, collar);
-  [0.05, 0.072, 0.094].forEach((along, i) => {
-    const cross = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.007, 0.056), lace);
-    cross.position.set(along, 0.093 - i * 0.011, 0);
-    cross.rotation.z = -0.42;
-    foot.add(cross);
+// A hand at the end of an arm hanging down: a palm, four fingers that
+// bend at two joints, and a thumb. Gloves are the same, thicker.
+function buildHand(sculpt, side, color, thick = 1) {
+  const gloved = thick > 1;
+  const hand = boneOf(side, HAND);
+  const knuckles = boneOf(side, KNUCKLES);
+  const tips = boneOf(side, FINGERS);
+  const wrist = REST_HIPS + CHEST_Y + 0.02 - UPPER_ARM - FOREARM;
+  const z = side * SHOULDER;
+  const palm = [[0.012, 0.028, 0.02], [-0.02, 0.034, 0.0165], [-0.05, 0.041, 0.0145], [-0.084, 0.04, 0.0125], [-0.096, 0.035, 0.0095]];
+  sculpt.tube(palm.map(([down, wide, deep]) => ({ at: [0, wrist + down, z], r: [wide * thick, wide * thick, deep * thick, deep * thick] })), { around: 12, color, weights: hand, capEnd: true });
+  [[0.03, 0.07, 0.0088], [0.0105, 0.078, 0.009], [-0.0095, 0.072, 0.0085], [-0.029, 0.058, 0.0078]].forEach(([x, long, radius]) => {
+    const rings = [0, 0.2, 0.4, 0.5, 0.6, 0.8, 0.94, 1].map((share) => {
+      const bend = smooth(0.4, 0.6, share);
+      let weights = [[knuckles, 1 - bend], [tips, bend]];
+      if (share === 0) {
+        weights = [[hand, 0.5], [knuckles, 0.5]];
+      }
+      const r = radius * thick * (1 - share * 0.2) * (share === 1 ? 0.55 : 1);
+      return { at: [x, wrist - 0.09 - share * long, z], r, weights };
+    });
+    sculpt.tube(rings, { around: 8, color, capEnd: true });
   });
-  // A stripe down each side.
-  [-1, 1].forEach((side) => {
-    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.014, 0.004), lace);
-    stripe.position.set(0.005, 0.066, side * 0.049);
-    stripe.rotation.z = 0.5;
-    foot.add(stripe);
+  sculpt.path([[0.03, wrist - 0.028, z - side * 0.004], [0.052, wrist - 0.058, z - side * 0.013], [0.058, wrist - 0.09, z - side * 0.02]], (t) => (0.0118 - t * 0.0036) * thick, { around: 8, color, weights: hand });
+  if (gloved) {
+    // The cuff, wide on a snow mitt and close on a riding glove.
+    const cuff = thick > 1.2 ? 0.04 : 0.032;
+    sculpt.tube([0.035, 0.03, -0.012].map((down, k) => ({ at: [0, wrist + down, z], r: [cuff - k * 0.002, cuff - k * 0.002, cuff - 0.006 - k * 0.002, cuff - 0.006 - k * 0.002] })), { around: 12, color, weights: hand });
+  }
+}
+
+// How tall a shoe is over the sole, and how wide, from heel to toe:
+// [forward of the ankle, height, half width].
+const SHOE = [[-0.088, 0.03, 0.012], [-0.08, 0.074, 0.034], [-0.05, 0.083, 0.043], [-0.012, 0.081, 0.046], [0.03, 0.07, 0.048], [0.07, 0.053, 0.05], [0.11, 0.041, 0.05], [0.15, 0.034, 0.046], [0.18, 0.026, 0.034], [0.193, 0.012, 0.015]];
+
+// A sneaker, or a snowboard boot: a shaped sole with a rubber toe, the
+// upper, a padded collar, a tongue with laces, a heel tab and a stripe.
+function buildShoe(kit, side, boot, look, trail = false) {
+  const { gear } = kit;
+  const foot = boneOf(side, FOOT);
+  const upper = new THREE.Color(look.shoes);
+  const trim = shade(look.shoes, 0.68);
+  const z = side * HIP;
+  const ground = REST_HIPS - 0.02 - THIGH - SHIN - ANKLE;
+  const thick = boot ? 0.034 : 0.026;
+  const top = ground + thick;
+  const grow = boot ? 1.14 : 1;
+  const along = [0, 1, 0];
+  // A trail shoe has a dark sole with lugs under it; a sneaker a white one.
+  const sole = trail ? DARK : WHITE;
+  gear.tube(SHOE.map(([x, , wide]) => ({ at: [x * grow, top, z], u: along, r: [0.003, thick, (wide + 0.004) * grow, (wide + 0.004) * grow] })), { around: 14, color: sole, weights: foot, capStart: true, capEnd: true });
+  if (trail) {
+    [-0.07, -0.04, -0.01, 0.05, 0.08, 0.11, 0.14, 0.17].forEach((x, i) => {
+      gear.block([x, ground + 0.002, z], [0.018, 0.01, i > 6 ? 0.06 : 0.088], DARK, foot, [0, 0, 0], 0);
+    });
+  }
+  gear.tube(SHOE.map(([x, tall, wide], i) => ({
+    at: [x * grow, top, z], u: along, r: [tall * grow, 0.004, wide * grow, wide * grow], color: i >= SHOE.length - 3 && !boot ? sole : upper,
+  })), { around: 14, color: upper, weights: foot, capStart: true, capEnd: true });
+  // The padded collar around the ankle, and a tab at the heel.
+  const collar = [];
+  for (let k = 0; k <= 12; k += 1) {
+    const angle = (k / 12) * Math.PI * 2;
+    collar.push([-0.028 * grow + Math.cos(angle) * 0.04 * grow, top + 0.083 * grow, z + Math.sin(angle) * 0.04 * grow]);
+  }
+  gear.path(collar, 0.012, { around: 6, steps: 24, color: trim, weights: foot, capStart: false, capEnd: false });
+  gear.block([-0.083 * grow, top + 0.085 * grow, z], [0.008, 0.03, 0.024], trim, foot);
+  // The tongue and the laces over it.
+  gear.block([0.03 * grow, top + 0.078 * grow, z], [0.08, 0.016, 0.046], trim, foot, [0, 0, -0.42]);
+  [0.03, 0.052, 0.074, 0.096, 0.118].forEach((x, i) => {
+    const tall = measure(SHOE.map(([at, height]) => [at, height]), x)[1];
+    gear.block([x * grow, top + (tall + 0.006) * grow + (i === 0 ? 0.006 : 0), z], [0.008, 0.006, 0.058], WHITE, foot, [0, i % 2 ? 0.25 : -0.25, 0]);
+  });
+  [-1, 1].forEach((flank) => {
+    gear.block([0.02 * grow, top + 0.04 * grow, z + flank * 0.0475 * grow], [0.085, 0.012, 0.004], WHITE, foot, [0, 0, 0.5]);
   });
   if (boot) {
-    // A boot comes up over the ankle, with two straps.
-    const shaft = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.062, 0.14, 14), shoe));
-    shaft.position.set(-0.028, 0.16, 0);
-    foot.add(shaft);
-    [0.13, 0.19].forEach((up) => {
-      const strap = new THREE.Mesh(new THREE.TorusGeometry(0.061, 0.009, 6, 16), trim);
-      strap.rotation.x = Math.PI / 2;
-      strap.position.set(-0.028, up, 0);
-      foot.add(strap);
+    // A boot comes up the shin, with two straps.
+    gear.tube([0.06, 0.1, 0.15, 0.2, 0.215].map((up, k) => ({ at: [-0.026, top + up, z], r: k === 4 ? 0.05 : 0.06 + (k === 3 ? 0.002 : 0) })), { around: 14, color: upper, weights: [[boneOf(side, SHIN_BONE), 0.5], [foot, 0.5]] });
+    [0.115, 0.17].forEach((up) => {
+      gear.tube([up - 0.013, up, up + 0.013].map((y, k) => ({ at: [-0.026, top + y, z], r: k === 1 ? 0.068 : 0.062 })), { around: 14, color: trim, weights: [[boneOf(side, SHIN_BONE), 0.5], [foot, 0.5]] });
     });
-    foot.scale.setScalar(1.08);
   }
-  return foot;
-}
-
-// A hand: a palm, four fingers a little curled, and a thumb. It runs along
-// y from the wrist, like the forearm it follows. Gloves are thicker.
-function buildHand(side, material, gloved) {
-  const hand = new THREE.Group();
-  const thick = gloved ? 1.3 : 1;
-  const palm = blob(0.02 * thick, 0.04, 0.036 * thick, material, 12);
-  palm.position.y = 0.036;
-  hand.add(palm);
-  [[-0.027, 0.028], [-0.009, 0.034], [0.009, 0.032], [0.027, 0.025]].forEach(([z, long]) => {
-    const finger = limb(0.0088 * thick, long, material);
-    finger.position.set(0.008, 0.074 + long / 2, z);
-    finger.rotation.z = -0.3;
-    hand.add(finger);
-  });
-  const thumb = limb(0.0098 * thick, 0.024, material);
-  thumb.position.set(0.006, 0.045, side * 0.042);
-  thumb.rotation.x = side * 0.75;
-  hand.add(thumb);
-  if (gloved) {
-    hand.add(wrap(-0.03, 0.012, 0.05, 0.046, material));
-  }
-  return hand;
 }
 
 /* ---------- The whole rider ---------- */
 
-// Builds a rider in their clothes on their board. `update` poses them.
+const aimUp = new THREE.Vector3();
+const aimSide = new THREE.Vector3();
+const aimFront = new THREE.Vector3();
+const aimBasis = new THREE.Matrix4();
+
+// Points a bone from one joint at the next, with `normal` (the axis the
+// limb bends around) fixing how it is rolled about its own length.
+function aim(bone, from, to, normal) {
+  aimUp.copy(from).sub(to).normalize();
+  aimSide.copy(normal).addScaledVector(aimUp, -normal.dot(aimUp)).normalize();
+  aimFront.crossVectors(aimUp, aimSide);
+  aimBasis.makeBasis(aimFront, aimUp, aimSide);
+  bone.position.copy(from);
+  bone.quaternion.setFromRotationMatrix(aimBasis);
+}
+
+// The axis a limb bends around, from its three joints. Arms fold toward
+// their front and legs toward their back, so one is the other's opposite.
+// A straight limb has no such axis: keep the last one.
+function bendAxis(normal, a, b, c, backward) {
+  edgeA.copy(b).sub(a);
+  edgeB.copy(c).sub(b);
+  if (backward) {
+    edgeB.cross(edgeA);
+  } else {
+    edgeB.crossVectors(edgeA, edgeB);
+  }
+  if (edgeB.lengthSq() > 1e-4) {
+    normal.lerp(edgeB.normalize(), 0.5).normalize();
+  }
+}
+
+// Builds a rider in their clothes on their board or bike. `update` poses
+// them.
 export function buildRider(look, board) {
   const owned = [];
+  const bike = board === 'bike';
+  const snow = board === 'snow';
   const group = new THREE.Group();
-  const body = new THREE.Group();
-  group.add(body);
+  // `spinner` spins and flips. On a bike everything inside is built facing
+  // +x, then turned to face the way of travel and leaned into turns.
+  const spinner = new THREE.Group();
+  group.add(spinner);
+  let body = spinner;
+  const tilt = new THREE.Group();
+  if (bike) {
+    const turned = new THREE.Group();
+    turned.rotation.y = -Math.PI / 2;
+    turned.add(tilt);
+    spinner.add(turned);
+    body = tilt;
+  }
   const boardHolder = new THREE.Group();
   const boardSpin = new THREE.Group();
-  const boardMesh = buildBoard(board, look, owned);
   const deckY = DECK[board];
-  // Spin the board around its middle.
-  boardSpin.position.y = deckY / 2;
-  boardMesh.position.y = -deckY / 2;
-  boardSpin.add(boardMesh);
-  boardHolder.add(boardSpin);
-  body.add(boardHolder);
+  const ride = bike ? buildBike(look) : null;
+  if (bike) {
+    body.add(ride.root);
+  } else {
+    const boardMesh = buildBoard(board, look, owned);
+    // Spin the board around its middle.
+    boardSpin.position.y = deckY / 2;
+    boardMesh.position.y = -deckY / 2;
+    boardSpin.add(boardMesh);
+    boardHolder.add(boardSpin);
+    body.add(boardHolder);
+  }
 
-  // Cloth has a fine weave that catches the light.
+  // Cloth has a fine weave that catches the light; hair has strands.
   const grain = bumpTexture(19);
   const weave = normalMapFrom(grain.image, { strength: 1.6, size: { width: 128, height: 128 } });
-  weave.repeat.set(5, 7);
-  owned.push(grain, weave);
-  const cloth = (color, roughness) => mat(color, { roughness, normalMap: weave, side: THREE.DoubleSide });
-  const shade = (color, amount) => new THREE.Color(color).multiplyScalar(amount);
-
-  const skin = skinMaterial(look.skin);
-  const top = cloth(look.topColor, 0.82);
-  const topTrim = cloth(shade(look.topColor, 0.78), 0.85);
-  const bottom = cloth(look.bottomColor, 0.86);
-  const bottomTrim = cloth(shade(look.bottomColor, 0.78), 0.88);
-  const shoe = mat(look.shoes, { roughness: 0.6 });
-  const shoeTrim = mat(shade(look.shoes, 0.72), { roughness: 0.65 });
-  const sole = mat('#f4f4f0', { roughness: 0.7 });
-  const white = mat('#f4f4f0', { roughness: 0.8 });
-  const snow = board === 'snow';
-  const glove = snow ? mat('#2a2a33', { roughness: 0.8 }) : skin;
-
-  // The body: a chest wider than the waist, flatter front to back.
-  const hips = new THREE.Object3D();
-  body.add(hips);
-  const torso = shadowed(new THREE.Mesh(new THREE.LatheGeometry(TORSO.map(([out, up]) => new THREE.Vector2(out, up)), 24), top));
-  torso.scale.x = TORSO_DEPTH;
-  hips.add(torso);
-  const pelvis = blob(0.105, 0.094, 0.147, bottom, 18);
-  pelvis.position.y = -0.012;
-  hips.add(pelvis);
-  // A waistband, and the hem of the top over it.
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.133, 0.013, 8, 24), bottomTrim);
-  belt.rotation.x = Math.PI / 2;
-  belt.scale.set(TORSO_DEPTH + 0.04, 1, 1);
-  belt.position.y = 0.012;
-  hips.add(belt);
-  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.134, 0.01, 8, 24), topTrim);
-  hem.rotation.x = Math.PI / 2;
-  hem.scale.set(TORSO_DEPTH + 0.03, 1, 1);
-  hem.position.y = 0.04;
-  hips.add(hem);
-
-  if (look.top === 'hoodie') {
-    const hood = sphere(0.12, top, { to: Math.PI * 0.6 });
-    hood.position.set(-0.1, 0.55, 0);
-    hood.rotation.z = 1.25;
-    hood.scale.set(1, 1, 1.15);
-    hips.add(hood);
-    // A pouch pocket, and two drawstrings.
-    const pocket = blob(0.02, 0.055, 0.1, topTrim, 12);
-    pocket.position.set(chestFront(0.16) - 0.004, 0.16, 0);
-    hips.add(pocket);
-    [-1, 1].forEach((side) => {
-      const string = limb(0.006, 0.09, white);
-      string.position.set(chestFront(0.42) + 0.004, 0.42, side * 0.035);
-      hips.add(string);
-    });
-  }
-  if (look.top === 'jacket') {
-    const zip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.44, 0.02), mat('#f2f2f2', { roughness: 0.35, metalness: 0.5 }));
-    zip.position.set(chestFront(0.3) + 0.002, 0.27, 0);
-    hips.add(zip);
-    const collar = wrap(0.52, 0.6, 0.085, 0.07, top);
-    collar.scale.x = 0.85;
-    hips.add(collar);
-    // Chest pockets.
-    [-1, 1].forEach((side) => {
-      const flap = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.018, 0.07), topTrim);
-      flap.position.set(chestFront(0.36) - 0.004, 0.36, side * 0.085);
-      hips.add(flap);
-    });
-  }
+  const lines = strandTexture();
+  const strands = normalMapFrom(lines.image, { strength: 2.4 });
+  owned.push(grain, weave, lines, strands);
+  // Skin has a soft sheen at its edges, like light through a cheek.
+  const materials = {
+    skin: new THREE.MeshPhysicalMaterial({
+      vertexColors: true, roughness: 0.55, sheen: 0.3, sheenRoughness: 0.5,
+      sheenColor: new THREE.Color(look.skin).lerp(new THREE.Color('#ff9a7a'), 0.5),
+    }),
+    cloth: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84, normalMap: weave, side: THREE.DoubleSide }),
+    gear: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, side: THREE.DoubleSide }),
+    gloss: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.14, metalness: 0.12, clearcoat: 1, clearcoatRoughness: 0.1, side: THREE.DoubleSide }),
+    hair: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.48, normalMap: strands, side: THREE.DoubleSide }),
+    // A printed jersey or T-shirt: its colors come from a picture.
+    print: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.82, side: THREE.DoubleSide }),
+  };
   if (look.top === 'tee') {
-    const print = new THREE.Mesh(new THREE.CircleGeometry(0.055, 20), mat(new THREE.Color(look.topColor).offsetHSL(0.5, 0, 0)));
-    print.position.set(chestFront(0.33) + 0.003, 0.33, 0);
-    print.rotation.y = Math.PI / 2;
-    hips.add(print);
+    materials.print.map = printTexture(look.topColor, bike);
+    owned.push(materials.print.map);
   }
-  if (look.top !== 'jacket') {
-    // A neckline.
-    const neckline = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.011, 8, 20), topTrim);
-    neckline.rotation.x = Math.PI / 2;
-    neckline.scale.x = 0.85;
-    neckline.position.y = 0.562;
-    hips.add(neckline);
-  }
+  const kit = { skin: new Sculpt(), cloth: new Sculpt(), gear: new Sculpt(), gloss: new Sculpt(), hair: new Sculpt(), print: new Sculpt() };
+  buildBody(kit, look, board);
+  buildHead(kit, look);
+  buildHair(kit, look);
+  buildHat(kit, look);
+  buildGlasses(kit, look);
+  [-1, 1].forEach((side) => {
+    // Thick mitts in the snow, full-finger gloves on a bike, bare hands
+    // on a skateboard.
+    if (snow || bike) {
+      buildHand(kit.gear, side, DARK, snow ? 1.32 : 1.12);
+    } else {
+      buildHand(kit.skin, side, new THREE.Color(look.skin));
+    }
+    buildShoe(kit, side, snow, look, bike);
+  });
 
+  // The bones, standing in the rest pose the body was built in.
+  const bones = Array.from({ length: BONES }, () => new THREE.Bone());
+  const shoulderY = REST_HIPS + CHEST_Y + 0.02;
+  const hipY = REST_HIPS - 0.02;
+  bones[HIPS].position.set(0, REST_HIPS, 0);
+  bones[CHEST].position.set(0, REST_HIPS + CHEST_Y, 0);
+  bones[HEAD].position.set(0, REST_HEAD, 0);
+  [-1, 1].forEach((side) => {
+    const bone = (part) => bones[boneOf(side, part)];
+    bone(UPPER).position.set(0, shoulderY, side * SHOULDER);
+    bone(FORE).position.set(0, shoulderY - UPPER_ARM, side * SHOULDER);
+    bone(HAND).position.set(0, shoulderY - UPPER_ARM - FOREARM, side * SHOULDER);
+    // The finger joints hang from the hand, so they move with it.
+    bone(KNUCKLES).position.set(0, -0.09, 0);
+    bone(FINGERS).position.set(0, -0.036, 0);
+    bone(HAND).add(bone(KNUCKLES));
+    bone(KNUCKLES).add(bone(FINGERS));
+    bone(THIGH_BONE).position.set(0, hipY, side * HIP);
+    bone(SHIN_BONE).position.set(0, hipY - THIGH, side * HIP);
+    bone(FOOT).position.set(0, hipY - THIGH - SHIN, side * HIP);
+  });
+  bones.forEach((bone) => {
+    if (!bone.parent) {
+      body.add(bone);
+    }
+  });
+  group.updateMatrixWorld(true);
+  const skeleton = new THREE.Skeleton(bones);
+  Object.entries(kit).forEach(([name, sculpt]) => {
+    if (sculpt.empty) {
+      materials[name].dispose();
+      return;
+    }
+    const mesh = sculpt.mesh(materials[name]);
+    body.add(mesh);
+    mesh.bind(skeleton);
+  });
+
+  // The pose is worked out on these, then copied to the bones.
+  const hips = new THREE.Object3D();
+  const waist = new THREE.Object3D();
+  waist.position.y = WAIST_Y;
   const chest = new THREE.Object3D();
-  chest.position.y = 0.48;
-  hips.add(chest);
-  const neck = segment(0.11, 0.056, 0.05, skin);
-  neck.position.y = 0.13;
-  chest.add(neck);
-  const head = buildHead(look, skin);
-  head.position.y = HEAD_HEIGHT;
-  head.rotation.y = -1.05;
-  chest.add(head);
-
-  // Legs: [thigh at the hip, thigh at the knee, shin at the knee, shin at
-  // the ankle] for each kind of trousers.
-  const shorts = look.bottom === 'shorts';
-  const legSize = { shorts: [0.08, 0.058, 0.056, 0.04], pants: [0.086, 0.064, 0.061, 0.05], baggy: [0.1, 0.084, 0.084, 0.078] }[look.bottom];
-  const half = { thigh: THIGH / 2, shin: SHIN / 2, upper: UPPER_ARM / 2, lower: FOREARM / 2 };
-  const legs = [-1, 1].map((side) => {
-    const thigh = segment(THIGH, legSize[0], legSize[1], shorts ? skin : bottom, { swell: 0.008, at: 0.35 });
-    // A bare shin has a calf; trousers hang straighter.
-    const shin = segment(SHIN, legSize[2], legSize[3], shorts ? skin : bottom, { swell: shorts ? 0.017 : 0.005, at: 0.3 });
-    if (shorts) {
-      // The shorts end above the knee; socks show above the shoes.
-      thigh.add(wrap(-half.thigh - 0.02, half.thigh * 0.36, 0.094, 0.082, bottom));
-      thigh.add(wrap(half.thigh * 0.3, half.thigh * 0.36, 0.083, 0.084, bottomTrim));
-      shin.add(wrap(half.shin - 0.13, half.shin - 0.02, 0.044, 0.042, white));
-    } else {
-      // A turned-up cuff at the ankle.
-      shin.add(wrap(half.shin - 0.07, half.shin - 0.015, legSize[3] + 0.012, legSize[3] + 0.01, bottomTrim));
-    }
-    const foot = buildShoe(snow, shoe, shoeTrim, sole, white);
-    body.add(thigh, shin, foot);
-    return { side, thigh, shin, foot, knee: new THREE.Vector3(), ankle: new THREE.Vector3() };
-  });
-
-  const sleeve = look.top === 'tee';
-  const arms = [-1, 1].map((side) => {
-    let upper = null;
-    let lower = null;
-    if (sleeve) {
-      // Bare arms under short sleeves.
-      upper = segment(UPPER_ARM, 0.052, 0.044, skin, { swell: 0.004, at: 0.4 });
-      upper.add(wrap(-half.upper - 0.02, half.upper * 0.1, 0.064, 0.061, top));
-      upper.add(wrap(half.upper * 0.02, half.upper * 0.1, 0.0615, 0.0625, topTrim));
-      const cap = blob(0.064, 0.06, 0.064, top, 12);
-      cap.position.y = -half.upper;
-      upper.add(cap);
-      lower = segment(FOREARM, 0.044, 0.033, skin, { swell: 0.008, at: 0.3 });
-    } else {
-      upper = segment(UPPER_ARM, 0.062, 0.052, top, { swell: 0.004 });
-      lower = segment(FOREARM, 0.052, 0.044, top);
-      // A ribbed cuff at the wrist.
-      lower.add(wrap(half.lower - 0.045, half.lower + 0.005, 0.047, 0.044, topTrim));
-    }
-    const hand = buildHand(side, glove, snow);
-    body.add(upper, lower, hand);
-    return { side, upper, lower, hand, elbow: new THREE.Vector3(), wrist: new THREE.Vector3() };
-  });
+  chest.position.y = CHEST_Y - WAIST_Y;
+  const head = new THREE.Object3D();
+  head.position.y = HEAD_Y;
+  // Sideways on a board, the head turns to look where it's going.
+  head.rotation.y = bike ? 0 : -1.05;
+  const chestMatrix = new THREE.Matrix4();
+  const headMatrix = new THREE.Matrix4();
+  const unused = new THREE.Vector3();
+  const legs = [-1, 1].map((side) => ({ side, hip: new THREE.Vector3(), knee: new THREE.Vector3(), ankle: new THREE.Vector3(), normal: new THREE.Vector3(0, 0, 1), turn: new THREE.Euler() }));
+  const arms = [-1, 1].map((side) => ({ side, shoulder: new THREE.Vector3(), elbow: new THREE.Vector3(), wrist: new THREE.Vector3(), normal: new THREE.Vector3(0, 0, 1), curl: 0.25, grip: null }));
 
   // Smoothed pose values.
-  const now = { hipY: 0.86, lean: 0.15, roll: 0, twist: 0, lift: 0, feet: 0, spin: 0, bail: 0, side: 0, crouch: 0 };
+  const now = { hipY: bike ? 0.98 : 0.86, hipX: -0.2, lean: bike ? 0.75 : 0.15, roll: 0, twist: 0, lift: 0, feet: 0, spin: 0, bail: 0, side: 0, crouch: 0, table: 0 };
   const hands = [new THREE.Vector3(0.1, 0.95, -0.5), new THREE.Vector3(0.1, 0.95, 0.5)];
   const handGoal = [new THREE.Vector3(), new THREE.Vector3()];
-  const hipJoint = new THREE.Vector3();
-  const shoulder = new THREE.Vector3();
+  const feetNow = [new THREE.Vector3(-BIKE.pedal, 0.39, -FEET.bike), new THREE.Vector3(BIKE.pedal, 0.39, FEET.bike)];
   const footGoal = new THREE.Vector3();
   const pole = new THREE.Vector3();
-  const chestMatrix = new THREE.Matrix4();
   const flipQ = new THREE.Quaternion();
   const spinQ = new THREE.Quaternion();
+  const fall = new THREE.Quaternion();
   const pivot = new THREE.Vector3(0, 0.9, 0);
   const rotatedPivot = new THREE.Vector3();
   const axis = new THREE.Vector3();
+  const barAxis = new THREE.Vector3();
+  const along = new THREE.Vector3();
   const feetZ = FEET[board];
 
   function approach(key, target, rate, dt) {
     now[key] += (target - now[key]) * Math.min(1, dt * rate);
   }
 
+  // Applies the spin and flip (and the tip-over of a fall) to the body,
+  // turning it around a point near the hips.
+  function turnBody() {
+    if (now.bail > 0.001) {
+      // Tip over sideways, then lie there.
+      axis.set(0, 0, -1);
+      fall.setFromAxisAngle(axis, now.bail * Math.PI * 0.45);
+      flipQ.premultiply(fall);
+    }
+    spinner.quaternion.copy(spinQ).multiply(flipQ);
+    rotatedPivot.copy(pivot).applyQuaternion(flipQ).applyQuaternion(spinQ);
+    if (flipQ.w < 0.99999) {
+      spinner.position.copy(pivot).applyQuaternion(spinQ).sub(rotatedPivot);
+      spinner.position.y -= now.bail * 0.72;
+    } else {
+      spinner.position.set(0, 0, 0);
+    }
+  }
+
+  // Works out where the chest and head are from the hips and the spine.
+  function settleSpine() {
+    hips.updateMatrix();
+    waist.updateMatrix();
+    chest.updateMatrix();
+    head.updateMatrix();
+    chestMatrix.multiplyMatrices(hips.matrix, waist.matrix).multiply(chest.matrix);
+    headMatrix.multiplyMatrices(chestMatrix, head.matrix);
+  }
+
+  // Copies the finished pose onto the bones. `dt` smooths the fingers.
+  function driveBones(dt) {
+    bones[HIPS].position.copy(hips.position);
+    bones[HIPS].quaternion.copy(hips.quaternion);
+    chestMatrix.decompose(bones[CHEST].position, bones[CHEST].quaternion, unused);
+    headMatrix.decompose(bones[HEAD].position, bones[HEAD].quaternion, unused);
+    legs.forEach((leg) => {
+      const bone = (part) => bones[boneOf(leg.side, part)];
+      bendAxis(leg.normal, leg.hip, leg.knee, leg.ankle, true);
+      aim(bone(THIGH_BONE), leg.hip, leg.knee, leg.normal);
+      aim(bone(SHIN_BONE), leg.knee, leg.ankle, leg.normal);
+      bone(FOOT).position.copy(leg.ankle);
+      bone(FOOT).quaternion.setFromEuler(leg.turn);
+    });
+    arms.forEach((arm) => {
+      const bone = (part) => bones[boneOf(arm.side, part)];
+      bendAxis(arm.normal, arm.shoulder, arm.elbow, arm.wrist, false);
+      aim(bone(UPPER), arm.shoulder, arm.elbow, arm.normal);
+      aim(bone(FORE), arm.elbow, arm.wrist, arm.normal);
+      bone(HAND).position.copy(arm.wrist);
+      if (arm.grip) {
+        // Wrapped around a bar: the knuckles line up with it, thumbs in,
+        // and the palm rests on top.
+        aimFront.copy(arm.grip).multiplyScalar(-arm.side);
+        along.copy(arm.elbow).sub(arm.wrist);
+        aimUp.copy(along).addScaledVector(aimFront, -along.dot(aimFront)).normalize();
+        aimSide.crossVectors(aimFront, aimUp);
+        aimBasis.makeBasis(aimFront, aimUp, aimSide);
+        bone(HAND).quaternion.setFromRotationMatrix(aimBasis);
+      } else {
+        bone(HAND).quaternion.copy(bone(FORE).quaternion);
+      }
+      arm.curl += (arm.close - arm.curl) * Math.min(1, dt * 16);
+      bone(KNUCKLES).rotation.x = arm.side * arm.curl * 1.25;
+      bone(FINGERS).rotation.x = arm.side * arm.curl * 1.4;
+    });
+  }
+
+  // The bicycle: standing on the pedals, hands on the bars, leaning into
+  // turns; in the air the bars or the frame spin, the feet or hands come
+  // off, or the whole bike flips.
+  function poseBike(dt, pose) {
+    const { state } = pose;
+    const grab = state === 'air' ? pose.grab : null;
+    const flip = state === 'air' ? pose.flip : null;
+    const move = flip?.move || null;
+    let hipX = -0.2;
+    let hipY = 0.98;
+    let lean = 0.75;
+    if (state === 'air') {
+      hipX = -0.24;
+      hipY = 1.02;
+      lean = 0.62;
+    }
+    if (grab === 'nohander') {
+      lean = 0.3;
+    }
+    if (grab === 'superman') {
+      hipX = -0.42;
+      lean = 1.25;
+    }
+    if (move === 'tailwhip') {
+      hipY = 1.1;
+    }
+    hipY -= pose.land * 0.2;
+    approach('hipX', hipX, 10, dt);
+    approach('hipY', hipY, 12, dt);
+    approach('lean', lean, 10, dt);
+    approach('roll', state === 'ride' ? pose.steer * 0.24 : 0, 8, dt);
+    approach('twist', state === 'ride' ? pose.steer * 0.3 : 0, 8, dt);
+    approach('table', grab === 'tabletop' ? 1 : 0, 10, dt);
+    approach('bail', pose.bail, 10, dt);
+
+    spinQ.setFromAxisAngle(UP, pose.spin);
+    flipQ.identity();
+    if (move === 'backflip' || move === 'frontflip') {
+      axis.set(move === 'backflip' ? -1 : 1, 0, 0);
+      flipQ.setFromAxisAngle(axis, Math.PI * 2 * flip.progress);
+    }
+    turnBody();
+
+    tilt.rotation.x = now.roll;
+    ride.root.rotation.set(now.table * 1.15, 0, 0);
+    ride.root.position.set(0, now.table * 0.22, 0);
+    let bars = -now.twist;
+    if (move === 'barspin') {
+      bars += Math.PI * 2 * flip.progress;
+    }
+    if (move === 'xup') {
+      bars += Math.sin(Math.PI * flip.progress) * 2.5;
+    }
+    ride.steer.quaternion.setFromAxisAngle(ride.steerAxis, bars);
+    ride.frame.quaternion.setFromAxisAngle(ride.steerAxis, move === 'tailwhip' ? Math.PI * 2 * flip.progress : 0);
+    ride.wheels.forEach((wheel) => {
+      wheel.rotation.z -= ((pose.speed || 0) * dt) / WHEEL;
+    });
+
+    // The back rounds over the bars, and the head lifts to look ahead.
+    hips.position.set(now.hipX, now.hipY, 0);
+    hips.rotation.set(0, 0, -now.lean * 0.72);
+    waist.rotation.set(0, 0, -now.lean * 0.28);
+    head.rotation.z = now.lean * 0.82;
+    settleSpine();
+
+    // Legs: feet on the pedals, unless a trick takes them off.
+    legs.forEach((leg, i) => {
+      const { side } = leg;
+      leg.hip.set(0, -0.02, side * HIP).applyMatrix4(hips.matrix);
+      footGoal.set(side * BIKE.pedal - 0.04, BIKE.crank[1] + 0.012 + ANKLE, side * FEET.bike);
+      footGoal.applyEuler(ride.root.rotation).add(ride.root.position);
+      if (grab === 'superman') {
+        footGoal.set(-1.3, 1.02, side * 0.12);
+      }
+      if (grab === 'nofooter') {
+        footGoal.set(0.08, 0.5, side * 0.62);
+      }
+      if (grab === 'cancan' && side > 0) {
+        footGoal.set(0.12, 0.78, -0.42);
+      }
+      if (move === 'tailwhip') {
+        footGoal.set(side * 0.06, 0.72, side * 0.17);
+      }
+      if (state === 'bail') {
+        footGoal.set(0.3 + side * 0.2, 0.3, side * 0.3);
+      }
+      feetNow[i].lerp(footGoal, Math.min(1, dt * 16));
+      pole.set(1, 0.4, side * 0.3);
+      twoBone(leg.hip, feetNow[i], THIGH, SHIN, pole, leg.knee, leg.ankle);
+      leg.turn.set(0, 0, grab === 'superman' ? -1.2 : 0);
+    });
+
+    // Arms: hands on the grips, unless a trick lets go.
+    arms.forEach((arm, i) => {
+      const { side } = arm;
+      const goal = handGoal[i];
+      arm.shoulder.set(0, 0.02, side * SHOULDER).applyMatrix4(chestMatrix);
+      goal.set(BIKE.bar[0], BIKE.bar[1], side * BIKE.grip).sub(ride.pivot);
+      goal.applyQuaternion(ride.steer.quaternion).add(ride.pivot);
+      goal.applyEuler(ride.root.rotation).add(ride.root.position);
+      // The wrist sits behind and above the bar, so the fist is around it.
+      along.copy(arm.shoulder).sub(goal).normalize();
+      goal.addScaledVector(along, 0.062);
+      goal.y += 0.03;
+      let holding = true;
+      if (grab === 'nohander') {
+        goal.set(-0.05, 1.6, side * 0.66);
+        holding = false;
+      }
+      if (move === 'barspin') {
+        goal.set(0.28, 1.25, side * 0.36);
+        holding = false;
+      }
+      if (state === 'bail') {
+        goal.set(0.4, 0.9, side * 0.45);
+        holding = false;
+      }
+      hands[i].lerp(goal, Math.min(1, dt * 18));
+      pole.set(-0.2, -1, side * 0.7);
+      twoBone(arm.shoulder, hands[i], UPPER_ARM, FOREARM, pole, arm.elbow, arm.wrist);
+      arm.close = holding ? 0.95 : 0.2;
+      arm.grip = null;
+      if (holding) {
+        barAxis.set(0, 0, 1).applyQuaternion(ride.steer.quaternion).applyEuler(ride.root.rotation);
+        arm.grip = barAxis.clone();
+      }
+    });
+    driveBones(dt);
+  }
+
   // pose: { state: ride | air | grind | bail, steer, spin, flip, grab,
-  // side, land (0–1 squash), bail (0–1), time }
+  // side, land (0–1 squash), bail (0–1), speed, time }
   function update(dt, pose) {
+    if (bike) {
+      poseBike(dt, pose);
+      return;
+    }
     const { state } = pose;
     let hipY = 0.86 - Math.abs(pose.steer) * 0.04;
     let lean = 0.14;
@@ -699,7 +2034,7 @@ export function buildRider(look, board) {
     // Spins, and the whole-body flips of a snowboard.
     spinQ.setFromAxisAngle(UP, pose.spin + now.side * (Math.PI / 2));
     flipQ.identity();
-    if (flip && board === 'snow') {
+    if (flip && snow) {
       const turn = Math.PI * 2 * flip.progress;
       const axes = {
         backflip: [0, 0, 1],
@@ -711,20 +2046,7 @@ export function buildRider(look, board) {
       axis.fromArray(axes[flip.move]).normalize();
       flipQ.setFromAxisAngle(axis, turn);
     }
-    if (now.bail > 0.001) {
-      // Tip over onto the toe side, then lie there.
-      axis.set(0, 0, -1);
-      const fall = new THREE.Quaternion().setFromAxisAngle(axis, now.bail * Math.PI * 0.45);
-      flipQ.premultiply(fall);
-    }
-    body.quaternion.copy(spinQ).multiply(flipQ);
-    rotatedPivot.copy(pivot).applyQuaternion(flipQ).applyQuaternion(spinQ);
-    if (flipQ.w < 0.99999) {
-      body.position.copy(pivot).applyQuaternion(spinQ).sub(rotatedPivot);
-      body.position.y -= now.bail * 0.72;
-    } else {
-      body.position.set(0, 0, 0);
-    }
+    turnBody();
 
     // The board: lifted for grabs, flipped under the feet for skate tricks,
     // tipped with the turn.
@@ -764,90 +2086,99 @@ export function buildRider(look, board) {
       boardHolder.rotation.x = 0.35;
     }
 
-    // Body.
+    // The body: most of the lean is at the hips, the rest in the back, and
+    // the head stays level.
     hips.position.set(-0.03, now.hipY + now.lift * 0.4, 0);
-    hips.rotation.set(0, now.twist, -now.lean);
-    hips.updateMatrix();
-    chest.updateMatrix();
-    chestMatrix.multiplyMatrices(hips.matrix, chest.matrix);
-    head.rotation.z = now.lean * 0.6;
+    hips.rotation.set(0, now.twist * 0.5, -now.lean * 0.75);
+    waist.rotation.set(0, now.twist * 0.5, -now.lean * 0.25);
+    head.rotation.z = now.lean * 0.7;
+    settleSpine();
 
     // Legs: feet on the board.
     legs.forEach((leg) => {
-      hipJoint.set(0, -0.02, leg.side * 0.11).applyMatrix4(hips.matrix);
-      footGoal.set(0.02, deckY + 0.06 + now.feet, leg.side * feetZ);
+      leg.hip.set(0, -0.02, leg.side * HIP).applyMatrix4(hips.matrix);
+      footGoal.set(-0.045, deckY + ANKLE + (snow ? 0.02 : 0) + now.feet, leg.side * feetZ);
       footGoal.applyEuler(boardHolder.rotation).add(boardHolder.position);
       pole.set(1, 0.1, leg.side * 0.35);
-      twoBone(hipJoint, footGoal, THIGH, SHIN, pole, leg.knee, leg.ankle);
-      placeLimb(leg.thigh, hipJoint, leg.knee);
-      placeLimb(leg.shin, leg.knee, leg.ankle);
-      leg.foot.position.copy(leg.ankle);
-      leg.foot.position.y -= 0.06;
-      leg.foot.rotation.copy(boardHolder.rotation);
+      twoBone(leg.hip, footGoal, THIGH, SHIN, pole, leg.knee, leg.ankle);
+      leg.turn.copy(boardHolder.rotation);
     });
 
     // Arms: out for balance, up in the air, or grabbing the board.
     const swing = Math.sin(pose.time * 2.2) * 0.04;
     arms.forEach((arm, i) => {
-      const side = arm.side;
+      const { side } = arm;
       const goal = handGoal[i];
+      arm.close = 0.22;
+      arm.grip = null;
       if (state === 'air') {
         goal.set(0.15, 1.45, side * 0.62);
       } else if (state === 'grind') {
         goal.set(0.05, 1.18, side * 0.72);
       } else if (state === 'bail') {
         goal.set(0.4, 0.9, side * 0.45);
+        arm.close = 0.05;
       } else {
         goal.set(0.12 - side * 0.05, 0.92 + swing * side, side * 0.5 + pose.steer * 0.1);
       }
       if (grab) {
-        const boardY = now.lift + deckY + 0.02;
+        const boardY = now.lift + deckY + 0.07;
         const front = side > 0;
         const grabs = {
-          indy: front ? null : [0.13, boardY, 0.02],
-          melon: front ? [-0.13, boardY, 0.08] : null,
-          method: front ? [-0.28, boardY + 0.15, 0.05] : null,
+          indy: front ? null : [0.16, boardY, 0.02],
+          melon: front ? [-0.16, boardY, 0.08] : null,
+          method: front ? [-0.3, boardY + 0.15, 0.05] : null,
           nose: front ? [0, boardY + 0.05, 0.4] : null,
           tail: front ? null : [0, boardY + 0.05, -0.4],
         };
         const reach = grabs[grab];
         if (reach) {
           goal.fromArray(reach);
+          arm.close = 0.85;
         } else {
           goal.set(0.1, 1.35, side * 0.7);
         }
       }
       hands[i].lerp(goal, Math.min(1, dt * 14));
-      shoulder.set(0, 0.02, side * 0.2).applyMatrix4(chestMatrix);
+      arm.shoulder.set(0, 0.02, side * SHOULDER).applyMatrix4(chestMatrix);
       pole.set(-0.35, -1, side * 0.6);
-      twoBone(shoulder, hands[i], UPPER_ARM, FOREARM, pole, arm.elbow, arm.wrist);
-      placeLimb(arm.upper, shoulder, arm.elbow);
-      placeLimb(arm.lower, arm.elbow, arm.wrist);
-      arm.hand.position.copy(arm.wrist);
-      arm.hand.quaternion.copy(arm.lower.quaternion);
+      twoBone(arm.shoulder, hands[i], UPPER_ARM, FOREARM, pole, arm.elbow, arm.wrist);
     });
+    driveBones(dt);
   }
 
   // A point on the board (meters along it) in world space, for sparks and spray.
   const boardPoint = new THREE.Vector3();
   function boardWorld(z, y = 0) {
+    if (bike) {
+      boardPoint.set(z, y, 0);
+      ride.root.updateWorldMatrix(true, false);
+      return boardPoint.applyMatrix4(ride.root.matrixWorld);
+    }
     boardPoint.set(0, y, z);
     boardSpin.updateWorldMatrix(true, false);
     return boardPoint.applyMatrix4(boardSpin.matrixWorld);
   }
 
   update(0, { state: 'ride', steer: 0, spin: 0, flip: null, grab: null, side: false, land: 0, bail: 0, time: 0 });
+  // Start with the pose already settled, not easing in from the rest pose.
+  arms.forEach((arm, i) => {
+    hands[i].copy(handGoal[i]);
+    arm.curl = arm.close;
+  });
+  update(0, { state: 'ride', steer: 0, spin: 0, flip: null, grab: null, side: false, land: 0, bail: 0, time: 0 });
 
   return {
     group,
     update,
     boardWorld,
-    length: board === 'snow' ? 1.45 : 0.82,
+    length: { skate: 0.82, snow: 1.45, bike: 1.2 }[board],
     dispose() {
       group.traverse((object) => {
         object.geometry?.dispose();
         [object.material].flat().forEach((material) => material?.dispose());
       });
+      skeleton.dispose();
       owned.forEach((texture) => texture.dispose());
     },
   };

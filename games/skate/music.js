@@ -1,4 +1,4 @@
-// Background music for each park, played live with Web Audio synths (no
+// Background music for each hill, played live with Web Audio synths (no
 // audio files, works offline). Each song is a short loop: drums, a bass
 // line, an arpeggio over a chord progression and a soft pad. A look-ahead
 // scheduler queues notes slightly early so the beat stays steady.
@@ -16,8 +16,8 @@ const FADE_SECONDS = 0.8;
 // Arpeggio: numbers pick chord notes (0 = root, 1 = third, 2 = fifth,
 // 3 = octave), '.' is a rest. Chords: [root, 'minor' | 'major'], one per bar.
 export const SONGS = {
-  // Skate punk: fast drums and chunky power chords.
-  city: {
+  // Skate punk for the meadow: fast drums and chunky power chords.
+  meadow: {
     bpm: 136,
     chords: [[52, 'major'], [57, 'major'], [50, 'major'], [55, 'major']],
     kick: 'x...x.x.x...x.x.',
@@ -40,7 +40,7 @@ export const SONGS = {
     arpSound: 'bell',
     pad: true,
   },
-  // Chilled beats for the snow park.
+  // Chilled beats for the snow run.
   mountain: {
     bpm: 92,
     chords: [[57, 'minor'], [53, 'major'], [60, 'major'], [55, 'major']],
@@ -226,7 +226,7 @@ export function createMusic() {
         stop();
       }
     },
-    // Start (or switch to) a park's song. Needs a tap first (browsers
+    // Start (or switch to) a hill's song. Needs a tap first (browsers
     // only allow sound after one).
     play(id) {
       if (!enabled || current === id) {

@@ -1,4 +1,5 @@
-// Tilt steering: hold the phone like a steering wheel. Uses the device
+// Tilt steering for Turbo Drive and Skate Star: hold the phone like a
+// steering wheel. Uses the device
 // orientation sensor; iPhones ask for permission first, and it has to be
 // asked from a tap.
 

@@ -1,4 +1,4 @@
-// Tricks and combos, Tony Hawk style. Every trick done without touching the
+// Tricks and combos, arcade style. Every trick done without touching the
 // ground in between adds to one combo; the combo's points are the sum of
 // its tricks times how many there were. Landing in the middle of a flip is
 // a fall (a bail), and the combo is lost. No Three.js here, so it can be
@@ -23,6 +23,13 @@ export const FLIPS = {
     { name: 'Misty', points: 400, time: 0.8, move: 'misty' },
     { name: 'Wildcat', points: 350, time: 0.75, move: 'wildcat' },
   ],
+  bike: [
+    { name: 'Barspin', points: 150, time: 0.45, move: 'barspin' },
+    { name: 'X-Up', points: 100, time: 0.45, move: 'xup' },
+    { name: 'Tailwhip', points: 250, time: 0.6, move: 'tailwhip' },
+    { name: 'Backflip', points: 350, time: 0.8, move: 'backflip' },
+    { name: 'Frontflip', points: 350, time: 0.8, move: 'frontflip' },
+  ],
 };
 
 // Grabs: held for as long as the button is held, earning more meanwhile.
@@ -41,6 +48,14 @@ export const GRABS = {
     { name: 'Nose Grab', points: 100, move: 'nose' },
     { name: 'Tail Grab', points: 100, move: 'tail' },
   ],
+  // On a bike these are poses held in the air.
+  bike: [
+    { name: 'No Hander', points: 100, move: 'nohander' },
+    { name: 'No Footer', points: 100, move: 'nofooter' },
+    { name: 'Superman', points: 200, move: 'superman' },
+    { name: 'Tabletop', points: 150, move: 'tabletop' },
+    { name: 'Can-Can', points: 100, move: 'cancan' },
+  ],
 };
 
 export const GRAB_PER_SECOND = 200;
@@ -51,9 +66,15 @@ export const COMBO_GRACE = 0.6;
 // Landing before a flip is this far done is a fall.
 export const SAFE_LANDING = 0.8;
 
-export function grindName(side) {
+export function grindName(side, board = 'skate') {
+  if (board === 'bike') {
+    return side ? 'Feeble Grind' : 'Peg Grind';
+  }
   return side ? 'Boardslide' : '50-50 Grind';
 }
+
+// A plain jump with no trick in it.
+const HOPS = { skate: 'Ollie', snow: 'Ollie', bike: 'Bunny Hop' };
 
 // Spins come in half turns: 180, 360, 540…
 export function spinHalfTurns(spin) {
@@ -170,7 +191,7 @@ export function createTricks(board) {
       flip = null;
       grab = null;
       grinding = { entry: combo.length };
-      add(grindName(side), GRIND_POINTS);
+      add(grindName(side, board), GRIND_POINTS);
       grounded = 0;
     },
 
@@ -218,7 +239,7 @@ export function createTricks(board) {
         airTricks += 1;
       }
       if (airTricks === 0 && airTime > 0.35 && from !== 'grind') {
-        add(from === 'ollie' ? 'Ollie' : 'Air', from === 'ollie' ? 50 : 100);
+        add(from === 'ollie' ? HOPS[board] : 'Air', from === 'ollie' ? 50 : 100);
       }
       if (airTime > 1.25) {
         add('Big Air', 250);
