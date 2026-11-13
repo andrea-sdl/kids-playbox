@@ -7,8 +7,8 @@
 // proportions (about seven and a half heads tall): shoulders wider than
 // hips, a chest, shoulder blades, thighs, calves and tapering forearms.
 // Clothes are a second layer with thickness, hems and folds. The rider
-// has one build and no face, so anyone can see themselves in them; the
-// head has a jaw, ears and hair with volume and locks. Hands have fingers that close around the bars or the board.
+// has one build for everyone and a kawaii head: bigger than life, round,
+// with dot eyes, pink cheeks and a small smile, and hair with volume. Hands have fingers that close around the bars or the board.
 //
 // Each frame the pose is worked out the same way as before: two-bone IK
 // keeps the feet on the board or pedals and sends the hands where the pose
@@ -55,6 +55,10 @@ const WAIST_Y = 0.18;
 const CHEST_Y = 0.48;
 const HEAD_Y = 0.215;
 const REST_HEAD = REST_HIPS + CHEST_Y + HEAD_Y;
+// The head is shown bigger than life, the kawaii way, and lifted a little
+// so the bigger chin clears the shoulders.
+const HEAD_SIZE = 1.5;
+const HEAD_LIFT = 0.046;
 
 // The trunk from the crotch to the neck: [height above the hips, half
 // width, how far the front is from the spine, how far the back is].
@@ -1204,9 +1208,8 @@ function bump(y, z, atY, atZ, tall, wide) {
 
 // A point on the head, from how far down from the crown it is (`polar`)
 // and how far around from the front (`around`), `lift` above the skin. The
-// head starts as an egg; then the jaw narrows and the back of the neck
-// tucks in. The front is left plain on purpose: the rider has no face, so
-// they can be anyone. Only a soft ridge and a chin say which way they look.
+// head is round and soft, with full cheeks and a small chin: a cute
+// cartoon head, not a lifelike one.
 function headPoint(polar, around, lift = 0) {
   const ring = Math.sin(polar);
   const dx = ring * Math.cos(around);
@@ -1214,19 +1217,26 @@ function headPoint(polar, around, lift = 0) {
   const dz = ring * Math.sin(around);
   let x = dx * (dx >= 0 ? 0.098 : 0.104) - 0.006;
   const y = dy * 0.1175;
-  let z = dz * 0.078;
+  let z = dz * 0.09;
   const low = smooth(0.005, 0.1175, -y);
-  z *= 1 - 0.24 * low - 0.2 * low ** 3;
+  z *= 1 - 0.1 * low - 0.16 * low ** 3;
   if (x < 0) {
-    x *= 1 - 0.42 * low;
+    x *= 1 - 0.36 * low;
   }
   const front = smooth(0.1, 0.5, dx);
   x += front * (
-    0.024 * smooth(0.03, 0.11, -y)
-    + 0.007 * bump(y, z, -0.02, 0, 0.03, 0.014)
-    + 0.007 * bump(y, z, -0.104, 0, 0.016, 0.022)
+    0.02 * smooth(0.03, 0.11, -y)
+    + 0.004 * bump(y, z, -0.022, 0, 0.012, 0.01)
+    + 0.004 * (bump(y, z, -0.03, 0.05, 0.026, 0.026) + bump(y, z, -0.03, -0.05, 0.026, 0.026))
+    + 0.004 * bump(y, z, -0.1, 0, 0.016, 0.022)
   );
   return [x + dx * lift, y + dy * lift, z + dz * lift];
+}
+
+// A point on the front of the head, from how high it is (from the head's
+// middle) and how far to the side, `lift` above the skin.
+function onFace(up, side, lift = 0.001) {
+  return onHead(headPoint(Math.acos(up / 0.1175), Math.atan2(side, 0.085), lift));
 }
 
 // The same point in the rest pose.
@@ -1267,8 +1277,19 @@ function scalp(sculpt, color, { reach, lift, from = 0, rows = 14, cols = 40 }) {
 }
 
 function buildHead(kit, look) {
-  const { skin, face } = kit;
+  const { skin, face, eyes } = kit;
   const skinColor = skinTone(look.skin);
+  // A simple cute face, the same for every rider: two big shiny dot eyes
+  // set low and wide, pink cheeks and a small smile.
+  const blush = skinTone(look.skin).lerp(new THREE.Color('#ff6f91'), 0.55);
+  [-1, 1].forEach((side) => {
+    const eye = onFace(-0.012, side * 0.036, 0.0005);
+    eyes.ball(eye, [0.005, 0.0165, 0.0125], new THREE.Color('#1d1626'), HEAD, { segments: 14, turn: [0, side * -0.38, 0] });
+    eyes.ball([eye[0] + 0.0042, eye[1] + 0.0066, eye[2] + 0.0038], [0.002, 0.0046, 0.0038], new THREE.Color('#ffffff'), HEAD, { segments: 8 });
+    eyes.ball([eye[0] + 0.0046, eye[1] - 0.006, eye[2] - 0.0034], [0.0012, 0.0022, 0.002], new THREE.Color('#ffffff'), HEAD, { segments: 6 });
+    face.ball(onFace(-0.036, side * 0.056, -0.002), [0.004, 0.0085, 0.0135], blush, HEAD, { segments: 10, turn: [0, side * -0.55, 0] });
+  });
+  eyes.path([onFace(-0.04, -0.011), onFace(-0.0455, 0), onFace(-0.04, 0.011)], 0.0016, { around: 6, color: new THREE.Color('#8a3b4a'), weights: HEAD });
   face.grid(44, 52, (i, j) => ({
     at: onHead(headPoint((i / 44) * Math.PI, faceAround(j / 52))),
     color: skinColor.clone(),
@@ -1722,6 +1743,8 @@ export function buildRider(look, board) {
   const materials = {
     skin: skinLook(),
     face: skinLook(),
+    // The eyes are glossy, so they catch a glint.
+    eyes: new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.08, side: THREE.DoubleSide }),
     cloth: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84, normalMap: weave, side: THREE.DoubleSide }),
     top: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: look.top === 'jacket' ? 0.6 : 0.92, normalMap: weave, side: THREE.DoubleSide }),
     gear: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, side: THREE.DoubleSide }),
@@ -1734,7 +1757,7 @@ export function buildRider(look, board) {
     materials.print.map = printTexture(look.topColor, bike);
     owned.push(materials.print.map);
   }
-  const kit = { skin: new Sculpt(), face: new Sculpt(), cloth: new Sculpt(), top: new Sculpt(), gear: new Sculpt(), gloss: new Sculpt(), hair: new Sculpt(), print: new Sculpt() };
+  const kit = { skin: new Sculpt(), face: new Sculpt(), eyes: new Sculpt(), cloth: new Sculpt(), top: new Sculpt(), gear: new Sculpt(), gloss: new Sculpt(), hair: new Sculpt(), print: new Sculpt() };
   buildBody(kit, look, board);
   buildHead(kit, look);
   buildHair(kit, look);
@@ -1892,11 +1915,14 @@ export function buildRider(look, board) {
   }
 
   // Copies the finished pose onto the bones. `dt` smooths the fingers.
+  const headUp = new THREE.Vector3();
   function driveBones(dt) {
     bones[HIPS].position.copy(hips.position);
     bones[HIPS].quaternion.copy(hips.quaternion);
     chestMatrix.decompose(bones[CHEST].position, bones[CHEST].quaternion, unused);
     headMatrix.decompose(bones[HEAD].position, bones[HEAD].quaternion, unused);
+    bones[HEAD].scale.setScalar(HEAD_SIZE);
+    bones[HEAD].position.addScaledVector(headUp.set(0, 1, 0).applyQuaternion(bones[HEAD].quaternion), HEAD_LIFT);
     legs.forEach((leg) => {
       const bone = (part) => bones[boneOf(leg.side, part)];
       bendAxis(leg.normal, leg.hip, leg.knee, leg.ankle, true);

@@ -193,6 +193,10 @@ function loadScenario() {
       updateMusic();
       placeCarAtStart();
       els.loading.hidden = true;
+      // Points and boosts from the lap before don't fit this one: the map
+      // would look for places that aren't on the new road.
+      points = placePoints(track.samples, save.difficulty).map((point) => ({ ...point, collected: false }));
+      boosts = placeBoosts(track.samples).map((boost) => ({ ...boost, armed: true }));
       drawMinimap();
       resolve();
     }, 30);
