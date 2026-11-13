@@ -875,12 +875,6 @@ body.is-tilt .controls {
   justify-content: space-between;
 }
 
-.pad-group {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-}
-
 .pad {
   display: grid;
   place-items: center;
@@ -1106,10 +1100,6 @@ body.is-tilt .controls {
   .pad {
     width: 60px;
     height: 60px;
-  }
-
-  .pad-group {
-    gap: 6px;
   }
 
   .combo {
