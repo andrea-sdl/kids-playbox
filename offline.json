@@ -20,7 +20,8 @@
     "./shared/offline.js",
     "./shared/progress.js",
     "./shared/store.js",
-    "./shared/tilt.js"
+    "./shared/tilt.js",
+    "./shared/webgl.js"
   ],
   "games": {
     "blocks": [
@@ -112,6 +113,7 @@
       "./games/drive/art/road-wet.webp",
       "./games/drive/art/tile-redrock.webp",
       "./games/drive/art/tile-ruin.webp",
+      "./games/drive/boot.js",
       "./games/drive/cars.js",
       "./games/drive/drive.css",
       "./games/drive/drive.js",
@@ -243,6 +245,7 @@
       "./games/skate/art/tile-sandstone.webp",
       "./games/skate/art/tile-snow.webp",
       "./games/skate/art/tile-stonewall.webp",
+      "./games/skate/boot.js",
       "./games/skate/effects.js",
       "./games/skate/index.html",
       "./games/skate/music.js",

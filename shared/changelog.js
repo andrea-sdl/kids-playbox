@@ -8,6 +8,14 @@
 
 export const RELEASES = [
   {
+    version: 32,
+    date: '2026-11-17',
+    changes: [
+      { target: 'drive', type: 'fixed', text: 'changes.v32.webgl' },
+      { target: 'skate', type: 'fixed', text: 'changes.v32.webgl' },
+    ],
+  },
+  {
     version: 31,
     date: '2026-11-16',
     changes: [

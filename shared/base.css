@@ -341,6 +341,27 @@ body.is-immersive .focus-slot {
   display: flex;
 }
 
+/* ---------- A 3D game that can't start (WebGL is off) ---------- */
+
+.loading.is-problem {
+  padding: 24px;
+  font-size: 1.05rem;
+  font-style: normal;
+  line-height: 1.45;
+  text-align: center;
+  text-wrap: balance;
+}
+
+/* Nothing to pick or switch when the game can't run. */
+body.no-webgl .shop,
+body.no-webgl .garage,
+body.no-webgl .music-button,
+body.no-webgl .sound-button,
+body.no-webgl .fullscreen-button,
+body.no-webgl .favorite-button {
+  display: none;
+}
+
 /* ---------- Update notice ---------- */
 
 .update-banner {

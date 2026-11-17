@@ -1,4 +1,5 @@
 import { registerServiceWorker, setupFavoriteButton, setupFullscreen, setupLanguage, STAR_SVG } from '../../shared/chrome.js';
+import { explainNoWebGL, hasWebGL } from '../../shared/webgl.js';
 import { t } from '../../shared/i18n.js';
 import './strings.js';
 import { readJSON, writeJSON } from '../../shared/store.js';
@@ -621,6 +622,9 @@ renderSound();
 renderDock();
 
 try {
+  if (!hasWebGL()) {
+    throw new Error('WebGL is off');
+  }
   scene = createScene(els.holder);
   els.loading.hidden = true;
   if (isFirstVisit) {
@@ -632,5 +636,6 @@ try {
   renderTime();
   setupPointer(scene.canvas);
 } catch {
-  els.loading.textContent = t('blocks.noWebgl');
+  explainNoWebGL(els.loading);
+  els.loading.textContent = t('common.needsWebgl');
 }
