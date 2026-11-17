@@ -725,8 +725,13 @@ body.is-tilt .controls {
   color: #10081f;
   font-size: 1.35rem;
   font-weight: 900;
+  line-height: 1.2;
   text-align: center;
-  white-space: nowrap;
+  /* As wide as its words, but never wider than the screen: a long message
+     goes onto a second line instead of running off the sides. */
+  width: max-content;
+  max-width: calc(100% - 36px);
+  text-wrap: balance;
   opacity: 0;
   transform: translate(-50%, 10px) rotate(-3deg) scale(0.9);
   transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.3, 1.6, 0.5, 1);

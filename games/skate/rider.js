@@ -55,10 +55,10 @@ const WAIST_Y = 0.18;
 const CHEST_Y = 0.48;
 const HEAD_Y = 0.215;
 const REST_HEAD = REST_HIPS + CHEST_Y + HEAD_Y;
-// The head is shown bigger than life, the kawaii way, and lifted a little
-// so the bigger chin clears the shoulders.
-const HEAD_SIZE = 1.5;
-const HEAD_LIFT = 0.046;
+// The head is a real person's size, a touch generous so the simple face
+// still reads from a distance, and lifted to keep the chin off the collar.
+const HEAD_SIZE = 1;
+const HEAD_LIFT = 0.004;
 
 // The trunk from the crotch to the neck: [height above the hips, half
 // width, how far the front is from the spine, how far the back is].
@@ -67,16 +67,16 @@ const TORSO = [
   [-0.06, 0.15, 0.092, 0.112],
   [0, 0.166, 0.1, 0.12],
   [0.06, 0.16, 0.102, 0.108],
-  [0.12, 0.146, 0.098, 0.09],
-  [0.19, 0.138, 0.095, 0.084],
+  [0.12, 0.154, 0.098, 0.09],
+  [0.19, 0.15, 0.095, 0.084],
   [0.27, 0.15, 0.106, 0.09],
   [0.35, 0.168, 0.122, 0.1],
   [0.42, 0.186, 0.12, 0.108],
   [0.475, 0.19, 0.098, 0.102],
   [0.505, 0.17, 0.082, 0.09],
-  [0.53, 0.105, 0.07, 0.076],
-  [0.545, 0.075, 0.06, 0.064],
-  [0.57, 0.056, 0.054, 0.056],
+  [0.53, 0.122, 0.07, 0.078],
+  [0.545, 0.094, 0.064, 0.068],
+  [0.57, 0.07, 0.06, 0.062],
 ];
 // An arm from just above the shoulder to the wrist, and a leg from inside
 // the hip to the ankle: [distance down, front, back, outer side, inner side].
@@ -84,15 +84,15 @@ const ARM = [
   [-0.05, 0.01, 0.01, 0.01, 0.01],
   [-0.042, 0.03, 0.03, 0.03, 0.03],
   [-0.02, 0.046, 0.048, 0.045, 0.045],
-  [0.02, 0.056, 0.058, 0.058, 0.05],
-  [0.07, 0.054, 0.056, 0.058, 0.048],
-  [0.13, 0.05, 0.049, 0.048, 0.045],
-  [0.2, 0.046, 0.046, 0.043, 0.042],
-  [0.26, 0.041, 0.042, 0.041, 0.04],
-  [0.29, 0.039, 0.043, 0.041, 0.04],
-  [0.33, 0.044, 0.042, 0.046, 0.042],
-  [0.39, 0.043, 0.039, 0.044, 0.04],
-  [0.47, 0.034, 0.032, 0.035, 0.033],
+  [0.02, 0.066, 0.068, 0.068, 0.06],
+  [0.07, 0.066, 0.068, 0.07, 0.059],
+  [0.13, 0.062, 0.061, 0.06, 0.056],
+  [0.2, 0.056, 0.056, 0.053, 0.052],
+  [0.26, 0.05, 0.051, 0.05, 0.049],
+  [0.29, 0.052, 0.057, 0.054, 0.053],
+  [0.33, 0.055, 0.053, 0.057, 0.053],
+  [0.39, 0.054, 0.049, 0.055, 0.05],
+  [0.47, 0.042, 0.039, 0.043, 0.04],
   [0.54, 0.029, 0.028, 0.026, 0.025],
   [0.585, 0.029, 0.028, 0.021, 0.02],
 ];
@@ -104,12 +104,12 @@ const LEG = [
   [0.14, 0.088, 0.086, 0.084, 0.078],
   [0.24, 0.078, 0.075, 0.074, 0.07],
   [0.34, 0.066, 0.062, 0.062, 0.06],
-  [0.41, 0.058, 0.054, 0.056, 0.055],
-  [0.44, 0.058, 0.052, 0.055, 0.054],
-  [0.48, 0.052, 0.054, 0.053, 0.052],
-  [0.55, 0.046, 0.064, 0.056, 0.052],
-  [0.62, 0.043, 0.06, 0.052, 0.048],
-  [0.72, 0.038, 0.044, 0.042, 0.04],
+  [0.41, 0.0626, 0.0583, 0.0605, 0.0594],
+  [0.44, 0.0626, 0.0562, 0.0594, 0.0583],
+  [0.48, 0.0562, 0.0583, 0.0572, 0.0562],
+  [0.55, 0.055, 0.078, 0.068, 0.063],
+  [0.62, 0.052, 0.073, 0.063, 0.058],
+  [0.72, 0.0418, 0.0484, 0.0462, 0.044],
   [0.81, 0.034, 0.036, 0.035, 0.034],
   [0.87, 0.034, 0.038, 0.034, 0.034],
   [0.9, 0.03, 0.03, 0.03, 0.03],
@@ -127,7 +127,9 @@ const FINGERS = 4;
 const THIGH_BONE = 5;
 const SHIN_BONE = 6;
 const FOOT = 7;
-const BONES = 19;
+// One more bone hangs from the head: loose hair swings on it.
+const SWAY = 19;
+const BONES = 20;
 
 function boneOf(side, part) {
   return 3 + (side > 0 ? 8 : 0) + part;
@@ -1086,7 +1088,7 @@ function buildBody(kit, look, board) {
   // The top. A hoodie hangs loose and boxy, a jacket a little less, a
   // T-shirt follows the body.
   const fit = {
-    tee: { pad: 0.007, hem: 0.04, least: [0, 0, 0], crease: 0.006, sleeve: 0.006 },
+    tee: { pad: 0.011, hem: 0.005, least: [0, 0, 0], crease: 0, sleeve: 0.008 },
     hoodie: { pad: 0.02, hem: -0.025, least: [0.172, 0.118, 0.106], crease: 0.02, sleeve: 0.02 },
     jacket: { pad: 0.015, hem: -0.015, least: [0.164, 0.11, 0.098], crease: 0.016, sleeve: 0.015 },
   }[look.top];
@@ -1110,7 +1112,7 @@ function buildBody(kit, look, board) {
     const origin = [0, shoulderY, side * SHOULDER];
     if (tee) {
       limb(print, ARM, origin, side, armWeights, {
-        from: -0.05, to: 0.17, pad: fit.sleeve + 0.002, least: 0.052, color: PLAIN, lipEnd: true, capStart: true,
+        from: -0.05, to: 0.15, pad: fit.sleeve + 0.002, least: 0, color: PLAIN, lipEnd: true, capStart: true,
         shape: folds(0.12, 0.06, 0.02, 150),
         map: PRINT_TRIM,
       });
@@ -1151,7 +1153,7 @@ function buildBody(kit, look, board) {
   // The bottoms: the seat, a waistband, then the legs.
   const cut = {
     // Baggy cargo shorts, down to the knee.
-    shorts: { pad: 0.02, to: 0.425, least: 0.086, loose: 0.012 },
+    shorts: { pad: 0.007, to: 0.425, least: 0.072, loose: 0.012 },
     pants: { pad: 0.01, to: 0.86, least: 0.046, loose: 0 },
     baggy: { pad: 0.026, to: 0.875, least: 0.074, loose: 0.03 },
   }[look.bottom];
@@ -1173,9 +1175,9 @@ function buildBody(kit, look, board) {
       // the outside of the leg.
       const outer = measure(LEG, 0.25)[3] + cut.pad;
       const thigh = boneOf(side, THIGH_BONE);
-      cloth.block([-0.004, hipY - 0.27, side * (HIP + outer + 0.002)], [0.1, 0.12, 0.02], bottom, thigh, [0, 0, 0], 1);
-      cloth.block([-0.004, hipY - 0.215, side * (HIP + outer + 0.008)], [0.108, 0.036, 0.018], bottomTrim, thigh, [0, 0, 0], 1);
-      cloth.block([-0.004, hipY - 0.228, side * (HIP + outer + 0.018)], [0.016, 0.012, 0.006], DARK, thigh, [0, 0, 0], 0);
+      cloth.block([-0.004, hipY - 0.27, side * (HIP + outer - 0.008)], [0.1, 0.12, 0.02], bottom, thigh, [0, 0, 0], 1);
+      cloth.block([-0.004, hipY - 0.215, side * (HIP + outer - 0.002)], [0.108, 0.036, 0.018], bottomTrim, thigh, [0, 0, 0], 1);
+      cloth.block([-0.004, hipY - 0.228, side * (HIP + outer + 0.008)], [0.016, 0.012, 0.006], DARK, thigh, [0, 0, 0], 0);
       cloth.path([[0, hipY - 0.03, side * (HIP + outer - 0.004)], [0, hipY - 0.12, side * (HIP + outer + 0.002)], [0, hipY - 0.2, side * (HIP + outer + 0.004)]], [0.004, 0.003], { around: 4, color: bottomTrim, weights: thigh, up: [0, 0, 1] });
     }
     if (look.bottom === 'shorts' && board !== 'snow') {
@@ -1219,7 +1221,7 @@ function headPoint(polar, around, lift = 0) {
   const y = dy * 0.1175;
   let z = dz * 0.09;
   const low = smooth(0.005, 0.1175, -y);
-  z *= 1 - 0.1 * low - 0.16 * low ** 3;
+  z *= 1 - 0.16 * low - 0.16 * low ** 3;
   if (x < 0) {
     x *= 1 - 0.36 * low;
   }
@@ -1284,20 +1286,20 @@ function buildHead(kit, look) {
   const blush = skinTone(look.skin).lerp(new THREE.Color('#ff6f91'), 0.55);
   [-1, 1].forEach((side) => {
     const eye = onFace(-0.012, side * 0.036, 0.0005);
-    eyes.ball(eye, [0.005, 0.0165, 0.0125], new THREE.Color('#1d1626'), HEAD, { segments: 14, turn: [0, side * -0.38, 0] });
+    eyes.ball(eye, [0.005, 0.019, 0.0145], new THREE.Color('#1d1626'), HEAD, { segments: 14, turn: [0, side * -0.38, 0] });
     eyes.ball([eye[0] + 0.0042, eye[1] + 0.0066, eye[2] + 0.0038], [0.002, 0.0046, 0.0038], new THREE.Color('#ffffff'), HEAD, { segments: 8 });
     eyes.ball([eye[0] + 0.0046, eye[1] - 0.006, eye[2] - 0.0034], [0.0012, 0.0022, 0.002], new THREE.Color('#ffffff'), HEAD, { segments: 6 });
     face.ball(onFace(-0.036, side * 0.056, -0.002), [0.004, 0.0085, 0.0135], blush, HEAD, { segments: 10, turn: [0, side * -0.55, 0] });
   });
   eyes.path([onFace(-0.04, -0.011), onFace(-0.0455, 0), onFace(-0.04, 0.011)], 0.0016, { around: 6, color: new THREE.Color('#8a3b4a'), weights: HEAD });
-  face.grid(44, 52, (i, j) => ({
-    at: onHead(headPoint((i / 44) * Math.PI, faceAround(j / 52))),
+  face.grid(34, 42, (i, j) => ({
+    at: onHead(headPoint((i / 34) * Math.PI, faceAround(j / 42))),
     color: skinColor.clone(),
   }), { weights: HEAD, center: [0, REST_HEAD, 0] });
   // Ears, each with its darker hollow.
   [-1, 1].forEach((side) => {
-    skin.ball([-0.012, REST_HEAD - 0.004, side * 0.0745], [0.017, 0.03, 0.008], skinColor, HEAD, { segments: 12, turn: [side * 0.18, side * -0.28, 0.15] });
-    skin.ball([-0.009, REST_HEAD - 0.004, side * 0.0795], [0.009, 0.019, 0.005], skinTone(look.skin).multiplyScalar(0.72), HEAD, { segments: 8, turn: [side * 0.25, side * -0.35, 0.15] });
+    skin.ball([-0.012, REST_HEAD - 0.008, side * 0.0885], [0.019, 0.032, 0.011], skinColor, HEAD, { segments: 12, turn: [side * 0.18, side * -0.28, 0.15] });
+    skin.ball([-0.009, REST_HEAD - 0.008, side * 0.0965], [0.01, 0.02, 0.005], skinTone(look.skin).multiplyScalar(0.72), HEAD, { segments: 8, turn: [side * 0.25, side * -0.35, 0.15] });
   });
 }
 
@@ -1693,6 +1695,38 @@ function bendAxis(normal, a, b, c, backward) {
   }
 }
 
+// Lets hair that hangs below the ears swing: the further down a strand
+// is, the more it follows the sway bone and the less the head itself.
+function loosen(hair) {
+  const top = REST_HEAD - 0.02;
+  for (let i = 0; i < hair.position.length / 3; i += 1) {
+    if (hair.bones[i * 4] !== HEAD || hair.weights[i * 4] !== 1) {
+      continue;
+    }
+    const loose = Math.min(1, Math.max(0, (top - hair.position[i * 3 + 1]) / 0.2));
+    hair.bones[i * 4 + 1] = SWAY;
+    hair.weights[i * 4] = 1 - loose;
+    hair.weights[i * 4 + 1] = loose;
+  }
+}
+
+// A weight on a spring: it is pulled toward `target`, overshoots a little
+// and settles. Small steps keep it steady however long a frame takes.
+function spring(state, target, dt, stiff, damp, limit) {
+  let left = Math.min(dt, 0.1);
+  while (left > 0) {
+    const step = Math.min(left, 1 / 120);
+    state.speed += ((target - state.at) * stiff - state.speed * damp) * step;
+    state.at += state.speed * step;
+    left -= step;
+  }
+  if (Math.abs(state.at) > limit) {
+    state.at = Math.sign(state.at) * limit;
+    state.speed = 0;
+  }
+  return state.at;
+}
+
 // Builds a rider in their clothes on their board or bike. `update` poses
 // them.
 export function buildRider(look, board) {
@@ -1761,6 +1795,7 @@ export function buildRider(look, board) {
   buildBody(kit, look, board);
   buildHead(kit, look);
   buildHair(kit, look);
+  loosen(kit.hair);
   buildHat(kit, look);
   buildGlasses(kit, look);
   [-1, 1].forEach((side) => {
@@ -1769,7 +1804,7 @@ export function buildRider(look, board) {
     if (snow || bike) {
       buildHand(kit.gear, side, DARK, snow ? 1.32 : 1.12);
     } else {
-      buildHand(kit.skin, side, skinTone(look.skin));
+      buildHand(kit.skin, side, skinTone(look.skin), 1.2);
     }
     buildShoe(kit, side, snow, look, bike);
   });
@@ -1795,6 +1830,8 @@ export function buildRider(look, board) {
     bone(SHIN_BONE).position.set(0, hipY - THIGH, side * HIP);
     bone(FOOT).position.set(0, hipY - THIGH - SHIN, side * HIP);
   });
+  bones[SWAY].position.set(0, -0.05, 0);
+  bones[HEAD].add(bones[SWAY]);
   bones.forEach((bone) => {
     if (!bone.parent) {
       body.add(bone);
@@ -1884,6 +1921,53 @@ export function buildRider(look, board) {
     now[key] += (target - now[key]) * Math.min(1, dt * rate);
   }
 
+  // What makes the rider move like a person and not a statue: springs for
+  // the knees (`bob`) and the hair, slower and faster followers of the
+  // steering for hips, chest and head, breathing, and small shifts of
+  // weight when standing still.
+  const life = {
+    bob: { at: 0, speed: 0 }, hairBack: { at: 0, speed: 0 }, hairSide: { at: 0, speed: 0 },
+    quick: 0, slow: 0, wasAir: false, wasLand: 0, fast: 0, still: 1, breath: 0, shift: 0, glance: 0, air: 0,
+  };
+
+  function live(dt, pose) {
+    const riding = pose.state === 'ride' || pose.state === 'grind';
+    const speed = pose.speed || 0;
+    const ease = (rate) => Math.min(1, dt * rate);
+    life.fast += (Math.min(1, speed / 24) - life.fast) * ease(3);
+    life.still += ((riding && speed < 0.6 ? 1 : 0) - life.still) * ease(2.5);
+    life.air += ((pose.state === 'air' ? 1 : 0) - life.air) * ease(7);
+    // The hips answer the steering first, the chest and head after.
+    const steer = riding ? pose.steer : 0;
+    life.quick += (steer - life.quick) * ease(9);
+    life.slow += (steer - life.slow) * ease(3.2);
+    // Knees: a push up at take-off, a deep give on landing, and a
+    // tremble from the ground at speed.
+    const inAir = pose.state === 'air';
+    // The game leaves the ground on the tap itself, so the crouch comes
+    // in the first moments of the air and the body then opens out.
+    if (inAir && !life.wasAir) {
+      life.bob.speed -= 2;
+    }
+    if (pose.land > life.wasLand + 0.05) {
+      life.bob.speed -= 1.9 * pose.land;
+    }
+    life.wasAir = inAir;
+    life.wasLand = pose.land;
+    const rumble = riding ? (Math.sin(pose.time * 23) * 0.5 + Math.sin(pose.time * 37.3) * 0.5) * life.fast * 0.006 : 0;
+    spring(life.bob, rumble - (0.5 + 0.5 * Math.sin(pose.time * 0.85)) * 0.03 * life.still, dt, 120, 11, 0.2);
+    // Standing still: breathe, shift the weight, glance around now and then.
+    life.breath = Math.sin(pose.time * 1.7);
+    life.shift = Math.sin(pose.time * 0.53) * life.still;
+    const look = Math.sin(pose.time * 0.31 + 1);
+    life.glance = Math.sign(look) * smooth(0.55, 0.9, Math.abs(look)) * life.still;
+    // Hair: blown back by the wind, thrown by turns and landings.
+    const wind = life.fast;
+    // In a turn the tips hang to the outside for as long as it lasts.
+    spring(life.hairBack, (bike ? -0.5 : -0.38) * wind - life.bob.speed * 0.7, dt, 40, 6, 1);
+    spring(life.hairSide, (bike ? 0 : 0.24 * wind) + life.quick * 0.42 + (life.quick - life.slow) * 0.5, dt, 40, 6, 0.8);
+  }
+
   // Applies the spin and flip (and the tip-over of a fall) to the body,
   // turning it around a point near the hips.
   function turnBody() {
@@ -1921,6 +2005,7 @@ export function buildRider(look, board) {
     bones[HIPS].quaternion.copy(hips.quaternion);
     chestMatrix.decompose(bones[CHEST].position, bones[CHEST].quaternion, unused);
     headMatrix.decompose(bones[HEAD].position, bones[HEAD].quaternion, unused);
+    bones[SWAY].rotation.set(life.hairSide.at, 0, life.hairBack.at);
     bones[HEAD].scale.setScalar(HEAD_SIZE);
     bones[HEAD].position.addScaledVector(headUp.set(0, 1, 0).applyQuaternion(bones[HEAD].quaternion), HEAD_LIFT);
     legs.forEach((leg) => {
@@ -1963,13 +2048,15 @@ export function buildRider(look, board) {
     const grab = state === 'air' ? pose.grab : null;
     const flip = state === 'air' ? pose.flip : null;
     const move = flip?.move || null;
-    let hipX = -0.2;
-    let hipY = 0.98;
-    let lean = 0.75;
+    live(dt, pose);
+    // Faster means lower over the bars; standing still, more upright.
+    let hipX = -0.19 - life.fast * 0.03;
+    let hipY = 0.975 - life.fast * 0.035 + life.still * 0.02;
+    let lean = 0.78 + life.fast * 0.07 - life.still * 0.18;
     if (state === 'air') {
-      hipX = -0.24;
-      hipY = 1.02;
-      lean = 0.62;
+      hipX = -0.21;
+      hipY = 0.99;
+      lean = 0.72;
     }
     if (grab === 'nohander') {
       lean = 0.3;
@@ -2015,10 +2102,18 @@ export function buildRider(look, board) {
     });
 
     // The back rounds over the bars, and the head lifts to look ahead.
-    hips.position.set(now.hipX, now.hipY, 0);
-    hips.rotation.set(0, 0, -now.lean * 0.72);
-    waist.rotation.set(0, 0, -now.lean * 0.28);
-    head.rotation.z = now.lean * 0.82;
+    // In a turn the hips go first and the shoulders follow; the chest
+    // leans a little the other way and the head stays level, looking
+    // into the bend. In the air the eyes go down to the landing.
+    const drift = life.quick - life.slow;
+    // A dip of the knees also brings the chest down toward the bars.
+    const fold = now.lean - life.bob.at * 1.8;
+    hips.position.set(now.hipX, now.hipY + life.bob.at + life.breath * life.still * 0.012, life.shift * 0.03 - drift * 0.04);
+    hips.rotation.set(drift * 0.16, 0, -fold * 0.72);
+    waist.rotation.set(-now.roll * 0.3 - drift * 0.22, -now.twist * 0.45 - life.quick * 0.1, -fold * 0.28 + life.breath * 0.03 * (0.3 + life.still));
+    // The head is lifted against the bent back, so the eyes look down the
+    // trail and not at the front wheel.
+    head.rotation.set(-now.roll * 0.7, -now.twist * 0.7 - life.quick * 0.12 + life.glance * 0.5, fold * 0.82 + 0.22 - life.air * 0.2 + life.bob.at * 1.2);
     settleSpine();
 
     // Legs: feet on the pedals, unless a trick takes them off.
@@ -2043,7 +2138,8 @@ export function buildRider(look, board) {
         footGoal.set(0.3 + side * 0.2, 0.3, side * 0.3);
       }
       feetNow[i].lerp(footGoal, Math.min(1, dt * 16));
-      pole.set(1, 0.4, side * 0.3);
+      // Knees out, clear of the frame; the inside knee opens into a turn.
+      pole.set(1, 0.4, side * 0.4 + life.quick * 0.3);
       twoBone(leg.hip, feetNow[i], THIGH, SHIN, pole, leg.knee, leg.ankle);
       leg.turn.set(0, 0, grab === 'superman' ? -1.2 : 0);
     });
@@ -2074,7 +2170,8 @@ export function buildRider(look, board) {
         holding = false;
       }
       hands[i].lerp(goal, Math.min(1, dt * 18));
-      pole.set(-0.2, -1, side * 0.7);
+      // Elbows out and bent at speed, ready to soak up the trail.
+      pole.set(-0.45, -0.8 + life.fast * 0.2, side * (0.75 + life.fast * 0.3) - life.quick * 0.25);
       twoBone(arm.shoulder, hands[i], UPPER_ARM, FOREARM, pole, arm.elbow, arm.wrist);
       arm.close = holding ? 0.95 : 0.2;
       arm.grip = null;
@@ -2094,8 +2191,10 @@ export function buildRider(look, board) {
       return;
     }
     const { state } = pose;
-    let hipY = 0.86 - Math.abs(pose.steer) * 0.04;
-    let lean = 0.14;
+    live(dt, pose);
+    // Knees bend more the faster it goes; standing still, nearly straight.
+    let hipY = 0.78 - Math.abs(pose.steer) * 0.04 - life.fast * 0.04;
+    let lean = 0.32 + life.fast * 0.07 - life.still * 0.04;
     let lift = 0;
     let feet = 0;
     const grab = state === 'air' ? pose.grab : null;
@@ -2185,10 +2284,17 @@ export function buildRider(look, board) {
 
     // The body: most of the lean is at the hips, the rest in the back, and
     // the head stays level.
-    hips.position.set(-0.03, now.hipY + now.lift * 0.4, 0);
-    hips.rotation.set(0, now.twist * 0.5, -now.lean * 0.75);
-    waist.rotation.set(0, now.twist * 0.5, -now.lean * 0.25);
-    head.rotation.z = now.lean * 0.7;
+    // The hips answer a turn first; the shoulders wind up after them, and
+    // the head looks where the board is going. In the air the eyes drop
+    // to the landing.
+    const drift = life.quick - life.slow;
+    // The shoulders are wound toward the way of travel, over the front
+    // foot, so the head needs to turn less.
+    const open = 0.4 * (1 - now.side);
+    hips.position.set(-0.03 - drift * 0.02, now.hipY + now.lift * 0.4 + life.bob.at + life.breath * life.still * 0.012, 0.03 + life.shift * 0.055);
+    hips.rotation.set(life.shift * 0.04, now.twist * 0.5 + drift * 0.18 - open * 0.3, -now.lean * 0.75);
+    waist.rotation.set(0, now.twist * 0.5 - drift * 0.3 - open * 0.7, -now.lean * 0.25 + life.breath * 0.03 * (0.3 + life.still));
+    head.rotation.set(0, -1.05 + open - life.slow * 0.22 + life.glance * 0.45, now.lean * 0.7 - life.air * 0.14 + life.bob.at * 0.8);
     settleSpine();
 
     // Legs: feet on the board.
@@ -2209,14 +2315,20 @@ export function buildRider(look, board) {
       arm.close = 0.22;
       arm.grip = null;
       if (state === 'air') {
-        goal.set(0.15, 1.45, side * 0.62);
+        // Arms tuck in the crouch and open as the body stretches out.
+        goal.set(0.18, 1.27 + life.bob.at * 2.6, side * (0.56 + life.bob.at * 1.2));
       } else if (state === 'grind') {
         goal.set(0.05, 1.18, side * 0.72);
       } else if (state === 'bail') {
         goal.set(0.4, 0.9, side * 0.45);
         arm.close = 0.05;
       } else {
-        goal.set(0.12 - side * 0.05, 0.92 + swing * side, side * 0.5 + pose.steer * 0.1);
+        // One arm rises and the other drops against the turn; standing
+        // still, they hang lower and looser.
+        // The leading arm is held further out than the trailing one, both
+        // with a bend at the elbow.
+        const loose = Math.sin(pose.time * 1.7 + side * 1.3) * 0.03 * life.still;
+        goal.set(0.27 - side * 0.04, 1.03 + swing * side - side * life.quick * 0.11 - life.still * 0.07 + loose + life.bob.at * 0.6, side * (side > 0 ? 0.4 : 0.31) - life.still * side * 0.04 + pose.steer * 0.1 + drift * 0.08);
       }
       if (grab) {
         const boardY = now.lift + deckY + 0.07;
