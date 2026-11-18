@@ -7,6 +7,7 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v44.forest': 'Long presses in the forest no longer select text. Turn your phone sideways to see the tree carving and its button side by side.',
     'changes.v43.forest': 'The journal, nearby discovery, Run, and Look around are at the bottom center. Playbox and settings stay at the top right.',
     'changes.v42.forest': 'Forest controls are in the top right. On smaller screens, open Actions to find them.',
     'changes.v41.forest': 'Hold either walking arrow on your phone to keep walking without selecting text.',
@@ -71,6 +72,7 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v44.forest': 'Tenere premuto nel bosco non seleziona più il testo. In orizzontale, il pulsante è accanto all’incisione sull’albero.',
     'changes.v43.forest': 'Il diario, la scoperta vicina, la corsa e l’esplorazione sono in basso al centro. Playbox e le impostazioni restano in alto a destra.',
     'changes.v42.forest': 'I comandi del bosco sono in alto a destra. Sugli schermi piccoli, apri Azioni per trovarli.',
     'changes.v41.forest': 'Tieni premuta una delle frecce sul telefono per camminare senza selezionare il testo.',
@@ -135,6 +137,7 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v44.forest': 'Mantener pulsada la pantalla del bosque ya no selecciona texto. En horizontal, el botón aparece junto al grabado del árbol.',
     'changes.v43.forest': 'El diario, el descubrimiento cercano, correr y mirar alrededor están abajo, en el centro. Playbox y los ajustes siguen arriba a la derecha.',
     'changes.v42.forest': 'Los controles del bosque están arriba a la derecha. En pantallas pequeñas, abre Acciones para verlos.',
     'changes.v41.forest': 'Mantén pulsada una flecha en el móvil para caminar sin seleccionar texto.',
@@ -199,6 +202,7 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v44.forest': 'Manter a tela pressionada na floresta não seleciona mais o texto. Na horizontal, o botão fica ao lado da marca na árvore.',
     'changes.v43.forest': 'O diário, a descoberta próxima, correr e olhar ao redor ficam no centro da parte inferior. Playbox e as configurações continuam no canto superior direito.',
     'changes.v42.forest': 'Os controles da floresta ficam no canto superior direito. Em telas pequenas, abra Ações para encontrá-los.',
     'changes.v41.forest': 'Mantenha uma das setas pressionada no celular para andar sem selecionar texto.',
@@ -263,6 +267,7 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v44.forest': 'Langes Drücken im Wald markiert keinen Text mehr. Im Querformat steht die Schaltfläche neben der Schnitzerei im Baum.',
     'changes.v43.forest': 'Tagebuch, Fundstück, Rennen und Umsehen sind unten in der Mitte. Playbox und die Einstellungen bleiben oben rechts.',
     'changes.v42.forest': 'Die Steuerung für den Wald findest du oben rechts. Auf kleinen Bildschirmen öffnest du dafür Aktionen.',
     'changes.v41.forest': 'Halte auf dem Handy eine der Pfeiltasten gedrückt, um zu gehen, ohne Text zu markieren.',

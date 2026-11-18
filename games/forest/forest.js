@@ -25,6 +25,12 @@ import { forestMusic } from './music.js';
 import { makeSound } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
+const touchInput = matchMedia('(any-pointer: coarse)');
+function preventTouchSelection(event) {
+  if (touchInput.matches) event.preventDefault();
+}
+document.addEventListener('selectstart', preventTouchSelection);
+document.addEventListener('contextmenu', preventTouchSelection);
 const f = (key) => t('forest.' + key);
 const panel = $('panel'),
   body = $('panel-body'),
@@ -396,7 +402,7 @@ function startEnding() {
   sound.play('stairs');
 }
 function carveTree() {
-  openPanel(f('tree'), 'encounter');
+  openPanel(f('tree'), 'encounter carving');
   const closeup = node('div', null, 'bark');
   const guide = node('canvas');
   guide.width = 640;

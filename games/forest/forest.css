@@ -14,6 +14,13 @@
 body {
   margin: 0;
 }
+@media (any-pointer: coarse) {
+  :root, :root * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
 [hidden] {
   display: none !important;
 }
@@ -823,12 +830,14 @@ header.compact > .toolbar-items {
 #panel.discovery #close {
   display: none;
 }
-#panel.discovery {
+#panel.encounter {
   --side-gap: max(4px, env(safe-area-inset-left), env(safe-area-inset-right));
   --end-gap: max(8px, env(safe-area-inset-top), env(safe-area-inset-bottom));
   --card-height: calc(100dvh - 2 * var(--end-gap));
   max-width: calc(100% - 2 * var(--side-gap));
   max-height: var(--card-height);
+}
+#panel.discovery {
   width: min(1120px, calc((var(--card-height) - 120px) * var(--object-aspect, 1.6)));
 }
 .discovery #panel-body {
@@ -875,12 +884,28 @@ header.compact > .toolbar-items {
   min-height: 44px;
 }
 @media (max-height: 500px) and (orientation: landscape) {
-  #panel.discovery {
+  #panel.encounter {
     --caption-width: clamp(160px, 25vw, 230px);
-    width: calc((var(--card-height) - 2px) * var(--object-aspect, 1.6) + var(--caption-width) + 2px);
+    --art-aspect: var(--object-aspect, 1.6);
+    width: calc((var(--card-height) - 2px) * var(--art-aspect) + var(--caption-width) + 2px);
   }
-  .discovery #panel-body {
+  #panel.carving {
+    --art-aspect: calc(16 / 9);
+    --caption-width: clamp(180px, 32vw, 280px);
+  }
+  .encounter #panel-body {
+    display: grid;
     grid-template-columns: minmax(0, 1fr) var(--caption-width);
+    align-items: center;
+  }
+  .carving .insert-copy {
+    padding: 16px;
+  }
+  #panel.carving h2 {
+    font-size: clamp(22px, 3.6vw, 32px);
+  }
+  #panel.carving .primary {
+    min-height: 44px;
   }
   .discovery .object-view {
     grid-column: 1;
