@@ -10,6 +10,7 @@ Plain HTML, CSS and JavaScript. No build step, and nothing to install to run it.
 
 | Game | What it does |
 |---|---|
+| **The Forest Remembers** (`games/forest/`) | Walk or run as a giant forest robot along a continuous road through twelve connected landscapes under one sunrise. Three.js draws the guardian, wildlife and discoveries in real time. Step through the farmhouse door for tea. Find a hidden map, wake a spacecraft, and recover 22 animated memories to pass through the waterfall. Hold a direction to walk. An original piano and flute waltz plays along the way. |
 | **Dice Thrower** (`games/dice/`) | Pick a buddy and watch them throw 1 to 6 animated 3D dice. Five buddies, each with two looks and their own scene: Princess or Prince, Cowboy or Cowgirl, Explorer or Adventurer, Pixel Boy or Pixel Girl, Witch or Wizard. Every buddy has its own background music (can be turned off). Keeps your last rolls, your best total, and how often each number came up. |
 | **Memory** (`games/memory/`) | Flip cards to find pairs on a 4×4 to 7×7 table (odd sizes get one free star card in the middle). Card sets: animals, planets and moons, country flags (each match shows a fun fact), or your own photos, which stay on the device. Four card backs, zoom, best moves and times. |
 | **Blocks** (`games/blocks/`) | Build anything with 3D toy blocks: nine shapes, any color, plain plastic or textures (brick, stone, wood and more). Turn, paint, remove, undo. The sky follows the time of day, including sunset and a starry night, or your real clock. |

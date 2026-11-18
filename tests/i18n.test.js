@@ -8,6 +8,7 @@ import '../games/blocks/strings.js';
 import '../games/molecules/strings.js';
 import '../games/drive/strings.js';
 import '../games/skate/strings.js';
+import '../games/forest/strings.js';
 import '../notes/release-notes.js';
 import { GAMES } from '../shared/games.js';
 import { SHAPES, TEXTURES } from '../games/blocks/world.js';

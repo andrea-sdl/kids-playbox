@@ -91,4 +91,10 @@ export const GAMES = [
         <circle cx="28" cy="32" r="3" fill="#fff" stroke="none" opacity="0.5"/>
       </svg>`,
   },
+  {
+    id: 'forest',
+    path: 'games/forest/',
+    color: '#374d38',
+    icon: '<img class="forest-card-art" src="icons/forest.webp" alt="">',
+  },
 ];

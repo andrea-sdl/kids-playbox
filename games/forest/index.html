@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en" data-root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#18251d" />
+    <title>The Forest Remembers · Playbox</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="art/icon-192.png" />
+    <link rel="apple-touch-icon" href="art/icon-192.png" />
+    <link rel="stylesheet" href="forest.css" />
+    <link rel="preload" as="image" href="art/cover.webp" />
+    <script type="module" src="forest.js"></script>
+  </head>
+  <body>
+    <main id="game">
+      <section id="opening" aria-labelledby="title">
+        <div class="cover"></div>
+        <div class="title-block">
+          <div class="jp" lang="ja"><span class="sunline" aria-hidden="true"></span> 森の記憶</div>
+          <h1 id="title">The Forest<br /><i>Remembers</i></h1>
+          <p class="premise" data-i18n="forest.premise"></p>
+          <div class="intro-actions">
+            <button id="begin" class="primary" disabled><span></span><b aria-hidden="true">→</b></button>
+            <button id="restart" class="text-link" hidden data-i18n="forest.restart"></button>
+            <button class="text-link how" data-i18n="forest.how"></button>
+          </div>
+        </div>
+        <div class="credits">
+          <span class="sunrise-icon" aria-hidden="true">☼</span><span data-i18n="forest.meadow"></span
+          ><i></i><span data-i18n="forest.dawn"></span>
+        </div>
+      </section>
+      <section id="play" hidden aria-label="Forest">
+        <div id="stage" tabindex="0">
+          <canvas id="forest-view" aria-hidden="true"></canvas>
+          <div id="world">
+            <div id="spots"></div>
+            <div id="ways"></div>
+          </div>
+        </div>
+        <div class="location">
+          <div class="tiny">
+            <span class="sunrise-icon">☼</span><span data-i18n="forest.dawn"></span>
+          </div>
+          <h2 id="place"></h2>
+        </div>
+        <div id="toast" role="status" aria-live="polite"></div>
+        <div class="playbar">
+          <div class="travel-controls">
+            <button id="west" class="glass walk-key" data-i18n-attr="aria-label:forest.west">←</button>
+            <button id="east" class="glass walk-key" data-i18n-attr="aria-label:forest.east">→</button>
+            <button id="journal" class="glass">
+              <span class="ico" data-icon="book"></span><span id="count"></span>
+            </button>
+          </div>
+          <button id="action" class="glass" hidden></button>
+          <div class="motion-controls">
+            <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button
+            ><button id="listen" class="glass" data-i18n="forest.look"></button>
+          </div>
+        </div>
+      </section>
+      <section id="screening" hidden aria-labelledby="film-name">
+        <div class="film-controls">
+          <h2 id="film-name"></h2>
+          <button id="film-skip" class="glass" data-i18n="forest.skip"></button>
+        </div>
+      </section>
+      <header>
+        <a class="home" href="../../" data-i18n-attr="aria-label:forest.playbox"
+          ><span class="back" aria-hidden="true">‹</span><span>Playbox</span></a
+        >
+        <div class="tools">
+          <button
+            id="music"
+            class="round"
+            data-icon="music"
+            data-i18n-attr="aria-label:forest.music"
+          ></button>
+          <button id="sound" class="round" data-icon="sound"></button
+          ><button
+            id="settings"
+            class="round"
+            data-icon="settings"
+            data-i18n-attr="aria-label:forest.settings"
+          ></button>
+        </div>
+      </header>
+      <dialog id="panel" aria-labelledby="panel-title">
+        <button
+          id="close"
+          class="round"
+          data-i18n-attr="aria-label:forest.close"
+          data-icon="close"
+        ></button>
+        <div id="panel-body"></div>
+      </dialog>
+    </main>
+  </body>
+</html>

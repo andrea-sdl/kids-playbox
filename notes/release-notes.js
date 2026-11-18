@@ -7,6 +7,10 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v36.forest': 'The Forest Remembers is now the last game in Playbox. Start a fresh journey from the title screen or Settings.',
+    'changes.v35.forest': 'Follow one sunrise from the meadow to the falls. Three.js brings the guardian, the forest and all 22 discoveries to life as you walk.',
+    'changes.v34.forest': 'Walk across six new landscapes. Each discovery has its own animated scene, and a quiet piano and flute score accompanies your journey.',
+    'changes.v33.forest': 'Explore a painted forest as a giant robot. Find 22 memories, wake an old spaceship, and follow the water home.',
     'changes.v24.skate': 'A brand-new game! Skate Star: ride a skateboard or a snowboard in a city plaza, on a hill above the sea, on a snowy peak and in a desert with an oasis. Jump, flip, grab and grind for big combos, find the hidden letters, and dress your rider and style your board.',
     'changes.v6.fullscreen': 'Every game has a full-screen button, to use the whole phone or tablet screen.',
     'changes.v12.installedTop': 'When Playbox is added to the iPhone Home Screen, the top of the screen no longer looks blurry.',
@@ -60,6 +64,10 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v36.forest': 'Il bosco ricorda è ora l’ultimo gioco di Playbox. Puoi ricominciare dal titolo o dalle impostazioni.',
+    'changes.v35.forest': 'Segui lo stesso sole dal prato alla cascata. Three.js anima il guardiano, il bosco e tutte le 22 scoperte durante il cammino.',
+    'changes.v34.forest': 'Attraversa sei nuovi paesaggi a piedi. Ogni scoperta ha una scena animata, e pianoforte e flauto accompagnano il viaggio.',
+    'changes.v33.forest': 'Esplora un bosco dipinto nei panni di un robot gigante. Trova 22 ricordi, risveglia una navicella e segui l’acqua verso casa.',
     'changes.v24.skate': 'Un gioco tutto nuovo! Skate Star: vai in skateboard o in snowboard in una piazza di città, su una collina sopra il mare, su una vetta innevata e in un deserto con l’oasi. Salta, fai flip, grab e grind per combo enormi, trova le lettere nascoste, vesti il tuo rider e decora la tavola.',
     'changes.v6.fullscreen': 'Ogni gioco ha un pulsante per lo schermo intero, per usare tutto lo schermo di telefono o tablet.',
     'changes.v12.installedTop': 'Con Playbox aggiunto alla schermata Home dell’iPhone, la parte alta dello schermo non è più sfocata.',
@@ -113,6 +121,10 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v36.forest': 'El bosque recuerda es ahora el último juego de Playbox. Puedes volver a empezar desde el título o los ajustes.',
+    'changes.v35.forest': 'Sigue el mismo sol desde el prado hasta la cascada. Three.js anima al guardián, el bosque y los 22 hallazgos mientras caminas.',
+    'changes.v34.forest': 'Recorre seis paisajes nuevos a pie. Cada hallazgo tiene una escena animada y una melodía de piano y flauta acompaña el viaje.',
+    'changes.v33.forest': 'Explora un bosque pintado como un robot gigante. Encuentra 22 recuerdos, despierta una nave y sigue el agua hasta casa.',
     'changes.v24.skate': '¡Un juego nuevo! Skate Star: monta en monopatín o en snowboard en una plaza de la ciudad, en una colina sobre el mar, en una cumbre nevada y en un desierto con oasis. Salta, haz flips, grabs y grinds para combos enormes, encuentra las letras escondidas, viste a tu rider y decora tu tabla.',
     'changes.v6.fullscreen': 'Cada juego tiene un botón de pantalla completa, para usar toda la pantalla del teléfono o la tableta.',
     'changes.v12.installedTop': 'Con Playbox añadido a la pantalla de inicio del iPhone, la parte de arriba ya no se ve borrosa.',
@@ -166,6 +178,10 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v36.forest': 'A floresta se lembra agora é o último jogo do Playbox. Você pode recomeçar pela tela inicial ou pelas configurações.',
+    'changes.v35.forest': 'Siga o mesmo sol do prado até a cachoeira. Three.js anima o guardião, a floresta e as 22 descobertas durante a caminhada.',
+    'changes.v34.forest': 'Atravesse seis novas paisagens a pé. Cada descoberta tem uma cena animada, e uma melodia de piano e flauta acompanha a viagem.',
+    'changes.v33.forest': 'Explore uma floresta pintada como um robô gigante. Encontre 22 lembranças, desperte uma nave e siga a água até sua casa.',
     'changes.v24.skate': 'Um jogo novinho! Skate Star: ande de skate ou de snowboard numa praça da cidade, num morro sobre o mar, num pico nevado e num deserto com oásis. Pule, faça flips, grabs e grinds para combos enormes, encontre as letras escondidas, vista seu rider e decore sua prancha.',
     'changes.v6.fullscreen': 'Cada jogo tem um botão de tela cheia, para usar a tela toda do celular ou tablet.',
     'changes.v12.installedTop': 'Com o Playbox na tela de início do iPhone, o topo da tela não fica mais borrado.',
@@ -219,6 +235,10 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v36.forest': 'Der Wald erinnert sich steht jetzt am Ende der Spieleliste. Du kannst am Titelbildschirm oder in den Einstellungen neu anfangen.',
+    'changes.v35.forest': 'Folge derselben Morgensonne von der Wiese bis zum Wasserfall. Three.js erweckt den Wächter, den Wald und alle 22 Funde auf deinem Weg zum Leben.',
+    'changes.v34.forest': 'Durchwandere sechs neue Landschaften. Jeder Fund hat eine animierte Szene. Leise Klavier- und Flötenmusik begleitet dich.',
+    'changes.v33.forest': 'Erkunde als riesiger Roboter einen gemalten Wald. Finde 22 Erinnerungen, wecke ein Raumschiff und folge dem Wasser nach Hause.',
     'changes.v24.skate': 'Ein brandneues Spiel! Skate Star: Fahr Skateboard oder Snowboard auf einem Stadtplatz, auf einem Hügel über dem Meer, auf einem Schneegipfel und in einer Wüste mit Oase. Spring, mach Flips, Grabs und Grinds für riesige Kombos, finde die versteckten Buchstaben, zieh deine Figur an und gestalte dein Board.',
     'changes.v6.fullscreen': 'Jedes Spiel hat einen Vollbild-Knopf, um den ganzen Bildschirm von Handy oder Tablet zu nutzen.',
     'changes.v12.installedTop': 'Wenn Playbox auf dem iPhone-Home-Bildschirm liegt, ist der obere Bildschirmrand nicht mehr verschwommen.',

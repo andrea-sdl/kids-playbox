@@ -142,6 +142,9 @@ export function mountLanguagePicker() {
 
 addStrings({
   en: {
+    'game.forest.title': 'The Forest Remembers',
+    'game.forest.blurb': 'Wake as a giant robot. Follow a little bird through a painted forest and find its 22 lost memories.',
+    'progress.forest': 'Walked in the forest',
     'common.language': 'Language',
     'common.back': 'Back to all games',
     'common.allGames': 'All games',
@@ -193,6 +196,9 @@ addStrings({
     'progress.skate': { one: 'Scored {count} point', other: 'Scored {count} points' },
   },
   it: {
+    'game.forest.title': 'Il bosco ricorda',
+    'game.forest.blurb': 'Risvegliati nei panni di un robot gigante. Segui un uccellino in un bosco dipinto e ritrova i suoi 22 ricordi.',
+    'progress.forest': 'Passeggiata nel bosco',
     'common.language': 'Lingua',
     'common.back': 'Torna a tutti i giochi',
     'common.allGames': 'Tutti i giochi',
@@ -244,6 +250,9 @@ addStrings({
     'progress.skate': { one: '{count} punto fatto', other: '{count} punti fatti' },
   },
   es: {
+    'game.forest.title': 'El bosque recuerda',
+    'game.forest.blurb': 'Despierta como un robot gigante. Sigue a un pájaro por un bosque pintado y encuentra sus 22 recuerdos.',
+    'progress.forest': 'Paseo por el bosque',
     'common.language': 'Idioma',
     'common.back': 'Volver a todos los juegos',
     'common.allGames': 'Todos los juegos',
@@ -295,6 +304,9 @@ addStrings({
     'progress.skate': { one: '{count} punto conseguido', other: '{count} puntos conseguidos' },
   },
   'pt-BR': {
+    'game.forest.title': 'A floresta se lembra',
+    'game.forest.blurb': 'Acorde como um robô gigante. Siga um passarinho por uma floresta pintada e encontre suas 22 lembranças.',
+    'progress.forest': 'Passeio na floresta',
     'common.language': 'Idioma',
     'common.back': 'Voltar para todos os jogos',
     'common.allGames': 'Todos os jogos',
@@ -346,6 +358,9 @@ addStrings({
     'progress.skate': { one: '{count} ponto feito', other: '{count} pontos feitos' },
   },
   de: {
+    'game.forest.title': 'Der Wald erinnert sich',
+    'game.forest.blurb': 'Erwache als riesiger Roboter. Folge einem Vogel durch einen gemalten Wald und finde seine 22 Erinnerungen.',
+    'progress.forest': 'Im Wald gewandert',
     'common.language': 'Sprache',
     'common.back': 'Zurück zu allen Spielen',
     'common.allGames': 'Alle Spiele',
