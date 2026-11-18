@@ -679,7 +679,8 @@ panel.addEventListener('close', () => {
 const fullscreenButton = node('button', null, 'round');
 setupFullscreen(fullscreenButton);
 translatePage();
-const fitControls = setupTravelControls(document.querySelector('header'));
+setupTravelControls(document.querySelector('header'));
+const fitControls = setupTravelControls(document.querySelector('.play-controls'));
 document.title = t('game.forest.title') + ' · Playbox';
 if (getLanguage() !== 'en') $('title').textContent = t('game.forest.title');
 $('begin').firstElementChild.textContent = f(state.started ? 'resume' : 'begin');

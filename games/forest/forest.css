@@ -297,28 +297,35 @@ h1 i {
   bottom: max(19px, env(safe-area-inset-bottom));
   left: var(--pad);
   right: var(--pad);
-  display: flex;
+  display: grid;
+  grid-template-columns: 48px 48px minmax(0, 1fr) 48px 48px;
+  grid-template-areas: "west east actions . .";
+  align-items: center;
   gap: 8px;
   pointer-events: none;
 }
+#west { grid-area: west; }
+#east { grid-area: east; }
+.play-controls {
+  grid-area: actions;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
 .playbar button { pointer-events: auto; }
-#trail-actions {
+.toolbar-items {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
 }
-.play-tools { display: contents; }
-#play[hidden] ~ header .play-tools { display: none; }
-#trail-actions > *, #trail-actions button { flex: none; }
-#trail-actions .home, #trail-actions button, #actions-toggle { min-height: 44px; }
-#trail-actions .round { width: 44px; }
-header.compact #trail-actions {
+.toolbar-items > * { flex: none; }
+.toolbar-items .home, .toolbar-items button, [aria-controls="play-actions"],
+[aria-controls="trail-actions"] { min-height: 44px; }
+.toolbar-items .round { width: 44px; }
+.compact > .toolbar-items {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
   width: max-content;
-  max-width: 100%;
   max-height: calc(100dvh - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   overflow: auto;
   flex-wrap: wrap;
@@ -327,18 +334,19 @@ header.compact #trail-actions {
   border-radius: 8px;
   background: #1d3027f7;
   box-shadow: 0 3px 16px #10261d73;
+  pointer-events: auto;
 }
-header.compact:not(.expanded) #trail-actions { visibility: hidden; }
-header.compact #trail-actions { justify-content: flex-start; }
-header.compact .play-tools {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: inherit;
-  width: 100%;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #fff3cf35;
+header.compact > .toolbar-items {
+  top: calc(100% + 8px);
+  right: 0;
+  max-width: 100%;
 }
+.play-controls.compact > .toolbar-items {
+  bottom: calc(100% + 8px);
+  max-width: 100%;
+  justify-content: center;
+}
+.compact:not(.expanded) > .toolbar-items { visibility: hidden; }
 .glass {
   border-radius: 5px;
   padding: 9px 15px;
@@ -905,7 +913,8 @@ header.compact .play-tools {
   .playbar {
     left: max(12px, env(safe-area-inset-left));
     right: max(12px, env(safe-area-inset-right));
-    justify-content: space-between;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    grid-template-areas: "west actions east";
   }
   .playbar .walk-key { width: 48px; min-height: 48px; padding: 0; }
   header {

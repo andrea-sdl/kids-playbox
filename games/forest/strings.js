@@ -72,6 +72,7 @@ const rows = {
   mapLabel: ['Forest map', 'Mappa del bosco', 'Mapa del bosque', 'Mapa da floresta', 'Waldkarte'],
   close: ['Close', 'Chiudi', 'Cerrar', 'Fechar', 'Schließen'],
   back: ['Back', 'Indietro', 'Atrás', 'Voltar', 'Zurück'],
+  menu: ['Menu', 'Menu', 'Menú', 'Menu', 'Menü'],
   actions: ['Actions', 'Azioni', 'Acciones', 'Ações', 'Aktionen'],
   controls: [
     'Use the arrows or WASD to walk. Hold Shift to run. Press E near a glimmer to investigate. You can also tap the ground to walk or tap a glimmer to approach it.',

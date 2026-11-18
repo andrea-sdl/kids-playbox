@@ -50,20 +50,23 @@
         <div id="toast" role="status" aria-live="polite"></div>
         <div class="playbar">
           <button id="west" class="glass walk-key" data-i18n-attr="aria-label:forest.west">←</button>
+          <div class="play-controls">
+            <button id="play-actions-toggle" class="glass" aria-expanded="false" aria-controls="play-actions" data-i18n="forest.actions" hidden></button>
+            <div id="play-actions" class="toolbar-items">
+              <button id="journal" class="glass">
+                <span class="ico" data-icon="book"></span><span id="count"></span>
+              </button>
+              <button id="action" class="glass" hidden></button>
+              <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button>
+              <button id="listen" class="glass" data-i18n="forest.look"></button>
+            </div>
+          </div>
           <button id="east" class="glass walk-key" data-i18n-attr="aria-label:forest.east">→</button>
         </div>
       </section>
       <header>
-        <button id="actions-toggle" class="glass" aria-expanded="false" aria-controls="trail-actions" data-i18n="forest.actions" hidden></button>
-        <div id="trail-actions">
-          <div class="play-tools">
-            <button id="journal" class="glass">
-              <span class="ico" data-icon="book"></span><span id="count"></span>
-            </button>
-            <button id="action" class="glass" hidden></button>
-            <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button>
-            <button id="listen" class="glass" data-i18n="forest.look"></button>
-          </div>
+        <button id="actions-toggle" class="glass" aria-expanded="false" aria-controls="trail-actions" data-i18n="forest.menu" hidden></button>
+        <div id="trail-actions" class="toolbar-items">
           <a class="home" href="../../" data-i18n-attr="aria-label:forest.playbox"
             ><span class="back" aria-hidden="true">‹</span><span>Playbox</span></a
           >

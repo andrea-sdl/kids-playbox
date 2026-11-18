@@ -1,13 +1,13 @@
 // Keep the same controls and keyboard focus when the toolbar changes layout.
-export function setupTravelControls(header) {
-  const actions = header.querySelector('#trail-actions');
-  const toggle = header.querySelector('#actions-toggle');
+export function setupTravelControls(toolbar) {
+  const actions = toolbar.querySelector('.toolbar-items');
+  const toggle = toolbar.querySelector('[aria-controls]');
   const buttons = [...actions.querySelectorAll('button, a')];
 
   function expand(open) {
     toggle.setAttribute('aria-expanded', String(open));
-    header.classList.toggle('expanded', open);
-    actions.inert = header.classList.contains('compact') && !open;
+    toolbar.classList.toggle('expanded', open);
+    actions.inert = toolbar.classList.contains('compact') && !open;
   }
 
   function fit() {
@@ -16,10 +16,10 @@ export function setupTravelControls(header) {
     const needed =
       visible.reduce((width, button) => width + button.getBoundingClientRect().width, 0) +
       gap * Math.max(0, visible.length - 1);
-    const compact = needed > header.clientWidth;
-    if (header.classList.contains('compact') === compact) return;
+    const compact = needed > toolbar.clientWidth;
+    if (toolbar.classList.contains('compact') === compact) return;
     const focused = document.activeElement;
-    header.classList.toggle('compact', compact);
+    toolbar.classList.toggle('compact', compact);
     toggle.hidden = !compact;
     expand(false);
     if (compact && actions.contains(focused)) toggle.focus();
@@ -28,25 +28,25 @@ export function setupTravelControls(header) {
 
   toggle.onclick = () => expand(toggle.getAttribute('aria-expanded') !== 'true');
   actions.addEventListener('click', (event) => {
-    if (!header.classList.contains('expanded')) return;
+    if (!toolbar.classList.contains('expanded')) return;
     if (!event.composedPath().some((element) => buttons.includes(element))) return;
     expand(false);
     if (!document.querySelector('dialog[open]')) toggle.focus();
   });
-  header.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !header.classList.contains('expanded')) return;
+  toolbar.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !toolbar.classList.contains('expanded')) return;
     expand(false);
     toggle.focus();
     event.preventDefault();
   });
   document.addEventListener('pointerdown', (event) => {
-    if (!header.contains(event.target)) expand(false);
+    if (!toolbar.contains(event.target)) expand(false);
   });
-  header.addEventListener('focusout', (event) => {
-    if (event.relatedTarget && !header.contains(event.relatedTarget)) expand(false);
+  toolbar.addEventListener('focusout', (event) => {
+    if (event.relatedTarget && !toolbar.contains(event.relatedTarget)) expand(false);
   });
   const observer = new ResizeObserver(fit);
-  for (const element of [header, ...buttons]) observer.observe(element);
+  for (const element of [toolbar, ...buttons]) observer.observe(element);
   fit();
   return fit;
 }

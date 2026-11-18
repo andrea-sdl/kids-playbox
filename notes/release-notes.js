@@ -7,6 +7,7 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v43.forest': 'The journal, nearby discovery, Run, and Look around are at the bottom center. Playbox and settings stay at the top right.',
     'changes.v42.forest': 'Forest controls are in the top right. On smaller screens, open Actions to find them.',
     'changes.v41.forest': 'Hold either walking arrow on your phone to keep walking without selecting text.',
     'changes.v40.forest': 'The owl opens its wings while its tree stays still. The other forest discoveries now keep their scenery still, too.',
@@ -70,6 +71,7 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v43.forest': 'Il diario, la scoperta vicina, la corsa e l’esplorazione sono in basso al centro. Playbox e le impostazioni restano in alto a destra.',
     'changes.v42.forest': 'I comandi del bosco sono in alto a destra. Sugli schermi piccoli, apri Azioni per trovarli.',
     'changes.v41.forest': 'Tieni premuta una delle frecce sul telefono per camminare senza selezionare il testo.',
     'changes.v40.forest': 'Il gufo apre le ali e l’albero resta fermo. Anche gli sfondi delle altre scoperte nel bosco restano fermi.',
@@ -133,6 +135,7 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v43.forest': 'El diario, el descubrimiento cercano, correr y mirar alrededor están abajo, en el centro. Playbox y los ajustes siguen arriba a la derecha.',
     'changes.v42.forest': 'Los controles del bosque están arriba a la derecha. En pantallas pequeñas, abre Acciones para verlos.',
     'changes.v41.forest': 'Mantén pulsada una flecha en el móvil para caminar sin seleccionar texto.',
     'changes.v40.forest': 'El búho abre las alas y el árbol permanece quieto. Los fondos de los demás descubrimientos del bosque también se quedan quietos.',
@@ -196,6 +199,7 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v43.forest': 'O diário, a descoberta próxima, correr e olhar ao redor ficam no centro da parte inferior. Playbox e as configurações continuam no canto superior direito.',
     'changes.v42.forest': 'Os controles da floresta ficam no canto superior direito. Em telas pequenas, abra Ações para encontrá-los.',
     'changes.v41.forest': 'Mantenha uma das setas pressionada no celular para andar sem selecionar texto.',
     'changes.v40.forest': 'A coruja abre as asas e a árvore continua parada. O cenário das outras descobertas da floresta também fica parado.',
@@ -259,6 +263,7 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v43.forest': 'Tagebuch, Fundstück, Rennen und Umsehen sind unten in der Mitte. Playbox und die Einstellungen bleiben oben rechts.',
     'changes.v42.forest': 'Die Steuerung für den Wald findest du oben rechts. Auf kleinen Bildschirmen öffnest du dafür Aktionen.',
     'changes.v41.forest': 'Halte auf dem Handy eine der Pfeiltasten gedrückt, um zu gehen, ohne Text zu markieren.',
     'changes.v40.forest': 'Die Eule breitet ihre Flügel aus, während der Baum stillsteht. Auch bei den anderen Entdeckungen im Wald bleibt der Hintergrund ruhig.',
