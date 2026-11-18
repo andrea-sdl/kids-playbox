@@ -299,7 +299,30 @@ export function createWalkRenderer(world, plate, canvas) {
     carp: 75,
     moth: 40,
   };
-  function props(room, state, t) {
+  function semaphore(state, motion, t) {
+    const cel = picture('prop-semaphore');
+    if (!cel.naturalWidth) return;
+    const active = state.found.has('signal');
+    let angle = active ? 0 : 0.79;
+    if (active && !reduced.matches && motion.signalAt !== undefined) {
+      const stops = [0.79, 0.72, 0.52, 0.29, 0.11, -0.04, 0];
+      const step = clamp(Math.floor((t - motion.signalAt) * 8), 0, stops.length - 1);
+      angle = stops[step];
+    }
+    ctx.drawImage(cel, 0, 0, 150, 85, 958, 128, 150, 85);
+    ctx.save();
+    ctx.translate(980, 184);
+    ctx.rotate(angle);
+    ctx.drawImage(cel, 150, 0, 150, 85, -22, -56, 150, 85);
+    ctx.restore();
+    if (active && angle < 0.12) {
+      ctx.fillStyle = '#ffcb69';
+      ctx.beginPath();
+      ctx.arc(981, 201, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  function props(room, state, motion, t) {
     for (const [id, [x, y]] of Object.entries(places[room].points)) {
       const done = state.found.has(id);
       if (id.startsWith('coin')) {
@@ -320,20 +343,25 @@ export function createWalkRenderer(world, plate, canvas) {
       }
       if (id === 'carp') ctx.globalAlpha = 0.64;
       if (done && id === 'boat') px += 0.027;
-      if (done && id === 'moth') {
-        px += Math.sin(t * 0.56) * 0.021;
-        py -= 0.035 + Math.sin(t * 0.76) * 0.016;
+      if (id === 'moth') {
+        const wings = picture('prop-moth-wings');
+        const tick = reduced.matches ? 0 : Math.floor(t * 9);
+        if (done) {
+          px += Math.sin(tick / 16) * 0.021;
+          py -= 0.035 + Math.sin(tick / 11) * 0.016;
+        }
+        if (wings.naturalWidth) {
+          const poses = [0, 1, 2, 2, 3, 1];
+          const pose = !done && tick % 46 > 13 ? 0 : poses[tick % poses.length];
+          ctx.drawImage(wings, pose * 100, 0, 100, 86, px * 1600 - 29, py * 900 - 38, 58, 50);
+          continue;
+        }
       }
       image('prop-' + id, px, py, propSizes[id]);
       ctx.globalAlpha = 1;
       if (done && ['pods', 'float'].includes(id)) glints(px, py - 0.025, t);
     }
-    if (room === 'marsh' && state.found.has('signal')) {
-      ctx.fillStyle = '#ffcb69';
-      ctx.beginPath();
-      ctx.arc(0.61 * 1600, 0.208 * 900, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    if (room === 'marsh') semaphore(state, motion, t);
   }
   function render(state, motion, movie, time) {
     const t = Math.floor(time * 12) / 12;
@@ -350,7 +378,7 @@ export function createWalkRenderer(world, plate, canvas) {
         ctx.save();
         ctx.translate(tile.offset * 1600, 0);
         weather(tile.room, reduced.matches ? 1 : t);
-        props(tile.room, state, t);
+        props(tile.room, state, motion, t);
         if (tile.room === 'grove') {
           spacecraft(state, time, motion);
           if (state.found.has('tree')) {

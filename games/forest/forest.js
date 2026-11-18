@@ -11,14 +11,15 @@ import {
   neighboringPaintings,
   roadPosition,
   memories,
-  memoryLength,
+  walkableY,
   isCoin,
-  stories,
   restore,
   clamp,
 } from './world.js';
-import { actionText, echoText } from './encounters.js';
+import { echoText } from './encounters.js';
 import { createWalkRenderer } from './painted.js';
+import { setupTravelControls } from './travel-controls.js';
+import { createObjectAnimation } from './object-cels.js';
 import { traceRing } from './carving.js';
 import { forestMusic } from './music.js';
 import { makeSound } from './audio.js';
@@ -31,7 +32,7 @@ const panel = $('panel'),
   spots = $('spots');
 const state = restore(readJSON('forest:journey', null));
 const motion = { walking: false, facing: 1, stride: 0, kneel: 0 };
-let renderer;
+let renderer, card;
 const keys = new Set();
 const heldPointers = new Map();
 const score = forestMusic();
@@ -115,6 +116,7 @@ function panelTitle(title) {
 }
 function openPanel(title, cls = '') {
   stopFeet();
+  card = null;
   body.replaceChildren(panelTitle(title));
   panel.className = cls;
   if (!panel.open) panel.showModal();
@@ -171,6 +173,7 @@ function label(id) {
 function mark(id) {
   if (state.found.has(id)) return;
   state.found.add(id);
+  if (id === 'signal') motion.signalAt = time;
   save();
   updateCount();
   const s = spots.querySelector('[data-id="' + id + '"]');
@@ -183,6 +186,7 @@ function mark(id) {
     }
   }
   nearest = '';
+  $('action').hidden = true;
   updateNear();
 }
 function updateCount() {
@@ -237,6 +241,7 @@ function begin() {
   $('opening').hidden = true;
   $('play').hidden = false;
   playing = true;
+  fitControls();
   state.started = true;
   sound.wake();
   if (!renderer) {
@@ -271,10 +276,13 @@ function journal() {
       const done = id === 'passage' ? state.finished : state.found.has(id);
       const li = node('li');
       if (done && id !== 'passage') {
-        const replay = button(f(id), 'memory-replay', () => {
-          panel.close();
-          replayMemory(id, journal);
-        });
+        const replay = button(f(id), 'memory-replay', () =>
+          objectCard(id, () => {
+            journal();
+            body.querySelector('[data-memory="' + id + '"]')?.focus();
+          }),
+        );
+        replay.dataset.memory = id;
         replay.setAttribute('aria-label', f('replay') + ' · ' + f(id));
         replay.append(node('small', '▶'));
         li.append(node('span', '✓'), replay);
@@ -299,7 +307,7 @@ function destination(id, room = state.room) {
   const [x, y] = places[room].points[id];
   if (id === 'ship') return { x: 0.575, y: 0.824 };
   if (id === 'passage') return { x, y: 0.72 };
-  return { x, y: clamp(y + 0.075, 0.74, 0.9) };
+  return { x, y: walkableY(room, x, clamp(y + 0.075, 0.74, 0.9)) };
 }
 function approach(id, room = state.room) {
   if (movie || !playing) return;
@@ -325,76 +333,67 @@ function updateNear() {
   $('action').hidden = !best;
   if (best) $('action').textContent = label(best) + '  ↗';
 }
-function encounter(id) {
-  const done = state.found.has(id);
-  openPanel(f(id), 'encounter');
+function objectCard(id, onBack) {
+  openPanel(f(id), 'encounter discovery');
+  const view = node('div', null, 'object-view');
+  const plate = node('img');
+  plate.alt = '';
+  const canvas = node('canvas');
+  canvas.hidden = true;
+  canvas.setAttribute('aria-hidden', 'true');
+  let canAnimate = true;
+  function showStill() {
+    if (!canAnimate) return;
+    canAnimate = false;
+    canvas.hidden = true;
+    let artwork = id;
+    if (isCoin(id)) artwork = 'prop-coin';
+    if (id === 'ship') artwork = 'ignition';
+    if (id === 'tree') artwork = 'bark';
+    plate.src = 'art/' + artwork + '.webp';
+  }
+  plate.onerror = showStill;
+  plate.onload = () =>
+    view
+      .closest('dialog')
+      ?.style.setProperty('--object-aspect', plate.naturalWidth / plate.naturalHeight);
+  plate.src = 'art/objects/' + id + '-ground.webp';
+  view.append(plate, canvas);
   const copy = node('div', null, 'insert-copy');
   copy.append(body.firstChild);
-  body.append(photo(id, 'insert'), copy);
-  if (done)
-    copy.append(
-      node('p', echoText(id)),
-      button(f('go'), 'primary', () => panel.close()),
-    );
-  else
-    copy.append(
-      button(actionText(id), 'primary', () => {
-        mark(id);
-        panel.close();
-        replayMemory(id, () => encounter(id));
-      }),
-    );
+  const echo = echoText(id);
+  if (echo) copy.append(node('p', echo));
+  const back = button(f('back'), 'glass', backFromObject);
+  const actions = node('div', null, 'object-actions');
+  actions.append(back);
+  body.append(view, copy, actions);
+  const animation = createObjectAnimation(id, canvas, showStill);
+  card = {
+    onBack,
+    paint(dt) {
+      if (canAnimate) animation.paint(dt);
+    },
+  };
+  sound.play(id);
+  back.focus();
 }
-
-function rollFilm(kind, after = null) {
-  target = null;
-  motion.walking = false;
+function backFromObject() {
+  const onBack = card.onBack;
+  card = null;
+  if (onBack) onBack();
+  else panel.close();
+}
+function discover(id, onBack) {
+  mark(id);
+  objectCard(id, onBack);
+}
+function startEnding() {
+  stopFeet();
   $('toast').textContent = '';
-  movie = { kind, age: 0, after };
+  movie = { kind: 'ending', age: 0 };
   document.body.classList.add('filming');
   score.duck(true);
-  if (kind === 'ending') sound.play('stairs');
-}
-async function replayMemory(id, after = null) {
-  rollFilm(id, after);
-  const film = movie;
-  film.loading = true;
-  const still = $('memory-still');
-  const animation = $('memory-view');
-  let artwork = id;
-  if (isCoin(id)) artwork = 'meadow';
-  if (id === 'ship') artwork = 'ignition';
-  if (id === 'tree') artwork = 'bark';
-  still.src = 'art/' + artwork + '.webp';
-  still.hidden = false;
-  animation.hidden = true;
-  $('film-name').textContent = f(id);
-  $('screening').hidden = false;
-  $('film-skip').textContent = f('skip');
-  $('film-skip').focus({ preventScroll: true });
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    film.loading = false;
-    if (id === 'ship') sound.play('ship');
-    return;
-  }
-  film.request = new AbortController();
-  try {
-    const response = await fetch('art/films/' + id + '.gif', { signal: film.request.signal });
-    if (!response.ok) throw new Error('Memory unavailable');
-    const data = await response.blob();
-    if (movie !== film) return;
-    // Give even consecutive replays of the same GIF a fresh animation clock.
-    film.url = URL.createObjectURL(data);
-    animation.src = film.url;
-    await animation.decode();
-    if (movie !== film) return;
-    animation.hidden = false;
-    still.hidden = true;
-    film.loading = false;
-    if (id === 'ship') sound.play('ship');
-  } catch {
-    if (movie === film) $('film-skip').textContent = f('go');
-  }
+  sound.play('stairs');
 }
 function carveTree() {
   openPanel(f('tree'), 'encounter');
@@ -407,11 +406,8 @@ function carveTree() {
   const copy = node('div', null, 'insert-copy');
   copy.append(body.firstChild, node('p', f('trace')));
   function finish() {
-    mark('tree');
-    sound.play('wood');
     motion.kneel = time + 0.7;
-    panel.close();
-    replayMemory('tree');
+    discover('tree');
   }
   traceRing(guide, finish);
   copy.append(button(f('carve'), 'primary', finish));
@@ -433,14 +429,13 @@ function awakenShip() {
     tell(label(id));
     return;
   }
-  mark(id);
-  replayMemory('ship');
+  discover('ship');
   return;
 }
 function interact(id) {
   if (movie) return;
   if (id === 'passage') {
-    if (state.found.size === memories.length) rollFilm('ending');
+    if (state.found.size === memories.length) startEnding();
     else tell(f('locked'), 4);
     inFalls = true;
     return;
@@ -453,13 +448,8 @@ function interact(id) {
     carveTree();
     return;
   }
-  if (stories.includes(id)) {
-    encounter(id);
-    return;
-  }
   if (isCoin(id) && state.found.has(id)) return;
-  mark(id);
-  replayMemory(id, id === 'map' ? journal : null);
+  discover(id);
 }
 function finalCard() {
   // Hold the last flight drawing beneath the end title until the player returns.
@@ -470,47 +460,20 @@ function finalCard() {
     button(f('return'), 'primary', () => panel.close()),
   );
 }
-function finishFilm() {
-  const { kind, after, request, url } = movie;
-  request?.abort();
-  if (url) {
-    $('memory-view').removeAttribute('src');
-    URL.revokeObjectURL(url);
-  }
-  movie = null;
-  $('screening').hidden = true;
-  document.body.classList.remove('filming');
-  score.duck(false);
-  if (kind === 'ending') {
-    document.body.classList.add('ending-title');
-    state.finished = true;
-    state.y = 0.86;
-    save();
-    finalCard();
-    return;
-  }
-  if (after) {
-    after();
-    return;
-  }
-  stage.focus({ preventScroll: true });
-  tell(f(kind) + '  ✓');
-}
-function tickFilm(dt) {
-  if (movie.loading) return;
+function tickEnding(dt) {
   const previous = movie.age;
   movie.age += dt;
-  if (movie.kind === 'ending') {
-    if (previous < 2.4 && movie.age >= 2.4) sound.play('flight');
-    if (movie.age >= 7) finishFilm();
-  } else if (movie.kind === 'ship') {
-    if (movie.age >= 5.5) finishFilm();
-  } else {
-    if (previous < 0.55 && movie.age >= 0.55) sound.play(movie.kind);
-    if (movie.age >= memoryLength) finishFilm();
-  }
+  if (previous < 2.4 && movie.age >= 2.4) sound.play('flight');
+  if (movie.age < 7) return;
+  movie = null;
+  document.body.classList.remove('filming');
+  document.body.classList.add('ending-title');
+  score.duck(false);
+  state.finished = true;
+  state.y = 0.86;
+  save();
+  finalCard();
 }
-
 function enterDoor(door) {
   state.room = door.to;
   state.x = door.arrivesAt;
@@ -530,8 +493,8 @@ function floorEvents() {
     const coin = destination(id);
     if (Math.hypot(state.x - coin.x, (state.y - coin.y) * 0.75) < 0.029) {
       const onward = target;
-      mark(id);
-      replayMemory(id, () => {
+      discover(id, () => {
+        panel.close();
         target = onward;
         stage.focus({ preventScroll: true });
       });
@@ -578,9 +541,10 @@ function walk(dt) {
   if (newRoom && target) target.x -= shift;
   state.room = next.room;
   state.x = next.x;
-  state.y = clamp(oldY + (dy / magnitude) * distance, 0.72, 0.91);
+  state.y = walkableY(next.room, next.x, oldY + (dy / magnitude) * distance);
   const moved = Math.hypot(next.x + (newRoom ? shift : 0) - oldX, state.y - oldY);
   if (newRoom) enterPlace();
+  if (motion.walking && moved <= 0.00001) save();
   motion.walking = moved > 0.00001;
   if (!motion.walking) {
     target = null;
@@ -608,11 +572,12 @@ function walk(dt) {
 function loop(stamp) {
   const dt = Math.min(0.055, (stamp - lastStamp) / 1000);
   lastStamp = stamp;
+  if (card && panel.open && !document.hidden) card.paint(dt);
   if (playing && !panel.open && !document.hidden) {
     time += dt;
-    if (movie) tickFilm(dt);
+    if (movie) tickEnding(dt);
     else walk(dt);
-    if (!panel.open && (!movie || movie.kind === 'ending')) renderer.render(state, motion, movie, time);
+    if (!panel.open) renderer.render(state, motion, movie, time);
     if (!movie && time > nextChirp && state.room !== 'hearth') {
       sound.play('bird');
       nextChirp = time + 12 + Math.random() * 8;
@@ -652,7 +617,9 @@ document.addEventListener('visibilitychange', () => {
 stage.addEventListener('click', (e) => {
   if (movie || e.target.closest('button')) return;
   const p = renderer.point(e.clientX, e.clientY);
-  target = { x: p.x, y: clamp(p.y, 0.72, 0.91) };
+  const dest = roadPosition(state.room, p.x);
+  const shift = (road.indexOf(dest.room) - road.indexOf(state.room)) * pitch;
+  target = { x: dest.x + shift, y: walkableY(dest.room, dest.x, p.y) };
   stage.focus({ preventScroll: true });
 });
 $('begin').onclick = begin;
@@ -673,9 +640,6 @@ for (const [id, direction] of [
     if (!movie && e.detail === 0) target = { x: state.x + direction * 0.16, y: state.y };
   });
 }
-$('film-skip').onclick = () => {
-  if (movie) finishFilm();
-};
 $('music').onclick = () => {
   musicOn = !musicOn;
   writeJSON('forest:music', musicOn);
@@ -700,13 +664,24 @@ $('sound').onclick = () => {
   soundButton();
 };
 document.querySelector('.how').onclick = help;
+panel.addEventListener('cancel', (event) => {
+  if (!card) return;
+  event.preventDefault();
+  backFromObject();
+});
 panel.addEventListener('close', () => {
+  if (panel.open) return;
+  card = null;
   document.body.classList.remove('ending-title');
   if (playing && !movie && !panel.open) stage.focus({ preventScroll: true });
 });
 const fullscreenButton = node('button', null, 'round');
 setupFullscreen(fullscreenButton);
 translatePage();
+const fitControls = setupTravelControls(
+  document.querySelector('.playbar'),
+  document.querySelector('header'),
+);
 document.title = t('game.forest.title') + ' · Playbox';
 if (getLanguage() !== 'en') $('title').textContent = t('game.forest.title');
 $('begin').firstElementChild.textContent = f(state.started ? 'resume' : 'begin');

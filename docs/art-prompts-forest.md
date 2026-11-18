@@ -20,4 +20,4 @@ The visual references were the woodland scale of *My Neighbor Totoro*, the aband
 
 ## The walking road and discovery films
 
-The walking camera tracks the guardian across twelve adjoining paintings. The guardian, swallow and props use drawn cels. The farmhouse interior and final flight have their own painted backgrounds. The meadow holds the only visible sun. Farther east, painted cloud bands and ridgelines carry the morning light. Each discovery plays a six-drawing GIF with individually timed holds. The journal replays the same sequence from its first frame.
+The walking camera tracks the guardian across twelve adjoining paintings. The guardian, swallow and props use drawn cels. The farmhouse interior and final flight have their own painted backgrounds. The meadow holds the only visible sun. Farther east, painted cloud bands and ridgelines carry the morning light. Each discovery card holds one background painting while transparent foreground cels move. The semaphore arm turns on its pin and the lamp lights as it seats. The moth cycles through wing drawings as it lifts from the moss and lands. The journal uses the same object cards.

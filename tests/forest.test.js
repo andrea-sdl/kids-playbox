@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { memories, memoryLength, places, restore, road, roadPosition, pitch, doors } from '../games/forest/world.js';
+import { memories, walkableY, places, restore, road, roadPosition, pitch, doors } from '../games/forest/world.js';
 
 test('walking east and back crosses every landscape at the same world position', () => {
   assert.equal(road.length, 12);
@@ -55,35 +55,29 @@ test('restarting can distinguish an old open tab from the new journey', () => {
   assert.equal(fresh.finished, false);
 });
 
-// Read GIF block boundaries so compressed pixel data cannot count as another frame.
-function gifTiming(data) {
-  const paletteBytes = (packed) => (packed & 0x80 ? 3 * (2 << (packed & 7)) : 0);
-  let offset = 13 + paletteBytes(data[10]);
-  let frames = 0;
-  let centiseconds = 0;
-  while (offset < data.length && data[offset] !== 0x3b) {
-    const type = data[offset++];
-    if (type === 0x2c) {
-      frames++;
-      offset += 10 + paletteBytes(data[offset + 8]); // Descriptor, palette and LZW code size.
-    } else {
-      assert.equal(type, 0x21, 'expected a GIF extension');
-      if (data[offset++] === 0xf9) centiseconds += data.readUInt16LE(offset + 2);
-    }
-    while (offset < data.length && data[offset]) offset += 1 + data[offset];
-    offset++;
-  }
-  assert.equal(data[offset], 0x3b, 'expected the GIF trailer');
-  return { frames, centiseconds };
-}
-
-test('every discovery has an animated GIF timed to its playback window', () => {
+test('each discovery has a painted background and a separate WebP pose sheet', () => {
   for (const id of memories) {
-    const url = new URL('../games/forest/art/films/' + id + '.gif', import.meta.url);
-    const data = readFileSync(url);
-    assert.equal(data.toString('ascii', 0, 6), 'GIF89a', id);
-    const { frames, centiseconds } = gifTiming(data);
-    assert.ok(frames > 1, id);
-    assert.equal(centiseconds, id === 'ship' ? 550 : memoryLength * 100, id);
+    for (const layer of ['ground', 'poses']) {
+      const src = new URL('../games/forest/art/objects/' + id + '-' + layer + '.webp', import.meta.url);
+      assert.equal(readFileSync(src).toString('ascii', 8, 12), 'WEBP', id);
+    }
   }
+});
+
+test('narrow paths meet at both ends of the shared painting overlap', () => {
+  for (let i = 1; i < road.length; i++) {
+    for (const x of [0.89, 0.94, 0.99]) {
+      for (const y of [0.72, 0.84, 0.91]) {
+        assert.equal(walkableY(road[i - 1], x, y), walkableY(road[i], x - pitch, y));
+      }
+    }
+  }
+});
+
+test('a saved guardian standing in reeds or below the viaduct resumes on the path', () => {
+  for (const room of ['causeway', 'marsh', 'viaduct', 'gorge']) {
+    assert.ok(restore({ room, x: 0.5, y: 0.72 }).y >= 0.79, room);
+    assert.ok(restore({ room, x: 0.5, y: 0.91 }).y <= 0.89, room);
+  }
+  assert.equal(restore({ room: 'meadow', x: 0.5, y: 0.72 }).y, 0.72);
 });

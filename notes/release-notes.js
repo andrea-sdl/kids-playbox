@@ -7,6 +7,8 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v40.forest': 'The owl opens its wings while its tree stays still. The other forest discoveries now keep their scenery still, too.',
+    'changes.v39.forest': 'Objects move as soon as you open their cards. Inspect them up close or go back. The causeway and viaduct now keep your feet on the path. On phones, the walking arrows sit on opposite sides.',
     'changes.v38.forest': 'One sun rises over the meadow. All 22 discoveries now play as painted animated GIFs, including journal replays.',
     'changes.v37.forest': 'Walk through the painted forest again. Each discovery opens a Three.js animation you can replay from the journal.',
     'changes.v36.forest': 'The Forest Remembers is now the last game in Playbox. Start a fresh journey from the title screen or Settings.',
@@ -66,6 +68,8 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v40.forest': 'Il gufo apre le ali e l’albero resta fermo. Anche gli sfondi delle altre scoperte nel bosco restano fermi.',
+    'changes.v39.forest': 'Gli oggetti si animano quando apri le schede. Puoi osservarli da vicino o tornare indietro. Sull’argine e sul viadotto si cammina sul sentiero. Sul telefono, le frecce per camminare sono ai lati opposti.',
     'changes.v38.forest': 'Un solo sole sorge sul prato. Tutte e 22 le scoperte sono GIF animate dipinte, che puoi rivedere nel diario.',
     'changes.v37.forest': 'Torna a camminare nel bosco dipinto. Ogni scoperta ha un’animazione Three.js che puoi rivedere dal diario.',
     'changes.v36.forest': 'Il bosco ricorda è ora l’ultimo gioco di Playbox. Puoi ricominciare dal titolo o dalle impostazioni.',
@@ -125,6 +129,8 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v40.forest': 'El búho abre las alas y el árbol permanece quieto. Los fondos de los demás descubrimientos del bosque también se quedan quietos.',
+    'changes.v39.forest': 'Los objetos se animan al abrir sus fichas. Puedes verlos de cerca o volver. La calzada y el viaducto te mantienen en el camino. En el móvil, las flechas para caminar están en lados opuestos.',
     'changes.v38.forest': 'Un solo sol se alza sobre el prado. Los 22 hallazgos tienen GIF animados pintados que puedes volver a ver en el diario.',
     'changes.v37.forest': 'Vuelve al bosque pintado. Cada hallazgo tiene una animación en Three.js que puedes volver a ver desde el diario.',
     'changes.v36.forest': 'El bosque recuerda es ahora el último juego de Playbox. Puedes volver a empezar desde el título o los ajustes.',
@@ -184,6 +190,8 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v40.forest': 'A coruja abre as asas e a árvore continua parada. O cenário das outras descobertas da floresta também fica parado.',
+    'changes.v39.forest': 'Os objetos se animam ao abrir suas fichas. Você pode vê-los de perto ou voltar. Na passagem entre os juncos e no viaduto, você caminha pela trilha. No celular, as setas para caminhar ficam em lados opostos.',
     'changes.v38.forest': 'Um único sol nasce sobre o prado. As 22 descobertas têm GIFs animados pintados que você pode rever no diário.',
     'changes.v37.forest': 'Caminhe de novo pela floresta pintada. Cada descoberta tem uma animação em Three.js que você pode rever pelo diário.',
     'changes.v36.forest': 'A floresta se lembra agora é o último jogo do Playbox. Você pode recomeçar pela tela inicial ou pelas configurações.',
@@ -243,6 +251,8 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v40.forest': 'Die Eule breitet ihre Flügel aus, während der Baum stillsteht. Auch bei den anderen Entdeckungen im Wald bleibt der Hintergrund ruhig.',
+    'changes.v39.forest': 'Die Fundstücke bewegen sich beim Öffnen ihrer Karten. Du kannst sie näher ansehen oder zurückgehen. Auf Damm und Viadukt bleibst du auf dem Weg. Auf dem Handy liegen die Richtungspfeile an gegenüberliegenden Seiten.',
     'changes.v38.forest': 'Eine einzige Sonne geht über der Wiese auf. Alle 22 Funde haben gemalte GIF-Animationen, die du im Tagebuch erneut ansehen kannst.',
     'changes.v37.forest': 'Wandere wieder durch den gemalten Wald. Zu jedem Fund gibt es eine Three.js-Animation, die du im Tagebuch erneut ansehen kannst.',
     'changes.v36.forest': 'Der Wald erinnert sich steht jetzt am Ende der Spieleliste. Du kannst am Titelbildschirm oder in den Einstellungen neu anfangen.',

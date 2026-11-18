@@ -1,90 +1,5 @@
-// The discovery is recorded when the player performs the action on the insert.
 import { getLanguage } from '../../shared/i18n.js';
 
-const actions = {
-  bell: ['Ring it gently', 'Suona piano', 'Hazla sonar', 'Toque de leve', 'Leise läuten'],
-  owl: [
-    'Call into the hollow',
-    'Chiama nel tronco',
-    'Llama al hueco',
-    'Chame no oco',
-    'In die Höhle rufen',
-  ],
-  pods: [
-    'Crack a seed pod',
-    'Apri un baccello',
-    'Abre una vaina',
-    'Abra uma vagem',
-    'Eine Kapsel öffnen',
-  ],
-  letter: [
-    'Post a maple leaf',
-    'Imbuca una foglia',
-    'Envía una hoja',
-    'Envie uma folha',
-    'Ein Blatt einwerfen',
-  ],
-  boat: [
-    'Float the ticket',
-    'Metti la barca in acqua',
-    'Suelta el barco',
-    'Solte o barco',
-    'Das Boot aussetzen',
-  ],
-  signal: [
-    'Pull the lever',
-    'Tira la leva',
-    'Tira de la palanca',
-    'Puxe a alavanca',
-    'Den Hebel ziehen',
-  ],
-  float: [
-    'Shelter the fireflies',
-    'Ripara le lucciole',
-    'Cobija las luciérnagas',
-    'Abrigue os vaga-lumes',
-    'Glühwürmchen schützen',
-  ],
-  carp: [
-    'Tap the clock face',
-    'Tocca il quadrante',
-    'Toca la esfera',
-    'Toque no mostrador',
-    'Ans Zifferblatt klopfen',
-  ],
-  fox: [
-    'Light the incense',
-    'Accendi l’incenso',
-    'Enciende el incienso',
-    'Acenda o incenso',
-    'Den Weihrauch anzünden',
-  ],
-  quilt: [
-    'Tie the loose thread',
-    'Annoda il filo',
-    'Ata el hilo suelto',
-    'Amarre a linha solta',
-    'Den Faden verknoten',
-  ],
-  tea: ['Drink the tea', 'Bevi il tè', 'Bebe el té', 'Beba o chá', 'Den Tee trinken'],
-  song: ['Wind the cylinder', 'Carica il carillon', 'Dale cuerda', 'Dê corda', 'Die Spieluhr aufziehen'],
-  scope: [
-    'Turn the telescope',
-    'Gira il telescopio',
-    'Gira el telescopio',
-    'Gire o telescópio',
-    'Das Teleskop drehen',
-  ],
-  stars: ['Turn the brass wheel', 'Gira la ruota', 'Gira la rueda', 'Gire a roda', 'Das Rad drehen'],
-  moth: ['Offer your hand', 'Porgi la mano', 'Ofrece la mano', 'Ofereça a mão', 'Die Hand reichen'],
-  stairs: [
-    'Step on the wet stone',
-    'Sali sulla pietra',
-    'Pisa la piedra',
-    'Pise na pedra',
-    'Auf den Stein treten',
-  ],
-};
 const echoes = {
   bell: [
     'A second bell answers from the empty valley.',
@@ -200,5 +115,4 @@ const echoes = {
   ],
 };
 const languageIndex = ['en', 'it', 'es', 'pt-BR', 'de'].indexOf(getLanguage());
-export const actionText = (id) => actions[id][languageIndex];
-export const echoText = (id) => echoes[id][languageIndex];
+export const echoText = (id) => echoes[id]?.[languageIndex];

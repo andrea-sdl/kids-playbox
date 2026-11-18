@@ -49,26 +49,19 @@
         </div>
         <div id="toast" role="status" aria-live="polite"></div>
         <div class="playbar">
-          <div class="travel-controls">
-            <button id="west" class="glass walk-key" data-i18n-attr="aria-label:forest.west">←</button>
-            <button id="east" class="glass walk-key" data-i18n-attr="aria-label:forest.east">→</button>
-            <button id="journal" class="glass">
-              <span class="ico" data-icon="book"></span><span id="count"></span>
-            </button>
+          <button id="west" class="glass walk-key" data-i18n-attr="aria-label:forest.west">←</button>
+          <div class="center-controls">
+            <button id="actions-toggle" class="glass" aria-expanded="false" aria-controls="trail-actions" data-i18n="forest.actions" hidden></button>
+            <div id="trail-actions">
+              <button id="journal" class="glass">
+                <span class="ico" data-icon="book"></span><span id="count"></span>
+              </button>
+              <button id="action" class="glass" hidden></button>
+              <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button>
+              <button id="listen" class="glass" data-i18n="forest.look"></button>
+            </div>
           </div>
-          <button id="action" class="glass" hidden></button>
-          <div class="motion-controls">
-            <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button
-            ><button id="listen" class="glass" data-i18n="forest.look"></button>
-          </div>
-        </div>
-      </section>
-      <section id="screening" hidden aria-labelledby="film-name">
-        <img id="memory-still" alt="" hidden />
-        <img id="memory-view" alt="" hidden />
-        <div class="film-controls">
-          <h2 id="film-name"></h2>
-          <button id="film-skip" class="glass" data-i18n="forest.skip"></button>
+          <button id="east" class="glass walk-key" data-i18n-attr="aria-label:forest.east">→</button>
         </div>
       </section>
       <header>
