@@ -7,6 +7,7 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v38.forest': 'One sun rises over the meadow. All 22 discoveries now play as painted animated GIFs, including journal replays.',
     'changes.v37.forest': 'Walk through the painted forest again. Each discovery opens a Three.js animation you can replay from the journal.',
     'changes.v36.forest': 'The Forest Remembers is now the last game in Playbox. Start a fresh journey from the title screen or Settings.',
     'changes.v35.forest': 'Follow one sunrise from the meadow to the falls. Three.js brings the guardian, the forest and all 22 discoveries to life as you walk.',
@@ -65,6 +66,7 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v38.forest': 'Un solo sole sorge sul prato. Tutte e 22 le scoperte sono GIF animate dipinte, che puoi rivedere nel diario.',
     'changes.v37.forest': 'Torna a camminare nel bosco dipinto. Ogni scoperta ha un’animazione Three.js che puoi rivedere dal diario.',
     'changes.v36.forest': 'Il bosco ricorda è ora l’ultimo gioco di Playbox. Puoi ricominciare dal titolo o dalle impostazioni.',
     'changes.v35.forest': 'Segui lo stesso sole dal prato alla cascata. Three.js anima il guardiano, il bosco e tutte le 22 scoperte durante il cammino.',
@@ -123,6 +125,7 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v38.forest': 'Un solo sol se alza sobre el prado. Los 22 hallazgos tienen GIF animados pintados que puedes volver a ver en el diario.',
     'changes.v37.forest': 'Vuelve al bosque pintado. Cada hallazgo tiene una animación en Three.js que puedes volver a ver desde el diario.',
     'changes.v36.forest': 'El bosque recuerda es ahora el último juego de Playbox. Puedes volver a empezar desde el título o los ajustes.',
     'changes.v35.forest': 'Sigue el mismo sol desde el prado hasta la cascada. Three.js anima al guardián, el bosque y los 22 hallazgos mientras caminas.',
@@ -181,6 +184,7 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v38.forest': 'Um único sol nasce sobre o prado. As 22 descobertas têm GIFs animados pintados que você pode rever no diário.',
     'changes.v37.forest': 'Caminhe de novo pela floresta pintada. Cada descoberta tem uma animação em Three.js que você pode rever pelo diário.',
     'changes.v36.forest': 'A floresta se lembra agora é o último jogo do Playbox. Você pode recomeçar pela tela inicial ou pelas configurações.',
     'changes.v35.forest': 'Siga o mesmo sol do prado até a cachoeira. Three.js anima o guardião, a floresta e as 22 descobertas durante a caminhada.',
@@ -239,6 +243,7 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v38.forest': 'Eine einzige Sonne geht über der Wiese auf. Alle 22 Funde haben gemalte GIF-Animationen, die du im Tagebuch erneut ansehen kannst.',
     'changes.v37.forest': 'Wandere wieder durch den gemalten Wald. Zu jedem Fund gibt es eine Three.js-Animation, die du im Tagebuch erneut ansehen kannst.',
     'changes.v36.forest': 'Der Wald erinnert sich steht jetzt am Ende der Spieleliste. Du kannst am Titelbildschirm oder in den Einstellungen neu anfangen.',
     'changes.v35.forest': 'Folge derselben Morgensonne von der Wiese bis zum Wasserfall. Three.js erweckt den Wächter, den Wald und alle 22 Funde auf deinem Weg zum Leben.',

@@ -806,10 +806,7 @@ h1 i {
 #panorama img.blended {
   mask-image: linear-gradient(to right, transparent, black 12%);
 }
-#panorama img.gorge {
-  transform: scaleX(-1);
-  mask-image: linear-gradient(to left, transparent, black 12%);
-}
+#memory-view,
 #memory-still {
   object-fit: contain;
   background: #16251e;

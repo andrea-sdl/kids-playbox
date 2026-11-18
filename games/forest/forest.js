@@ -31,7 +31,7 @@ const panel = $('panel'),
   spots = $('spots');
 const state = restore(readJSON('forest:journey', null));
 const motion = { walking: false, facing: 1, stride: 0, kneel: 0 };
-let renderer, cinema, cinemaLoading;
+let renderer;
 const keys = new Set();
 const heldPointers = new Map();
 const score = forestMusic();
@@ -360,34 +360,40 @@ async function replayMemory(id, after = null) {
   const film = movie;
   film.loading = true;
   const still = $('memory-still');
-  const canvas = $('memory-view');
+  const animation = $('memory-view');
   let artwork = id;
   if (isCoin(id)) artwork = 'meadow';
   if (id === 'ship') artwork = 'ignition';
   if (id === 'tree') artwork = 'bark';
   still.src = 'art/' + artwork + '.webp';
   still.hidden = false;
-  canvas.hidden = true;
+  animation.hidden = true;
   $('film-name').textContent = f(id);
   $('screening').hidden = false;
   $('film-skip').textContent = f('skip');
   $('film-skip').focus({ preventScroll: true });
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    film.loading = false;
+    if (id === 'ship') sound.play('ship');
+    return;
+  }
+  film.request = new AbortController();
   try {
-    cinemaLoading ??= import('./renderer.js').then(({ createDiscoveryRenderer }) =>
-      createDiscoveryRenderer(canvas),
-    );
-    cinema = await cinemaLoading;
+    const response = await fetch('art/films/' + id + '.gif', { signal: film.request.signal });
+    if (!response.ok) throw new Error('Memory unavailable');
+    const data = await response.blob();
     if (movie !== film) return;
-    cinema.render(state, film, time);
-    canvas.hidden = false;
+    // Give even consecutive replays of the same GIF a fresh animation clock.
+    film.url = URL.createObjectURL(data);
+    animation.src = film.url;
+    await animation.decode();
+    if (movie !== film) return;
+    animation.hidden = false;
     still.hidden = true;
     film.loading = false;
     if (id === 'ship') sound.play('ship');
   } catch {
-    cinemaLoading = null;
-    if (movie !== film) return;
-    // Keep the earned memory and its illustration available without WebGL.
-    $('film-skip').textContent = f('go');
+    if (movie === film) $('film-skip').textContent = f('go');
   }
 }
 function carveTree() {
@@ -465,7 +471,12 @@ function finalCard() {
   );
 }
 function finishFilm() {
-  const { kind, after } = movie;
+  const { kind, after, request, url } = movie;
+  request?.abort();
+  if (url) {
+    $('memory-view').removeAttribute('src');
+    URL.revokeObjectURL(url);
+  }
   movie = null;
   $('screening').hidden = true;
   document.body.classList.remove('filming');
@@ -601,10 +612,7 @@ function loop(stamp) {
     time += dt;
     if (movie) tickFilm(dt);
     else walk(dt);
-    if (!panel.open) {
-      if (!movie || movie.kind === 'ending') renderer.render(state, motion, movie, time);
-      else if (!movie.loading) cinema.render(state, movie, time);
-    }
+    if (!panel.open && (!movie || movie.kind === 'ending')) renderer.render(state, motion, movie, time);
     if (!movie && time > nextChirp && state.room !== 'hearth') {
       sound.play('bird');
       nextChirp = time + 12 + Math.random() * 8;

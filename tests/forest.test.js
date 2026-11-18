@@ -1,8 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { worldX } from '../games/forest/ground.js';
-import { discovery } from '../games/forest/discoveries.js';
-import { memories, places, restore, road, roadPosition, pitch, doors } from '../games/forest/world.js';
+import { readFileSync } from 'node:fs';
+import { memories, memoryLength, places, restore, road, roadPosition, pitch, doors } from '../games/forest/world.js';
 
 test('walking east and back crosses every landscape at the same world position', () => {
   assert.equal(road.length, 12);
@@ -10,7 +9,6 @@ test('walking east and back crosses every landscape at the same world position',
     const east = roadPosition(road[i], 0.945);
     assert.equal(east.room, road[i + 1]);
     assert.ok(Math.abs(east.x + pitch - 0.945) < 1e-9);
-    assert.ok(Math.abs(worldX(road[i], 0.945) - worldX(east.room, east.x)) < 1e-8);
     assert.equal(roadPosition(east.room, east.x - 0.02).room, road[i]);
   }
   assert.equal(roadPosition(road[0], -1).room, road[0]);
@@ -57,19 +55,35 @@ test('restarting can distinguish an old open tab from the new journey', () => {
   assert.equal(fresh.finished, false);
 });
 
-test('every journal close-up has a model with a reachable action pose', () => {
-  for (const id of memories.filter((id) => id !== 'ship')) {
-    const item = discovery(id);
-    function poseAt(progress) {
-      item.pose(progress, progress * 3.7);
-      item.group.updateMatrixWorld(true);
-      const pose = [];
-      item.group.traverse((object) => {
-        if (object.isMesh) pose.push([object.visible, ...object.matrixWorld.elements]);
-      });
-      return pose;
+// Read GIF block boundaries so compressed pixel data cannot count as another frame.
+function gifTiming(data) {
+  const paletteBytes = (packed) => (packed & 0x80 ? 3 * (2 << (packed & 7)) : 0);
+  let offset = 13 + paletteBytes(data[10]);
+  let frames = 0;
+  let centiseconds = 0;
+  while (offset < data.length && data[offset] !== 0x3b) {
+    const type = data[offset++];
+    if (type === 0x2c) {
+      frames++;
+      offset += 10 + paletteBytes(data[offset + 8]); // Descriptor, palette and LZW code size.
+    } else {
+      assert.equal(type, 0x21, 'expected a GIF extension');
+      if (data[offset++] === 0xf9) centiseconds += data.readUInt16LE(offset + 2);
     }
-    assert.ok(item.shotHeight > 0 && item.shotWidth > 0, id);
-    assert.notDeepEqual(poseAt(0), poseAt(0.72), id);
+    while (offset < data.length && data[offset]) offset += 1 + data[offset];
+    offset++;
+  }
+  assert.equal(data[offset], 0x3b, 'expected the GIF trailer');
+  return { frames, centiseconds };
+}
+
+test('every discovery has an animated GIF timed to its playback window', () => {
+  for (const id of memories) {
+    const url = new URL('../games/forest/art/films/' + id + '.gif', import.meta.url);
+    const data = readFileSync(url);
+    assert.equal(data.toString('ascii', 0, 6), 'GIF89a', id);
+    const { frames, centiseconds } = gifTiming(data);
+    assert.ok(frames > 1, id);
+    assert.equal(centiseconds, id === 'ship' ? 550 : memoryLength * 100, id);
   }
 });

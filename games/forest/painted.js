@@ -179,7 +179,6 @@ export function createWalkRenderer(world, plate, canvas) {
       img.draggable = false;
       img.style.left = offset * 100 + '%';
       img.classList.toggle('blended', room !== road[0]);
-      img.classList.toggle('gorge', room === 'gorge');
       return img;
     });
     panorama.replaceChildren(...visible);
@@ -189,8 +188,7 @@ export function createWalkRenderer(world, plate, canvas) {
   function cameraFrame(focus, continuous) {
     const w = stage.clientWidth,
       h = stage.clientHeight;
-    // Keep the two painted sun discs one full camera width apart at the gorge.
-    height = Math.max(h, (w * 9) / (16 * 0.95));
+    height = Math.max(h, (w * 9) / 16);
     width = (height * 16) / 9;
     if (w !== viewW || h !== viewH) {
       viewW = w;

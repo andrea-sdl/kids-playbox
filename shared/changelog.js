@@ -8,6 +8,11 @@
 
 export const RELEASES = [
   {
+    version: 38,
+    date: '2026-11-18',
+    changes: [{ target: 'forest', type: 'updated', text: 'changes.v38.forest' }],
+  },
+  {
     version: 37,
     date: '2026-11-18',
     changes: [{ target: 'forest', type: 'updated', text: 'changes.v37.forest' }],
