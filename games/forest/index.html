@@ -50,25 +50,23 @@
         <div id="toast" role="status" aria-live="polite"></div>
         <div class="playbar">
           <button id="west" class="glass walk-key" data-i18n-attr="aria-label:forest.west">←</button>
-          <div class="center-controls">
-            <button id="actions-toggle" class="glass" aria-expanded="false" aria-controls="trail-actions" data-i18n="forest.actions" hidden></button>
-            <div id="trail-actions">
-              <button id="journal" class="glass">
-                <span class="ico" data-icon="book"></span><span id="count"></span>
-              </button>
-              <button id="action" class="glass" hidden></button>
-              <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button>
-              <button id="listen" class="glass" data-i18n="forest.look"></button>
-            </div>
-          </div>
           <button id="east" class="glass walk-key" data-i18n-attr="aria-label:forest.east">→</button>
         </div>
       </section>
       <header>
-        <a class="home" href="../../" data-i18n-attr="aria-label:forest.playbox"
-          ><span class="back" aria-hidden="true">‹</span><span>Playbox</span></a
-        >
-        <div class="tools">
+        <button id="actions-toggle" class="glass" aria-expanded="false" aria-controls="trail-actions" data-i18n="forest.actions" hidden></button>
+        <div id="trail-actions">
+          <div class="play-tools">
+            <button id="journal" class="glass">
+              <span class="ico" data-icon="book"></span><span id="count"></span>
+            </button>
+            <button id="action" class="glass" hidden></button>
+            <button id="run" class="glass" aria-pressed="false" data-i18n="forest.run"></button>
+            <button id="listen" class="glass" data-i18n="forest.look"></button>
+          </div>
+          <a class="home" href="../../" data-i18n-attr="aria-label:forest.playbox"
+            ><span class="back" aria-hidden="true">‹</span><span>Playbox</span></a
+          >
           <button
             id="music"
             class="round"

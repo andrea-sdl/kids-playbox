@@ -69,14 +69,11 @@ select:focus-visible,
 }
 header {
   position: absolute;
-  left: 0;
-  top: 0;
-  right: 0;
+  left: max(var(--pad), env(safe-area-inset-left));
+  right: max(var(--pad), env(safe-area-inset-right));
+  top: max(12px, env(safe-area-inset-top));
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: max(21px, env(safe-area-inset-top)) max(var(--pad), env(safe-area-inset-right)) 0
-    max(var(--pad), env(safe-area-inset-left));
+  justify-content: flex-end;
   pointer-events: none;
   z-index: 3;
 }
@@ -105,7 +102,6 @@ header > * {
   border-radius: 50%;
   background: #16261c70;
 }
-.tools,
 .intro-actions {
   display: flex;
   align-items: center;
@@ -301,21 +297,48 @@ h1 i {
   bottom: max(19px, env(safe-area-inset-bottom));
   left: var(--pad);
   right: var(--pad);
-  display: grid;
-  grid-template-columns: auto auto auto 1fr auto 1fr auto auto;
-  grid-template-areas: "west east journal . action . run look";
-  align-items: center;
+  display: flex;
   gap: 8px;
   pointer-events: none;
 }
-.playbar button, .playbar a { pointer-events: auto; }
-.center-controls, #trail-actions { display: contents; }
-#west { grid-area: west; }
-#east { grid-area: east; }
-#journal { grid-area: journal; }
-#action { grid-area: action; }
-#run { grid-area: run; }
-#listen { grid-area: look; }
+.playbar button { pointer-events: auto; }
+#trail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.play-tools { display: contents; }
+#play[hidden] ~ header .play-tools { display: none; }
+#trail-actions > *, #trail-actions button { flex: none; }
+#trail-actions .home, #trail-actions button, #actions-toggle { min-height: 44px; }
+#trail-actions .round { width: 44px; }
+header.compact #trail-actions {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: max-content;
+  max-width: 100%;
+  max-height: calc(100dvh - 80px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow: auto;
+  flex-wrap: wrap;
+  padding: 10px;
+  border: 1px solid #fff3cf5c;
+  border-radius: 8px;
+  background: #1d3027f7;
+  box-shadow: 0 3px 16px #10261d73;
+}
+header.compact:not(.expanded) #trail-actions { visibility: hidden; }
+header.compact #trail-actions { justify-content: flex-start; }
+header.compact .play-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: inherit;
+  width: 100%;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #fff3cf35;
+}
 .glass {
   border-radius: 5px;
   padding: 9px 15px;
@@ -665,7 +688,7 @@ h1 i {
 }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) {
   header {
-    padding-top: 8px;
+    top: max(8px, env(safe-area-inset-top));
   }
   .round {
     min-height: 34px;
@@ -882,57 +905,11 @@ h1 i {
   .playbar {
     left: max(12px, env(safe-area-inset-left));
     right: max(12px, env(safe-area-inset-right));
-    grid-template-columns: 48px minmax(0, 1fr) 48px;
-    grid-template-areas: "west center east";
-    gap: 6px;
+    justify-content: space-between;
   }
-  .playbar .walk-key { min-height: 48px; padding: 0; }
-  .center-controls {
-    grid-area: center;
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-width: 0;
+  .playbar .walk-key { width: 48px; min-height: 48px; padding: 0; }
+  header {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
   }
-  #trail-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-  }
-  #trail-actions header, #trail-actions .tools { display: contents; }
-  #trail-actions button, #trail-actions a {
-    flex: none;
-    min-height: 44px;
-  }
-  #trail-actions .round { width: 44px; }
-  .compact #trail-actions {
-    visibility: hidden;
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: calc(100vw - 36px - env(safe-area-inset-left) - env(safe-area-inset-right));
-    flex-wrap: wrap;
-    gap: 5px;
-    padding: 10px;
-    border: 1px solid #fff3cf5c;
-    border-radius: 8px;
-    background: #1d3027f7;
-    box-shadow: 0 3px 16px #10261d73;
-    pointer-events: auto;
-  }
-  .compact.expanded { z-index: 1; }
-  .compact.expanded::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: auto;
-  }
-  .playbar .walk-key { position: relative; z-index: 2; }
-  .compact.expanded #trail-actions { visibility: visible; }
-  #actions-toggle { min-height: 44px; }
 }

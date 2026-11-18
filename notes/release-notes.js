@@ -7,6 +7,7 @@ import { addStrings } from '../shared/i18n.js';
 
 addStrings({
   en: {
+    'changes.v42.forest': 'Forest controls are in the top right. On smaller screens, open Actions to find them.',
     'changes.v41.forest': 'Hold either walking arrow on your phone to keep walking without selecting text.',
     'changes.v40.forest': 'The owl opens its wings while its tree stays still. The other forest discoveries now keep their scenery still, too.',
     'changes.v39.forest': 'Objects move as soon as you open their cards. Inspect them up close or go back. The causeway and viaduct now keep your feet on the path. On phones, the walking arrows sit on opposite sides.',
@@ -69,6 +70,7 @@ addStrings({
     'changes.v1.dice': 'The very first game, with four buddies to throw the dice.',
   },
   it: {
+    'changes.v42.forest': 'I comandi del bosco sono in alto a destra. Sugli schermi piccoli, apri Azioni per trovarli.',
     'changes.v41.forest': 'Tieni premuta una delle frecce sul telefono per camminare senza selezionare il testo.',
     'changes.v40.forest': 'Il gufo apre le ali e l’albero resta fermo. Anche gli sfondi delle altre scoperte nel bosco restano fermi.',
     'changes.v39.forest': 'Gli oggetti si animano quando apri le schede. Puoi osservarli da vicino o tornare indietro. Sull’argine e sul viadotto si cammina sul sentiero. Sul telefono, le frecce per camminare sono ai lati opposti.',
@@ -131,6 +133,7 @@ addStrings({
     'changes.v1.dice': 'Il primissimo gioco, con quattro amici che lanciano i dadi.',
   },
   es: {
+    'changes.v42.forest': 'Los controles del bosque están arriba a la derecha. En pantallas pequeñas, abre Acciones para verlos.',
     'changes.v41.forest': 'Mantén pulsada una flecha en el móvil para caminar sin seleccionar texto.',
     'changes.v40.forest': 'El búho abre las alas y el árbol permanece quieto. Los fondos de los demás descubrimientos del bosque también se quedan quietos.',
     'changes.v39.forest': 'Los objetos se animan al abrir sus fichas. Puedes verlos de cerca o volver. La calzada y el viaducto te mantienen en el camino. En el móvil, las flechas para caminar están en lados opuestos.',
@@ -193,6 +196,7 @@ addStrings({
     'changes.v1.dice': 'El primer juego, con cuatro amigos que lanzan los dados.',
   },
   'pt-BR': {
+    'changes.v42.forest': 'Os controles da floresta ficam no canto superior direito. Em telas pequenas, abra Ações para encontrá-los.',
     'changes.v41.forest': 'Mantenha uma das setas pressionada no celular para andar sem selecionar texto.',
     'changes.v40.forest': 'A coruja abre as asas e a árvore continua parada. O cenário das outras descobertas da floresta também fica parado.',
     'changes.v39.forest': 'Os objetos se animam ao abrir suas fichas. Você pode vê-los de perto ou voltar. Na passagem entre os juncos e no viaduto, você caminha pela trilha. No celular, as setas para caminhar ficam em lados opostos.',
@@ -255,6 +259,7 @@ addStrings({
     'changes.v1.dice': 'O primeiro jogo, com quatro amigos que jogam os dados.',
   },
   de: {
+    'changes.v42.forest': 'Die Steuerung für den Wald findest du oben rechts. Auf kleinen Bildschirmen öffnest du dafür Aktionen.',
     'changes.v41.forest': 'Halte auf dem Handy eine der Pfeiltasten gedrückt, um zu gehen, ohne Text zu markieren.',
     'changes.v40.forest': 'Die Eule breitet ihre Flügel aus, während der Baum stillsteht. Auch bei den anderen Entdeckungen im Wald bleibt der Hintergrund ruhig.',
     'changes.v39.forest': 'Die Fundstücke bewegen sich beim Öffnen ihrer Karten. Du kannst sie näher ansehen oder zurückgehen. Auf Damm und Viadukt bleibst du auf dem Weg. Auf dem Handy liegen die Richtungspfeile an gegenüberliegenden Seiten.',

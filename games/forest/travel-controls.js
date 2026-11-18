@@ -1,61 +1,52 @@
-// One set of buttons keeps its state and handlers as the phone rotates.
-export function setupTravelControls(bar, header) {
-  const center = bar.querySelector('.center-controls');
-  const actions = bar.querySelector('#trail-actions');
-  const toggle = bar.querySelector('#actions-toggle');
-  const headerHome = header.parentNode;
-  const headerNext = header.nextSibling;
-  const mobile = matchMedia('(max-width: 650px), (pointer: coarse)');
-  const buttons = [...actions.querySelectorAll('button'), ...header.querySelectorAll('button, a')];
+// Keep the same controls and keyboard focus when the toolbar changes layout.
+export function setupTravelControls(header) {
+  const actions = header.querySelector('#trail-actions');
+  const toggle = header.querySelector('#actions-toggle');
+  const buttons = [...actions.querySelectorAll('button, a')];
 
   function expand(open) {
     toggle.setAttribute('aria-expanded', String(open));
-    center.classList.toggle('expanded', open);
-    actions.inert = center.classList.contains('compact') && !open;
+    header.classList.toggle('expanded', open);
+    actions.inert = header.classList.contains('compact') && !open;
   }
 
   function fit() {
-    const split = mobile.matches && bar.clientWidth > 0;
-    if (split && header.parentNode !== actions) actions.append(header);
-    if (!split && header.parentNode === actions) headerHome.insertBefore(header, headerNext);
     const visible = buttons.filter((button) => button.getBoundingClientRect().width > 0);
     const gap = parseFloat(getComputedStyle(actions).columnGap) || 0;
     const needed =
       visible.reduce((width, button) => width + button.getBoundingClientRect().width, 0) +
       gap * Math.max(0, visible.length - 1);
-    const compact = split && needed > center.clientWidth;
-    if (center.classList.contains('compact') === compact) return;
+    const compact = needed > header.clientWidth;
+    if (header.classList.contains('compact') === compact) return;
     const focused = document.activeElement;
-    center.classList.toggle('compact', compact);
+    header.classList.toggle('compact', compact);
     toggle.hidden = !compact;
     expand(false);
     if (compact && actions.contains(focused)) toggle.focus();
-    if (!compact && focused === toggle) actions.querySelector('button:not([hidden])').focus();
+    if (!compact && focused === toggle) visible[0]?.focus();
   }
 
   toggle.onclick = () => expand(toggle.getAttribute('aria-expanded') !== 'true');
-  center.addEventListener('click', (event) => {
-    if (event.target === center) expand(false);
-  });
   actions.addEventListener('click', (event) => {
-    if (!center.classList.contains('expanded') || !event.target.closest('button, a')) return;
+    if (!header.classList.contains('expanded')) return;
+    if (!event.composedPath().some((element) => buttons.includes(element))) return;
     expand(false);
     if (!document.querySelector('dialog[open]')) toggle.focus();
   });
-  bar.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape' || !center.classList.contains('expanded')) return;
+  header.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || !header.classList.contains('expanded')) return;
     expand(false);
     toggle.focus();
     event.preventDefault();
   });
   document.addEventListener('pointerdown', (event) => {
-    if (!center.contains(event.target)) expand(false);
+    if (!header.contains(event.target)) expand(false);
   });
-  center.addEventListener('focusout', (event) => {
-    if (event.relatedTarget && !center.contains(event.relatedTarget)) expand(false);
+  header.addEventListener('focusout', (event) => {
+    if (event.relatedTarget && !header.contains(event.relatedTarget)) expand(false);
   });
   const observer = new ResizeObserver(fit);
-  for (const element of [bar, center, ...buttons]) observer.observe(element);
-  mobile.addEventListener('change', fit);
+  for (const element of [header, ...buttons]) observer.observe(element);
+  fit();
   return fit;
 }
