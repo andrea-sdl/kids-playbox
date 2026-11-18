@@ -1,6 +1,6 @@
 # The Forest Remembers
 
-The title, field journal map, bark drawing surface and icons use original bitmap artwork. The following briefs also guided the shape and palette of the Three.js models.
+The walking landscapes, guardian cels, title, field journal map, bark drawing surface and icons use original bitmap artwork. The following briefs also guided the shape and palette of the Three.js models.
 
 ## Art direction
 
@@ -20,4 +20,4 @@ The visual references were the woodland scale of *My Neighbor Totoro*, the aband
 
 ## The walking road and discovery films
 
-One continuous Three.js scene connects the twelve outdoor areas. A procedural sunrise, distant ridges, and a continuous ground mesh establish the horizon. The trees, stonework, farmhouse and railway are geometry placed at fixed world coordinates. The walking camera and journal close-ups use the same models. Joint poses, water flow, wings, steam, and the objects’ moving parts are animated at runtime.
+The walking camera tracks the guardian across twelve adjoining paintings. The guardian, swallow and props use drawn cels. The farmhouse interior and final flight have their own painted backgrounds. Each of the 22 discoveries opens a Three.js scene that can also be replayed from the journal. The models animate the objects’ moving parts, water, wings and steam.

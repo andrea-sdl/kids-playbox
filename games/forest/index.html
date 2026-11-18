@@ -33,8 +33,10 @@
       </section>
       <section id="play" hidden aria-label="Forest">
         <div id="stage" tabindex="0">
-          <canvas id="forest-view" aria-hidden="true"></canvas>
           <div id="world">
+            <img id="plate" alt="" hidden />
+            <div id="panorama" aria-hidden="true"></div>
+            <canvas id="forest-view" aria-hidden="true"></canvas>
             <div id="spots"></div>
             <div id="ways"></div>
           </div>
@@ -62,6 +64,8 @@
         </div>
       </section>
       <section id="screening" hidden aria-labelledby="film-name">
+        <img id="memory-still" alt="" hidden />
+        <canvas id="memory-view" aria-hidden="true" hidden></canvas>
         <div class="film-controls">
           <h2 id="film-name"></h2>
           <button id="film-skip" class="glass" data-i18n="forest.skip"></button>

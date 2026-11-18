@@ -13,6 +13,11 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
+class PlayboxServer(http.server.ThreadingHTTPServer):
+    # The first visit fetches game modules while the PWA caches its art.
+    request_queue_size = 128
+
+
 class NoCacheHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cache-Control', 'no-cache')
@@ -24,4 +29,4 @@ if len(sys.argv) > 1:
     port = int(sys.argv[1])
 
 handler = functools.partial(NoCacheHandler, directory=str(ROOT))
-http.server.ThreadingHTTPServer(('', port), handler).serve_forever()
+PlayboxServer(('', port), handler).serve_forever()

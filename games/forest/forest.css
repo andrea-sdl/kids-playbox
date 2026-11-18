@@ -792,21 +792,33 @@ h1 i {
 #film-skip {
   pointer-events: auto;
 }
-#panel.object-detail {
-  inset: auto auto max(3vh, 16px) var(--pad);
-  margin: 0;
-  width: min(460px, 90vw);
+#plate,
+#panorama,
+#panorama img,
+#memory-view,
+#memory-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
-#panel.object-detail::backdrop {
-  background: transparent;
-  backdrop-filter: none;
+#panorama img.blended {
+  mask-image: linear-gradient(to right, transparent, black 12%);
 }
-body:has(.object-detail[open]) :is(.location, .playbar, #spots, #ways, #toast) {
-  visibility: hidden;
+#panorama img.gorge {
+  transform: scaleX(-1);
+  mask-image: linear-gradient(to left, transparent, black 12%);
 }
-.spot.coin.glint .spark {
-  background: #fffada;
-  transform: scale(1.6);
+#memory-still {
+  object-fit: contain;
+  background: #16251e;
+}
+.insert {
+  display: block;
+  width: 100%;
+  max-height: 44dvh;
+  object-fit: cover;
 }
 .film-controls {
   position: absolute;

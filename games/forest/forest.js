@@ -18,7 +18,7 @@ import {
   clamp,
 } from './world.js';
 import { actionText, echoText } from './encounters.js';
-import { hasWebGL, explainNoWebGL } from '../../shared/webgl.js';
+import { createWalkRenderer } from './painted.js';
 import { traceRing } from './carving.js';
 import { forestMusic } from './music.js';
 import { makeSound } from './audio.js';
@@ -31,7 +31,7 @@ const panel = $('panel'),
   spots = $('spots');
 const state = restore(readJSON('forest:journey', null));
 const motion = { walking: false, facing: 1, stride: 0, kneel: 0 };
-let renderer, createRenderer;
+let renderer, cinema, cinemaLoading;
 const keys = new Set();
 const heldPointers = new Map();
 const score = forestMusic();
@@ -131,7 +131,7 @@ function settings() {
   picker.append(lang, fullscreenButton);
   const actions = node('div', null, 'dialog-actions');
   actions.append(button(f('how'), 'primary', help));
-  if (state.started && createRenderer) actions.append(button(f('restart'), 'text-link', confirmRestart));
+  if (state.started) actions.append(button(f('restart'), 'text-link', confirmRestart));
   body.append(picker, actions);
   mountLanguagePicker();
 }
@@ -199,14 +199,18 @@ function spotsForRoom() {
     const b = button('', 'spot way', () => {
       target = { x: door.x, y: door.y, arrive: () => enterDoor(door) };
     });
+    b.style.left = door.x * 100 + '%';
+    b.style.top = '64%';
     b.setAttribute('aria-label', f(door.to));
     b.append(node('span', '↥', 'way-arrow'), node('span', f(door.to), 'tip'));
     ways.append(b);
   }
   for (const tile of neighboringPaintings(state.room)) {
-    for (const id of Object.keys(places[tile.room].points)) {
+    for (const [id, [x, y]] of Object.entries(places[tile.room].points)) {
       if (state.found.has(id) && (isCoin(id) || id === 'ship')) continue;
       const s = button('', 'spot', () => approach(id, tile.room));
+      s.style.left = (x + tile.offset) * 100 + '%';
+      s.style.top = y * 100 + '%';
       s.dataset.id = id;
       s.setAttribute('aria-label', label(id));
       s.classList.toggle('done', state.found.has(id));
@@ -235,7 +239,10 @@ function begin() {
   playing = true;
   state.started = true;
   sound.wake();
-  renderer ??= createRenderer($('forest-view'), spots, $('ways'));
+  if (!renderer) {
+    renderer = createWalkRenderer($('world'), $('plate'), $('forest-view'));
+    renderer.warm();
+  }
   motion.kneel = time + 1.4;
   enterPlace();
   renderer.render(state, motion, movie, time);
@@ -320,11 +327,10 @@ function updateNear() {
 }
 function encounter(id) {
   const done = state.found.has(id);
-  renderer.render(state, motion, { kind: id, age: done ? memoryLength : 0 }, time);
-  openPanel(f(id), 'encounter object-detail');
+  openPanel(f(id), 'encounter');
   const copy = node('div', null, 'insert-copy');
   copy.append(body.firstChild);
-  body.append(copy);
+  body.append(photo(id, 'insert'), copy);
   if (done)
     copy.append(
       node('p', echoText(id)),
@@ -347,13 +353,42 @@ function rollFilm(kind, after = null) {
   movie = { kind, age: 0, after };
   document.body.classList.add('filming');
   score.duck(true);
-  if (kind === 'ship' || kind === 'ending') sound.play(kind === 'ship' ? 'ship' : 'stairs');
+  if (kind === 'ending') sound.play('stairs');
 }
-function replayMemory(id, after = null) {
+async function replayMemory(id, after = null) {
   rollFilm(id, after);
+  const film = movie;
+  film.loading = true;
+  const still = $('memory-still');
+  const canvas = $('memory-view');
+  let artwork = id;
+  if (isCoin(id)) artwork = 'meadow';
+  if (id === 'ship') artwork = 'ignition';
+  if (id === 'tree') artwork = 'bark';
+  still.src = 'art/' + artwork + '.webp';
+  still.hidden = false;
+  canvas.hidden = true;
   $('film-name').textContent = f(id);
   $('screening').hidden = false;
+  $('film-skip').textContent = f('skip');
   $('film-skip').focus({ preventScroll: true });
+  try {
+    cinemaLoading ??= import('./renderer.js').then(({ createDiscoveryRenderer }) =>
+      createDiscoveryRenderer(canvas),
+    );
+    cinema = await cinemaLoading;
+    if (movie !== film) return;
+    cinema.render(state, film, time);
+    canvas.hidden = false;
+    still.hidden = true;
+    film.loading = false;
+    if (id === 'ship') sound.play('ship');
+  } catch {
+    cinemaLoading = null;
+    if (movie !== film) return;
+    // Keep the earned memory and its illustration available without WebGL.
+    $('film-skip').textContent = f('go');
+  }
 }
 function carveTree() {
   openPanel(f('tree'), 'encounter');
@@ -393,7 +428,7 @@ function awakenShip() {
     return;
   }
   mark(id);
-  rollFilm('ship');
+  replayMemory('ship');
   return;
 }
 function interact(id) {
@@ -451,6 +486,7 @@ function finishFilm() {
   tell(f(kind) + '  ✓');
 }
 function tickFilm(dt) {
+  if (movie.loading) return;
   const previous = movie.age;
   movie.age += dt;
   if (movie.kind === 'ending') {
@@ -566,9 +602,8 @@ function loop(stamp) {
     if (movie) tickFilm(dt);
     else walk(dt);
     if (!panel.open) {
-      let scene = state;
-      if (movie?.kind === 'ship') scene = { ...state, room: 'grove', x: 0.575, y: 0.824 };
-      renderer.render(scene, motion, movie, time);
+      if (!movie || movie.kind === 'ending') renderer.render(state, motion, movie, time);
+      else if (!movie.loading) cinema.render(state, movie, time);
     }
     if (!movie && time > nextChirp && state.room !== 'hearth') {
       sound.play('bird');
@@ -667,25 +702,8 @@ translatePage();
 document.title = t('game.forest.title') + ' · Playbox';
 if (getLanguage() !== 'en') $('title').textContent = t('game.forest.title');
 $('begin').firstElementChild.textContent = f(state.started ? 'resume' : 'begin');
-if (hasWebGL()) {
-  import('./renderer.js')
-    .then((module) => {
-      createRenderer = module.createRenderer;
-      $('begin').disabled = false;
-      $('restart').hidden = !state.started;
-    })
-    .catch(() => {
-      document.querySelector('.premise').textContent = f('loadFailed');
-      $('begin').firstElementChild.textContent = f('retry');
-      $('begin').onclick = () => location.reload();
-      $('begin').disabled = false;
-    });
-} else {
-  $('begin').hidden = true;
-  const note = document.querySelector('.premise');
-  explainNoWebGL(note);
-  note.textContent = t('common.needsWebgl');
-}
+$('begin').disabled = false;
+$('restart').hidden = !state.started;
 document.querySelectorAll('[data-icon]').forEach((el) => icon(el, el.dataset.icon));
 soundButton();
 syncMusic();
