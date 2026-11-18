@@ -629,6 +629,7 @@ for (const [id, direction] of [
   ['east', 1],
 ]) {
   const key = $(id);
+  key.addEventListener('contextmenu', (event) => event.preventDefault());
   key.addEventListener('pointerdown', (e) => {
     if (movie) return;
     e.preventDefault();

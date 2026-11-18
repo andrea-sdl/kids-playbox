@@ -764,6 +764,8 @@ h1 i {
 .walk-key {
   min-width: 44px;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
   font-size: 19px;
   line-height: 1;
